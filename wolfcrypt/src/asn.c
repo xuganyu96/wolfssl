@@ -8839,22 +8839,22 @@ int wc_CheckPrivateKey(const byte* privKey, word32 privKeySz,
         }
 
         if (ks == SPHINCS_FAST_LEVEL1k) {
-            ret = wc_sphincs_set_level_and_optim(key_pair, 1, FAST_VARIANT);
+            ret = wc_sphincs_set_level_and_optim(key_pair, 1, SPHINCS_FAST_VARIANT);
         }
         else if (ks == SPHINCS_FAST_LEVEL3k) {
-            ret = wc_sphincs_set_level_and_optim(key_pair, 3, FAST_VARIANT);
+            ret = wc_sphincs_set_level_and_optim(key_pair, 3, SPHINCS_FAST_VARIANT);
         }
         else if (ks == SPHINCS_FAST_LEVEL5k) {
-            ret = wc_sphincs_set_level_and_optim(key_pair, 5, FAST_VARIANT);
+            ret = wc_sphincs_set_level_and_optim(key_pair, 5, SPHINCS_FAST_VARIANT);
         }
         else if (ks == SPHINCS_SMALL_LEVEL1k) {
-            ret = wc_sphincs_set_level_and_optim(key_pair, 1, SMALL_VARIANT);
+            ret = wc_sphincs_set_level_and_optim(key_pair, 1, SPHINCS_SMALL_VARIANT);
         }
         else if (ks == SPHINCS_SMALL_LEVEL3k) {
-            ret = wc_sphincs_set_level_and_optim(key_pair, 3, SMALL_VARIANT);
+            ret = wc_sphincs_set_level_and_optim(key_pair, 3, SPHINCS_SMALL_VARIANT);
         }
         else if (ks == SPHINCS_SMALL_LEVEL5k) {
-            ret = wc_sphincs_set_level_and_optim(key_pair, 5, SMALL_VARIANT);
+            ret = wc_sphincs_set_level_and_optim(key_pair, 5, SPHINCS_SMALL_VARIANT);
         }
 
         if (ret  < 0) {
@@ -9322,7 +9322,7 @@ int wc_GetKeyOID(byte* key, word32 keySz, const byte** curveOID, word32* oidSz,
 
         if (wc_sphincs_init(sphincs) != 0) {
             tmpIdx = 0;
-            if (wc_sphincs_set_level_and_optim(sphincs, 1, FAST_VARIANT)
+            if (wc_sphincs_set_level_and_optim(sphincs, 1, SPHINCS_FAST_VARIANT)
                 == 0) {
                 if (wc_Sphincs_PrivateKeyDecode(key, &tmpIdx, sphincs,
                     keySz) == 0) {
@@ -9332,7 +9332,7 @@ int wc_GetKeyOID(byte* key, word32 keySz, const byte** curveOID, word32* oidSz,
                     WOLFSSL_MSG("Not Sphincs-fast Level 1 DER key");
                 }
             }
-            else if (wc_sphincs_set_level_and_optim(sphincs, 3, FAST_VARIANT)
+            else if (wc_sphincs_set_level_and_optim(sphincs, 3, SPHINCS_FAST_VARIANT)
                 == 0) {
                 if (wc_Sphincs_PrivateKeyDecode(key, &tmpIdx, sphincs,
                     keySz) == 0) {
@@ -9342,7 +9342,7 @@ int wc_GetKeyOID(byte* key, word32 keySz, const byte** curveOID, word32* oidSz,
                     WOLFSSL_MSG("Not Sphincs-fast Level 3 DER key");
                 }
             }
-            else if (wc_sphincs_set_level_and_optim(sphincs, 5, FAST_VARIANT)
+            else if (wc_sphincs_set_level_and_optim(sphincs, 5, SPHINCS_FAST_VARIANT)
                 == 0) {
                 if (wc_Sphincs_PrivateKeyDecode(key, &tmpIdx, sphincs,
                     keySz) == 0) {
@@ -9352,7 +9352,7 @@ int wc_GetKeyOID(byte* key, word32 keySz, const byte** curveOID, word32* oidSz,
                     WOLFSSL_MSG("Not Sphincs-fast Level 5 DER key");
                 }
             }
-            else if (wc_sphincs_set_level_and_optim(sphincs, 1, SMALL_VARIANT)
+            else if (wc_sphincs_set_level_and_optim(sphincs, 1, SPHINCS_SMALL_VARIANT)
                 == 0) {
                 if (wc_Sphincs_PrivateKeyDecode(key, &tmpIdx, sphincs,
                     keySz) == 0) {
@@ -9362,7 +9362,7 @@ int wc_GetKeyOID(byte* key, word32 keySz, const byte** curveOID, word32* oidSz,
                     WOLFSSL_MSG("Not Sphincs-small Level 1 DER key");
                 }
             }
-            else if (wc_sphincs_set_level_and_optim(sphincs, 3, SMALL_VARIANT)
+            else if (wc_sphincs_set_level_and_optim(sphincs, 3, SPHINCS_SMALL_VARIANT)
                 == 0) {
                 if (wc_Sphincs_PrivateKeyDecode(key, &tmpIdx, sphincs,
                     keySz) == 0) {
@@ -9372,7 +9372,7 @@ int wc_GetKeyOID(byte* key, word32 keySz, const byte** curveOID, word32* oidSz,
                     WOLFSSL_MSG("Not Sphincs-small Level 3 DER key");
                 }
             }
-            else if (wc_sphincs_set_level_and_optim(sphincs, 5, SMALL_VARIANT)
+            else if (wc_sphincs_set_level_and_optim(sphincs, 5, SPHINCS_SMALL_VARIANT)
                 == 0) {
                 if (wc_Sphincs_PrivateKeyDecode(key, &tmpIdx, sphincs,
                     keySz) == 0) {
@@ -18320,7 +18320,7 @@ int ConfirmSignature(SignatureCtx* sigCtx,
                         goto exit_cs;
                     }
                     if ((ret = wc_sphincs_set_level_and_optim(
-                                   sigCtx->key.sphincs, 1, FAST_VARIANT))
+                                   sigCtx->key.sphincs, 1, SPHINCS_FAST_VARIANT))
                         < 0) {
                         goto exit_cs;
                     }
@@ -18348,7 +18348,7 @@ int ConfirmSignature(SignatureCtx* sigCtx,
                         goto exit_cs;
                     }
                     if ((ret = wc_sphincs_set_level_and_optim(
-                                   sigCtx->key.sphincs, 3, FAST_VARIANT))
+                                   sigCtx->key.sphincs, 3, SPHINCS_FAST_VARIANT))
                         < 0) {
                         goto exit_cs;
                     }
@@ -18376,7 +18376,7 @@ int ConfirmSignature(SignatureCtx* sigCtx,
                         goto exit_cs;
                     }
                     if ((ret = wc_sphincs_set_level_and_optim(
-                                   sigCtx->key.sphincs, 5, FAST_VARIANT))
+                                   sigCtx->key.sphincs, 5, SPHINCS_FAST_VARIANT))
                         < 0) {
                         goto exit_cs;
                     }
@@ -18404,7 +18404,7 @@ int ConfirmSignature(SignatureCtx* sigCtx,
                         goto exit_cs;
                     }
                     if ((ret = wc_sphincs_set_level_and_optim(
-                                   sigCtx->key.sphincs, 1, SMALL_VARIANT))
+                                   sigCtx->key.sphincs, 1, SPHINCS_SMALL_VARIANT))
                         < 0) {
                         goto exit_cs;
                     }
@@ -18432,7 +18432,7 @@ int ConfirmSignature(SignatureCtx* sigCtx,
                         goto exit_cs;
                     }
                     if ((ret = wc_sphincs_set_level_and_optim(
-                                   sigCtx->key.sphincs, 3, SMALL_VARIANT))
+                                   sigCtx->key.sphincs, 3, SPHINCS_SMALL_VARIANT))
                         < 0) {
                         goto exit_cs;
                     }
@@ -18460,7 +18460,7 @@ int ConfirmSignature(SignatureCtx* sigCtx,
                         goto exit_cs;
                     }
                     if ((ret = wc_sphincs_set_level_and_optim(
-                                   sigCtx->key.sphincs, 5, SMALL_VARIANT))
+                                   sigCtx->key.sphincs, 5, SPHINCS_SMALL_VARIANT))
                         < 0) {
                         goto exit_cs;
                     }
@@ -31761,22 +31761,22 @@ static int MakeAnyCert(Cert* cert, byte* derBuffer, word32 derSz,
 #endif /* HAVE_DILITHIUM */
 #ifdef HAVE_SPHINCS
     else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
-             && (sphincsKey->optim == FAST_VARIANT))
+             && (sphincsKey->optim == SPHINCS_FAST_VARIANT))
         cert->keyType = SPHINCS_FAST_LEVEL1_KEY;
     else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
-             && (sphincsKey->optim == FAST_VARIANT))
+             && (sphincsKey->optim == SPHINCS_FAST_VARIANT))
         cert->keyType = SPHINCS_FAST_LEVEL3_KEY;
     else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
-             && (sphincsKey->optim == FAST_VARIANT))
+             && (sphincsKey->optim == SPHINCS_FAST_VARIANT))
         cert->keyType = SPHINCS_FAST_LEVEL5_KEY;
     else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
-             && (sphincsKey->optim == SMALL_VARIANT))
+             && (sphincsKey->optim == SPHINCS_SMALL_VARIANT))
         cert->keyType = SPHINCS_SMALL_LEVEL1_KEY;
     else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
-             && (sphincsKey->optim == SMALL_VARIANT))
+             && (sphincsKey->optim == SPHINCS_SMALL_VARIANT))
         cert->keyType = SPHINCS_SMALL_LEVEL3_KEY;
     else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
-             && (sphincsKey->optim == SMALL_VARIANT))
+             && (sphincsKey->optim == SPHINCS_SMALL_VARIANT))
         cert->keyType = SPHINCS_SMALL_LEVEL5_KEY;
 #endif /* HAVE_SPHINCS */
     else
@@ -31876,27 +31876,27 @@ static int MakeAnyCert(Cert* cert, byte* derBuffer, word32 derSz,
 #endif /* HAVE_DILITHIUM */
 #ifdef HAVE_SPHINCS
         else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
-                 && (sphincsKey->optim == FAST_VARIANT)) {
+                 && (sphincsKey->optim == SPHINCS_FAST_VARIANT)) {
             cert->keyType = SPHINCS_FAST_LEVEL1_KEY;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
-                 && (sphincsKey->optim == FAST_VARIANT)) {
+                 && (sphincsKey->optim == SPHINCS_FAST_VARIANT)) {
             cert->keyType = SPHINCS_FAST_LEVEL3_KEY;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
-                 && (sphincsKey->optim == FAST_VARIANT)) {
+                 && (sphincsKey->optim == SPHINCS_FAST_VARIANT)) {
             cert->keyType = SPHINCS_FAST_LEVEL5_KEY;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
-                 && (sphincsKey->optim == SMALL_VARIANT)) {
+                 && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
             cert->keyType = SPHINCS_SMALL_LEVEL1_KEY;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
-                 && (sphincsKey->optim == SMALL_VARIANT)) {
+                 && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
             cert->keyType = SPHINCS_SMALL_LEVEL3_KEY;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
-                 && (sphincsKey->optim == SMALL_VARIANT)) {
+                 && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
             cert->keyType = SPHINCS_SMALL_LEVEL5_KEY;
         }
 #endif /* HAVE_SPHINCS */
@@ -32891,22 +32891,22 @@ static int MakeCertReq(Cert* cert, byte* derBuffer, word32 derSz,
 #endif /* HAVE_DILITHIUM */
 #ifdef HAVE_SPHINCS
     else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
-             && (sphincsKey->optim == FAST_VARIANT))
+             && (sphincsKey->optim == SPHINCS_FAST_VARIANT))
         cert->keyType = SPHINCS_FAST_LEVEL1_KEY;
     else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
-             && (sphincsKey->optim == FAST_VARIANT))
+             && (sphincsKey->optim == SPHINCS_FAST_VARIANT))
         cert->keyType = SPHINCS_FAST_LEVEL3_KEY;
     else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
-             && (sphincsKey->optim == FAST_VARIANT))
+             && (sphincsKey->optim == SPHINCS_FAST_VARIANT))
         cert->keyType = SPHINCS_FAST_LEVEL5_KEY;
     else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
-             && (sphincsKey->optim == SMALL_VARIANT))
+             && (sphincsKey->optim == SPHINCS_SMALL_VARIANT))
         cert->keyType = SPHINCS_SMALL_LEVEL1_KEY;
     else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
-             && (sphincsKey->optim == SMALL_VARIANT))
+             && (sphincsKey->optim == SPHINCS_SMALL_VARIANT))
         cert->keyType = SPHINCS_SMALL_LEVEL3_KEY;
     else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
-             && (sphincsKey->optim == SMALL_VARIANT))
+             && (sphincsKey->optim == SPHINCS_SMALL_VARIANT))
         cert->keyType = SPHINCS_SMALL_LEVEL5_KEY;
 #endif /* HAVE_SPHINCS */
     else
@@ -33007,27 +33007,27 @@ static int MakeCertReq(Cert* cert, byte* derBuffer, word32 derSz,
 #endif /* HAVE_DILITHIUM */
 #ifdef HAVE_SPHINCS
         else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
-                 && (sphincsKey->optim == FAST_VARIANT)) {
+                 && (sphincsKey->optim == SPHINCS_FAST_VARIANT)) {
             cert->keyType = SPHINCS_FAST_LEVEL1_KEY;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
-                 && (sphincsKey->optim == FAST_VARIANT)) {
+                 && (sphincsKey->optim == SPHINCS_FAST_VARIANT)) {
             cert->keyType = SPHINCS_FAST_LEVEL3_KEY;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
-                 && (sphincsKey->optim == FAST_VARIANT)) {
+                 && (sphincsKey->optim == SPHINCS_FAST_VARIANT)) {
             cert->keyType = SPHINCS_FAST_LEVEL5_KEY;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
-                 && (sphincsKey->optim == SMALL_VARIANT)) {
+                 && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
             cert->keyType = SPHINCS_SMALL_LEVEL1_KEY;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
-                 && (sphincsKey->optim == SMALL_VARIANT)) {
+                 && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
             cert->keyType = SPHINCS_SMALL_LEVEL3_KEY;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
-                 && (sphincsKey->optim == SMALL_VARIANT)) {
+                 && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
             cert->keyType = SPHINCS_SMALL_LEVEL5_KEY;
         }
 #endif /* HAVE_SPHINCS */
