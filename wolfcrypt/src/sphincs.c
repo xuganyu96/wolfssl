@@ -22,6 +22,7 @@
 #include "wolfssl/wolfcrypt/error-crypt.h"
 #include "wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-128f-simple/clean/api.h"
 #include "wolfssl/wolfcrypt/random.h"
+#include <stdio.h>
 #include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 /* Based on dilithium.c and Reworked for Sphincs by Anthony Hu. */
@@ -328,7 +329,6 @@ int wc_sphincs_verify_msg(const byte *sig, word32 sigLen, const byte *msg, word3
     }
     int sphincs_err;
     if ((key->level == 1) && (key->optim == SPHINCS_FAST_VARIANT)) {
-        printf("siglen is %d, msglen is %d\n", sigLen, msgLen);
         sphincs_err = PQCLEAN_SPHINCSSHAKE128FSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
                                                                               msgLen, key->p);
         *res = (sphincs_err == 0) ? 1 : 0;
@@ -353,7 +353,14 @@ int wc_sphincs_verify_msg(const byte *sig, word32 sigLen, const byte *msg, word3
         //                                                                       msgLen, key->p);
         // *res = (sphincs_err == 0) ? 1 : 0;
     } /* no need to check else since level and optim are already set */
+#if defined(DEBUG_WOLFSSL) || 1
+    char errmsg[120];
+    snprintf(errmsg, sizeof(errmsg), "siglen is %d, msglen is %d, verified=%d\n", sigLen, msgLen,
+             *res);
+    WOLFSSL_MSG(errmsg);
 #endif
+
+#endif /* HAVE_LIBOQS */
 
     return ret;
 }
