@@ -84,20 +84,25 @@ int wc_sphincs_make_key_from_seed(sphincs_key *key, const byte *seed) {
         pqc_err =
             PQCLEAN_SPHINCSSHAKE128FSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
     } else if ((key->level == 1) && (key->optim == SPHINCS_SMALL_VARIANT)) {
-        pqc_err =
-            PQCLEAN_SPHINCSSHAKE128SSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
+        // pqc_err =
+        //     PQCLEAN_SPHINCSSHAKE128SSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
+        pqc_err = NOT_COMPILED_IN;
     } else if ((key->level == 3) && (key->optim == SPHINCS_FAST_VARIANT)) {
-        pqc_err =
-            PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
+        // pqc_err =
+        //     PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
+        pqc_err = NOT_COMPILED_IN;
     } else if ((key->level == 3) && (key->optim == SPHINCS_SMALL_VARIANT)) {
-        pqc_err =
-            PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
+        // pqc_err =
+        //     PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
+        pqc_err = NOT_COMPILED_IN;
     } else if ((key->level == 5) && (key->optim == SPHINCS_FAST_VARIANT)) {
-        pqc_err =
-            PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
+        // pqc_err =
+        //     PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
+        pqc_err = NOT_COMPILED_IN;
     } else if ((key->level == 5) && (key->optim == SPHINCS_SMALL_VARIANT)) {
-        pqc_err =
-            PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
+        // pqc_err =
+        //     PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
+        pqc_err = NOT_COMPILED_IN;
     }
     /* No need to check other level/optim since they have been validated */
     wc_err = (pqc_err == 0) ? 0 : WC_FAILURE; /* only generic error */
