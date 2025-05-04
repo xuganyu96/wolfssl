@@ -317,7 +317,42 @@ int wc_sphincs_verify_msg(const byte *sig, word32 sigLen, const byte *msg, word3
         OQS_SIG_free(oqssig);
     }
 #else
-    ret = NOT_COMPILED_IN;
+    if ((sig == NULL) || (msg == NULL) || (res == NULL) || (key == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    if (!key->pubKeySet) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_sphincs_level(key->level) || !is_valid_sphincs_optim(key->optim)) {
+        return SIG_TYPE_E;
+    }
+    int sphincs_err;
+    if ((key->level == 1) && (key->optim == SPHINCS_FAST_VARIANT)) {
+        printf("siglen is %d, msglen is %d\n", sigLen, msgLen);
+        sphincs_err = PQCLEAN_SPHINCSSHAKE128FSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
+                                                                              msgLen, key->p);
+        *res = (sphincs_err == 0) ? 1 : 0;
+    } else if ((key->level == 1) && (key->optim == SPHINCS_SMALL_VARIANT)) {
+        // sphincs_err = PQCLEAN_SPHINCSSHAKE128SSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
+        //                                                                       msgLen, key->p);
+        // *res = (sphincs_err == 0) ? 1 : 0;
+    } else if ((key->level == 3) && (key->optim == SPHINCS_FAST_VARIANT)) {
+        // sphincs_err = PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
+        //                                                                       msgLen, key->p);
+        // *res = (sphincs_err == 0) ? 1 : 0;
+    } else if ((key->level == 3) && (key->optim == SPHINCS_SMALL_VARIANT)) {
+        // sphincs_err = PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
+        //                                                                       msgLen, key->p);
+        // *res = (sphincs_err == 0) ? 1 : 0;
+    } else if ((key->level == 5) && (key->optim == SPHINCS_FAST_VARIANT)) {
+        // sphincs_err = PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
+        //                                                                       msgLen, key->p);
+        // *res = (sphincs_err == 0) ? 1 : 0;
+    } else if ((key->level == 5) && (key->optim == SPHINCS_SMALL_VARIANT)) {
+        // sphincs_err = PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
+        //                                                                       msgLen, key->p);
+        // *res = (sphincs_err == 0) ? 1 : 0;
+    } /* no need to check else since level and optim are already set */
 #endif
 
     return ret;
