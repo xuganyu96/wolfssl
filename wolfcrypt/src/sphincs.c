@@ -521,6 +521,7 @@ int wc_sphincs_import_public(const byte *in, word32 inLen, sphincs_key *key) {
     return 0;
 }
 
+/* Read PKCS8 private key (which includes both secret key and public key) */
 static int parse_private_key(const byte *priv, word32 privSz, byte **out, word32 *outSz,
                              sphincs_key *key) {
     word32 idx = 0;
