@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <wolfssl/wolfcrypt/random.h>
+
 #include "params.h"
 
 #define CRYPTO_ALGNAME "SPHINCS+"
@@ -52,14 +54,14 @@ int crypto_sign_seed_keypair(uint8_t *pk, uint8_t *sk,
  * Format pk: [root || PUB_SEED]
  */
 #define crypto_sign_keypair SPX_NAMESPACE(crypto_sign_keypair)
-int crypto_sign_keypair(uint8_t *pk, uint8_t *sk);
+int crypto_sign_keypair(uint8_t *pk, uint8_t *sk, WC_RNG *rng);
 
 /**
  * Returns an array containing a detached signature.
  */
 #define crypto_sign_signature SPX_NAMESPACE(crypto_sign_signature)
 int crypto_sign_signature(uint8_t *sig, size_t *siglen,
-                          const uint8_t *m, size_t mlen, const uint8_t *sk);
+                          const uint8_t *m, size_t mlen, const uint8_t *sk, WC_RNG *rng);
 
 /**
  * Verifies a detached signature and message under a given public key.
@@ -74,7 +76,7 @@ int crypto_sign_verify(const uint8_t *sig, size_t siglen,
 #define crypto_sign SPX_NAMESPACE(crypto_sign)
 int crypto_sign(uint8_t *sm, size_t *smlen,
                 const uint8_t *m, size_t mlen,
-                const uint8_t *sk);
+                const uint8_t *sk, WC_RNG *rng);
 
 /**
  * Verifies a given signature-message pair under a given public key.
