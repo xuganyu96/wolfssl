@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "compat.h"
+#include "wolfssl/wolfcrypt/pqclean/common/compat.h"
 #include "context.h"
 #include "params.h"
 
