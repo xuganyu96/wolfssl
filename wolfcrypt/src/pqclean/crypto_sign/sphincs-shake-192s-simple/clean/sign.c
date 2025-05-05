@@ -2,16 +2,16 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192f-simple/clean/address.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192f-simple/clean/context.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192f-simple/clean/fors.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192f-simple/clean/hash.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192f-simple/clean/merkle.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192f-simple/clean/nistapi.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192f-simple/clean/params.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192f-simple/clean/thash.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192f-simple/clean/utils.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192f-simple/clean/wots.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192s-simple/clean/address.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192s-simple/clean/context.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192s-simple/clean/fors.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192s-simple/clean/hash.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192s-simple/clean/merkle.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192s-simple/clean/nistapi.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192s-simple/clean/params.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192s-simple/clean/thash.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192s-simple/clean/utils.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-192s-simple/clean/wots.h>
 #include <wolfssl/wolfcrypt/random.h>
 
 /*
@@ -73,7 +73,6 @@ int crypto_sign_seed_keypair(uint8_t *pk, uint8_t *sk, const uint8_t *seed) {
 int crypto_sign_keypair(uint8_t *pk, uint8_t *sk, WC_RNG *rng) {
     uint8_t seed[CRYPTO_SEEDBYTES];
     wc_RNG_GenerateBlock(rng, seed, CRYPTO_SEEDBYTES);
-    // randombytes(seed, CRYPTO_SEEDBYTES);
     crypto_sign_seed_keypair(pk, sk, seed);
 
     return 0;
@@ -111,7 +110,6 @@ int crypto_sign_signature(uint8_t *sig, size_t *siglen, const uint8_t *m, size_t
     /* Optionally, signing can be made non-deterministic using optrand.
        This can help counter side-channel attacks that would benefit from
        getting a large number of traces when the signer uses the same nodes. */
-    // randombytes(optrand, SPX_N);
     wc_RNG_GenerateBlock(rng, optrand, SPX_N);
     /* Compute the digest randomization value. */
     gen_message_random(sig, sk_prf, optrand, m, mlen, &ctx);
