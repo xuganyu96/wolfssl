@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 
-#include "compat.h"
-#include "context.h"
-#include "params.h"
+#include <wolfssl/wolfcrypt/pqclean/common/compat.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-256s-simple/clean/context.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-256s-simple/clean/params.h>
 
 
 /* To support MSVC use alloca() instead of VLAs. See #20. */

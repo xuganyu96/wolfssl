@@ -19,15 +19,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-#include "wolfssl/wolfcrypt/error-crypt.h"
-#include "wolfssl/wolfcrypt/pqclean/crypto_sign/sphincs-shake-128f-simple/clean/api.h"
-#include "wolfssl/wolfcrypt/random.h"
 #include <stdio.h>
 #include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 /* Based on dilithium.c and Reworked for Sphincs by Anthony Hu. */
 
 #include <wolfssl/wolfcrypt/asn.h>
+#include <wolfssl/wolfcrypt/error-crypt.h>
+#include <wolfssl/wolfcrypt/random.h>
 
 #if defined(HAVE_PQC) && defined(HAVE_SPHINCS)
 
@@ -92,17 +91,14 @@ int wc_sphincs_make_key_from_seed(sphincs_key *key, const byte *seed) {
         pqc_err =
             PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
     } else if ((key->level == 3) && (key->optim == SPHINCS_SMALL_VARIANT)) {
-        // pqc_err =
-        //     PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
-        pqc_err = NOT_COMPILED_IN;
+        pqc_err =
+            PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
     } else if ((key->level == 5) && (key->optim == SPHINCS_FAST_VARIANT)) {
-        // pqc_err =
-        //     PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
-        pqc_err = NOT_COMPILED_IN;
+        pqc_err =
+            PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
     } else if ((key->level == 5) && (key->optim == SPHINCS_SMALL_VARIANT)) {
-        // pqc_err =
-        //     PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
-        pqc_err = NOT_COMPILED_IN;
+        pqc_err =
+            PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_seed_keypair(key->p, key->k, seed);
     }
     /* No need to check other level/optim since they have been validated */
     wc_err = (pqc_err == 0) ? 0 : WC_FAILURE; /* only generic error */
@@ -240,17 +236,14 @@ int wc_sphincs_sign_msg(const byte *in, word32 inLen, byte *out, word32 *outLen,
         sphincs_err = PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_crypto_sign_signature(
             out, (size_t *)outLen, in, inLen, key->k);
     } else if ((key->level == 3) && (key->optim == SPHINCS_SMALL_VARIANT)) {
-        // sphincs_err = PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_signature(
-        //     out, (size_t *)outLen, in, inLen, key->k);
-        return NOT_COMPILED_IN;
+        sphincs_err = PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_signature(
+            out, (size_t *)outLen, in, inLen, key->k);
     } else if ((key->level == 5) && (key->optim == SPHINCS_FAST_VARIANT)) {
-        // sphincs_err = PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_signature(
-        //     out, (size_t *)outLen, in, inLen, key->k);
-        return NOT_COMPILED_IN;
+        sphincs_err = PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_signature(
+            out, (size_t *)outLen, in, inLen, key->k);
     } else if ((key->level == 5) && (key->optim == SPHINCS_SMALL_VARIANT)) {
-        // sphincs_err = PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_signature(
-        //     out, (size_t *)outLen, in, inLen, key->k);
-        return NOT_COMPILED_IN;
+        sphincs_err = PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_signature(
+            out, (size_t *)outLen, in, inLen, key->k);
     } /* levels already validated, no need to check else */
 #endif
     return ret;
@@ -337,17 +330,17 @@ int wc_sphincs_verify_msg(const byte *sig, word32 sigLen, const byte *msg, word3
                                                                               msgLen, key->p);
         *res = (sphincs_err == 0) ? 1 : 0;
     } else if ((key->level == 3) && (key->optim == SPHINCS_SMALL_VARIANT)) {
-        // sphincs_err = PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
-        //                                                                       msgLen, key->p);
-        // *res = (sphincs_err == 0) ? 1 : 0;
+        sphincs_err = PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
+                                                                              msgLen, key->p);
+        *res = (sphincs_err == 0) ? 1 : 0;
     } else if ((key->level == 5) && (key->optim == SPHINCS_FAST_VARIANT)) {
-        // sphincs_err = PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
-        //                                                                       msgLen, key->p);
-        // *res = (sphincs_err == 0) ? 1 : 0;
+        sphincs_err = PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
+                                                                              msgLen, key->p);
+        *res = (sphincs_err == 0) ? 1 : 0;
     } else if ((key->level == 5) && (key->optim == SPHINCS_SMALL_VARIANT)) {
-        // sphincs_err = PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
-        //                                                                       msgLen, key->p);
-        // *res = (sphincs_err == 0) ? 1 : 0;
+        sphincs_err = PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_verify(sig, sigLen, msg,
+                                                                              msgLen, key->p);
+        *res = (sphincs_err == 0) ? 1 : 0;
     } /* no need to check else since level and optim are already set */
 #if defined(DEBUG_WOLFSSL) || 1
     char errmsg[120];
