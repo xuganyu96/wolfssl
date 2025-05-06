@@ -220,31 +220,31 @@ int wc_sphincs_sign_msg(const byte *in, word32 inLen, byte *out, word32 *outLen,
         return BUFFER_E;
     }
 
-    int sphincs_err;
-    size_t wide_siglen;
+    int sphincs_err = 0;
+    size_t wide_siglen = 0;
     if ((key->level == 1) && (key->optim == SPHINCS_FAST_VARIANT)) {
         sphincs_err = PQCLEAN_SPHINCSSHAKE128FSIMPLE_CLEAN_crypto_sign_signature(out, &wide_siglen,
                                                                                  in, inLen, key->k);
-        /* NOTES: truncating is okay because SPHINCS sig size is bounded */
-        *outLen = (word32)wide_siglen;
-        /* BAD_FUNC_ARG because the OQS port uses it as well */
-        ret = (sphincs_err == 0) ? 0 : BAD_FUNC_ARG;
     } else if ((key->level == 1) && (key->optim == SPHINCS_SMALL_VARIANT)) {
-        sphincs_err = PQCLEAN_SPHINCSSHAKE128SSIMPLE_CLEAN_crypto_sign_signature(
-            out, (size_t *)outLen, in, inLen, key->k);
+        sphincs_err = PQCLEAN_SPHINCSSHAKE128SSIMPLE_CLEAN_crypto_sign_signature(out, &wide_siglen,
+                                                                                 in, inLen, key->k);
     } else if ((key->level == 3) && (key->optim == SPHINCS_FAST_VARIANT)) {
-        sphincs_err = PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_crypto_sign_signature(
-            out, (size_t *)outLen, in, inLen, key->k);
+        sphincs_err = PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_crypto_sign_signature(out, &wide_siglen,
+                                                                                 in, inLen, key->k);
     } else if ((key->level == 3) && (key->optim == SPHINCS_SMALL_VARIANT)) {
-        sphincs_err = PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_signature(
-            out, (size_t *)outLen, in, inLen, key->k);
+        sphincs_err = PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_signature(out, &wide_siglen,
+                                                                                 in, inLen, key->k);
     } else if ((key->level == 5) && (key->optim == SPHINCS_FAST_VARIANT)) {
-        sphincs_err = PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_signature(
-            out, (size_t *)outLen, in, inLen, key->k);
+        sphincs_err = PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_signature(out, &wide_siglen,
+                                                                                 in, inLen, key->k);
     } else if ((key->level == 5) && (key->optim == SPHINCS_SMALL_VARIANT)) {
-        sphincs_err = PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_signature(
-            out, (size_t *)outLen, in, inLen, key->k);
+        sphincs_err = PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_signature(out, &wide_siglen,
+                                                                                 in, inLen, key->k);
     } /* levels already validated, no need to check else */
+    /* truncating is okay because SPHINCS sig size is smaller than 32-bit max */
+    *outLen = (word32)wide_siglen;
+    /* BAD_FUNC_ARG because the OQS port uses it as well */
+    ret = (sphincs_err == 0) ? 0 : BAD_FUNC_ARG;
 #endif
     return ret;
 }

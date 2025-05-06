@@ -103,7 +103,9 @@ struct falcon_key {
     int labelLen;
 #endif
 
+    /* Falcon public key */
     byte p[FALCON_MAX_PUB_KEY_SIZE];
+    /* Falcon secret key */
     byte k[FALCON_MAX_PRV_KEY_SIZE];
 };
 
@@ -116,8 +118,11 @@ typedef struct falcon_key falcon_key;
 WOLFSSL_API
 int wc_falcon_make_key(falcon_key *key, WC_RNG *rng);
 
+/* It is not straightforward to generate key from a single set of seeds */
+#if 0
 WOLFSSL_API
 int wc_falcon_make_key_from_seed(falcon_key *key, const byte *seed);
+#endif
 
 WOLFSSL_API
 int wc_falcon_sign_msg(const byte *in, word32 inLen, byte *out, word32 *outLen, falcon_key *key,
