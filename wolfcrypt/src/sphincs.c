@@ -42,9 +42,9 @@
 #include <wolfcrypt/src/misc.c>
 #endif
 
-static bool is_valid_sphincs_level(byte lvl) { return (lvl == 1) || (lvl == 3) || (lvl == 5); }
+static byte is_valid_sphincs_level(byte lvl) { return (lvl == 1) || (lvl == 3) || (lvl == 5); }
 
-static bool is_valid_sphincs_optim(byte optim) {
+static byte is_valid_sphincs_optim(byte optim) {
     return (optim == SPHINCS_FAST_VARIANT) || (optim == SPHINCS_SMALL_VARIANT);
 }
 
