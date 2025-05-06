@@ -53,9 +53,9 @@ int wc_falcon_make_key(falcon_key *key, WC_RNG *rng) {
         return SIG_TYPE_E;
     }
     if (key->level == 1) {
-        pqclean_err = PQCLEAN_FALCON512_CLEAN_crypto_sign_keypair(key->p, key->k);
+        pqclean_err = PQCLEAN_FALCON512_CLEAN_crypto_sign_keypair(key->p, key->k, rng);
     } else if (key->level == 5) {
-        pqclean_err = PQCLEAN_FALCON1024_CLEAN_crypto_sign_keypair(key->p, key->k);
+        pqclean_err = PQCLEAN_FALCON1024_CLEAN_crypto_sign_keypair(key->p, key->k, rng);
     } /* no need to worry about else case */
     wc_err = (pqclean_err == 0) ? 0 : WC_FAILURE; /* only generic error */
     if (wc_err == 0) {
@@ -171,11 +171,11 @@ int wc_falcon_sign_msg(const byte *in, word32 inLen, byte *out, word32 *outLen, 
     int pqclean_err = 0;
     size_t wide_siglen = 0;
     if (key->level == 1) {
-        pqclean_err =
-            PQCLEAN_FALCON512_CLEAN_crypto_sign_signature(out, &wide_siglen, in, inLen, key->k);
+        pqclean_err = PQCLEAN_FALCON512_CLEAN_crypto_sign_signature(out, &wide_siglen, in, inLen,
+                                                                    key->k, rng);
     } else if (key->level == 5) {
-        pqclean_err =
-            PQCLEAN_FALCON1024_CLEAN_crypto_sign_signature(out, &wide_siglen, in, inLen, key->k);
+        pqclean_err = PQCLEAN_FALCON1024_CLEAN_crypto_sign_signature(out, &wide_siglen, in, inLen,
+                                                                     key->k, rng);
     } /* levels already validated, no need to check else */
     /* Falcon signature lengths are small enough to not need to worry about overflow */
     *outLen = (word32)wide_siglen;
@@ -924,10 +924,10 @@ int wc_Falcon_KeyToDer(falcon_key *key, byte *output, word32 inLen) {
     }
 
     if (key->level == 1) {
-        return SetAsymKeyDer(key->k, FALCON_LEVEL1_KEY_SIZE, key->p, FALCON_LEVEL1_KEY_SIZE, output,
+        return SetAsymKeyDer(key->k, FALCON_LEVEL1_KEY_SIZE, key->p, FALCON_LEVEL1_PUB_KEY_SIZE, output,
                              inLen, FALCON_LEVEL1k);
     } else if (key->level == 5) {
-        return SetAsymKeyDer(key->k, FALCON_LEVEL5_KEY_SIZE, key->p, FALCON_LEVEL5_KEY_SIZE, output,
+        return SetAsymKeyDer(key->k, FALCON_LEVEL5_KEY_SIZE, key->p, FALCON_LEVEL5_PUB_KEY_SIZE, output,
                              inLen, FALCON_LEVEL5k);
     }
 
