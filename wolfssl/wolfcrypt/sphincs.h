@@ -117,8 +117,8 @@ extern "C" {
 /* Structs */
 
 struct sphincs_key {
-    bool pubKeySet;
-    bool prvKeySet;
+    byte pubKeySet;
+    byte prvKeySet;
     byte level; /* 1,3 or 5 */
     byte optim; /* FAST_VARIANT or SMALL_VARIANT */
     /* public key */
