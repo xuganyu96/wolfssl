@@ -173,9 +173,11 @@ int wc_falcon_sign_msg(const byte *in, word32 inLen, byte *out, word32 *outLen, 
     if (key->level == 1) {
         pqclean_err = PQCLEAN_FALCON512_CLEAN_crypto_sign_signature(out, &wide_siglen, in, inLen,
                                                                     key->k, rng);
+        // printf("Falcon-512 siglen %zu \n", wide_siglen);
     } else if (key->level == 5) {
         pqclean_err = PQCLEAN_FALCON1024_CLEAN_crypto_sign_signature(out, &wide_siglen, in, inLen,
                                                                      key->k, rng);
+        // printf("Falcon-1024 siglen %zu \n", wide_siglen);
     } /* levels already validated, no need to check else */
     /* Falcon signature lengths are small enough to not need to worry about overflow */
     *outLen = (word32)wide_siglen;
@@ -266,8 +268,10 @@ int wc_falcon_verify_msg(const byte *sig, word32 sigLen, const byte *msg, word32
     int pqclean_err = 0;
     if (key->level == 1) {
         pqclean_err = PQCLEAN_FALCON512_CLEAN_crypto_sign_verify(sig, sigLen, msg, msgLen, key->p);
+        // printf("Falcon-512 siglen %d \n", sigLen);
     } else if (key->level == 5) {
         pqclean_err = PQCLEAN_FALCON1024_CLEAN_crypto_sign_verify(sig, sigLen, msg, msgLen, key->p);
+        // printf("Falcon-1024 siglen %d\n", sigLen);
     } /* key level already validated, no need to check else */
     *res = (pqclean_err == 0) ? 1 : 0;
 #endif
@@ -924,11 +928,11 @@ int wc_Falcon_KeyToDer(falcon_key *key, byte *output, word32 inLen) {
     }
 
     if (key->level == 1) {
-        return SetAsymKeyDer(key->k, FALCON_LEVEL1_KEY_SIZE, key->p, FALCON_LEVEL1_PUB_KEY_SIZE, output,
-                             inLen, FALCON_LEVEL1k);
+        return SetAsymKeyDer(key->k, FALCON_LEVEL1_KEY_SIZE, key->p, FALCON_LEVEL1_PUB_KEY_SIZE,
+                             output, inLen, FALCON_LEVEL1k);
     } else if (key->level == 5) {
-        return SetAsymKeyDer(key->k, FALCON_LEVEL5_KEY_SIZE, key->p, FALCON_LEVEL5_PUB_KEY_SIZE, output,
-                             inLen, FALCON_LEVEL5k);
+        return SetAsymKeyDer(key->k, FALCON_LEVEL5_KEY_SIZE, key->p, FALCON_LEVEL5_PUB_KEY_SIZE,
+                             output, inLen, FALCON_LEVEL5k);
     }
 
     return BAD_FUNC_ARG;
