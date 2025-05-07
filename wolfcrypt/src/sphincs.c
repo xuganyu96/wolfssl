@@ -446,7 +446,7 @@ int wc_sphincs_export_public(sphincs_key *key, byte *out, word32 *outLen) {
         return BAD_FUNC_ARG;
     }
 
-    if ((key->level != 1) && (key->level != 5)) {
+    if (!is_valid_sphincs_level(key->level)) {
         return BAD_FUNC_ARG;
     }
 
