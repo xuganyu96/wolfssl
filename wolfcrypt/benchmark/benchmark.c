@@ -208,6 +208,7 @@
 #if defined(HAVE_SPHINCS)
     #include <wolfssl/wolfcrypt/sphincs.h>
 #endif
+#include <wolfssl/wolfcrypt/pqclean_mlkem.h>
 
 #ifdef WOLF_CRYPTO_CB
     #include <wolfssl/wolfcrypt/cryptocb.h>
@@ -3690,6 +3691,7 @@ static void* benchmarks_do(void* args)
     #endif
     }
 #endif
+
 
 #ifdef WOLFSSL_HAVE_MLKEM
     if (bench_all || (bench_pq_asym_algs & BENCH_KYBER)) {
@@ -9813,19 +9815,19 @@ void bench_mlkem(int type)
 #ifndef WOLFSSL_NO_ML_KEM
 #ifdef WOLFSSL_WC_ML_KEM_512
     case WC_ML_KEM_512:
-        name = "ML-KEM 512 ";
+        name = "ML-KEM 512         ";
         keySize = 128;
         break;
 #endif
 #ifdef WOLFSSL_WC_ML_KEM_768
     case WC_ML_KEM_768:
-        name = "ML-KEM 768 ";
+        name = "ML-KEM 768         ";
         keySize = 192;
         break;
 #endif
 #ifdef WOLFSSL_WC_ML_KEM_1024
     case WC_ML_KEM_1024:
-        name = "ML-KEM 1024";
+        name = "ML-KEM 1024        ";
         keySize = 256;
         break;
 #endif
@@ -9864,6 +9866,89 @@ void bench_mlkem(int type)
     wc_KyberKey_Free(&key1);
 }
 #endif
+
+void bench_pqcleanmlkem(int level) {
+    PQCleanMlKemKey key;
+    int ret = 0, times, count, pending = 0;
+    word32 ctlen;
+    double start;
+    char *name = NULL;
+    int keySize = 0;
+    unsigned char ct[PQCLEAN_MLKEM_MAX_CIPHERTEXT_SIZE], ss[PQCLEAN_MLKEM_SS_SIZE];
+    switch (level) {
+        case 1:
+            name = "PQCLEAN-ML-KEM 512 ";
+            keySize = 128;
+            break;
+        case 3:
+            name = "PQCLEAN-ML-KEM 768 ";
+            keySize = 192;
+            break;
+        case 5:
+            name = "PQCLEAN-ML-KEM 768 ";
+            keySize = 192;
+            break;
+        default:
+            return;
+    }
+
+    /* bench keygen */
+    bench_stats_start(&count, &start);
+    do {
+        /* while free pending slots in queue, submit ops */
+        for (times = 0; times < agreeTimes || pending > 0; times++) {
+            wc_PQCleanMlKemKey_Free(&key);
+            ret = wc_PQCleanMlKemKey_InitEx(&key, HEAP_HINT, INVALID_DEVID);
+            if (ret != 0)
+                goto keygen_exit;
+
+            ret = wc_PQCleanMlKemKey_SetLevel(&key, level);
+            if (ret != 0)
+                goto keygen_exit;
+            {
+                unsigned char rand[PQCLEAN_MLKEM_SEED_SIZE] = {0,};
+                ret = wc_PQCleanMlKemKey_MakeKeyWithRandom(&key, rand, sizeof(rand));
+            }
+            if (ret != 0)
+                goto keygen_exit;
+            RECORD_MULTI_VALUE_STATS();
+        } /* for times */
+        count += times;
+    } while (bench_stats_check(start));
+
+    keygen_exit:
+        bench_stats_asym_finish(name, keySize, "keygen", 0, count, start, ret);
+
+    /* bench encap */
+    bench_stats_start(&count, &start);
+    do {
+        for (times = 0; times < agreeTimes || pending > 0; times++) {
+            unsigned char rand[PQCLEAN_MLKEM_SEED_SIZE] = {0,};
+            ret = wc_PQCleanMlKemKey_EncapsulateWithRandom(&key, ct, ss, rand, sizeof(rand));
+            if (ret != 0) goto exit_encap;
+        }
+        count += times;
+    } while (bench_stats_check(start));
+
+exit_encap:
+    bench_stats_asym_finish(name, keySize, "encap", 0, count, start, ret);
+
+
+    /* bench decap */
+    wc_PQCleanMlKemKey_CipherTextSize(&key, &ctlen);
+    bench_stats_start(&count, &start);
+    do {
+        for (times = 0; times < agreeTimes || pending > 0; times++) {
+            ret = wc_PQCleanMlKemKey_Decapsulate(&key, ss, ct, ctlen);
+            if (ret)
+                goto exit_decap;
+        }
+        count += times;
+    } while (bench_stats_check(start));
+
+exit_decap:
+    bench_stats_asym_finish(name, keySize, "decap", 0, count, start, ret);
+}
 
 #if defined(WOLFSSL_HAVE_LMS) && !defined(WOLFSSL_LMS_VERIFY_ONLY)
 #ifndef WOLFSSL_NO_LMS_SHA256_256
