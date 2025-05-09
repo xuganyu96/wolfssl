@@ -10593,6 +10593,10 @@ static int TLSX_KeyShare_IsSupported(int namedGroup)
         }
     #endif
 #endif
+        case PQCLEAN_ML_KEM_512:
+        case PQCLEAN_ML_KEM_768:
+        case PQCLEAN_ML_KEM_1024:
+            break;
 #endif /* WOLFSSL_HAVE_MLKEM */
         default:
             return 0;
