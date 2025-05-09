@@ -9872,7 +9872,7 @@ void bench_pqcleanmlkem(int level) {
     int ret = 0, times, count, pending = 0;
     word32 ctlen;
     double start;
-    char *name = NULL;
+    const char *name = NULL;
     int keySize = 0;
     unsigned char ct[PQCLEAN_MLKEM_MAX_CIPHERTEXT_SIZE], ss[PQCLEAN_MLKEM_SS_SIZE];
     switch (level) {

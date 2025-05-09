@@ -4623,6 +4623,20 @@ enum {
     WOLFSSL_X25519_ML_KEM_512     = 12214,
     WOLFSSL_X448_ML_KEM_768       = 12215,
 #endif /* WOLFSSL_NO_ML_KEM */
+    /* Taken from
+     * https://github.com/open-quantum-safe/oqs-provider/blob/main/oqs-template/oqs-kem-info.md
+     */
+    PQCLEAN_HQC_128               = 0x0244,
+    PQCLEAN_HQC_192               = 0x0245,
+    PQCLEAN_HQC_256               = 0x0246,
+
+
+    /* Ganyu's custom key exchange groups
+     * These will later become the OT-ML-KEM's
+     */
+    PQCLEAN_ML_KEM_512            = 1512,
+    PQCLEAN_ML_KEM_768            = 1513,
+    PQCLEAN_ML_KEM_1024           = 1514,
 #endif /* HAVE_PQC */
     WOLF_ENUM_DUMMY_LAST_ELEMENT(SSL_H)
 };
