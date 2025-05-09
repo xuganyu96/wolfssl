@@ -10,42 +10,72 @@
 #define SHA3_384_RATE 104
 #define SHA3_512_RATE 72
 
-#define PQC_SHAKEINCCTX_BYTES (sizeof(uint64_t)*26)
-#define PQC_SHAKECTX_BYTES (sizeof(uint64_t)*25)
+#define PQC_SHAKEINCCTX_BYTES (sizeof(uint64_t) * 26)
+#define PQC_SHAKECTX_BYTES (sizeof(uint64_t) * 25)
+
+#define PQCLEAN_FIPS202_STACK_ONLY
 
 // Context for incremental API
 typedef struct {
+#if defined(PQCLEAN_FIPS202_STACK_ONLY)
+    uint64_t ctx[PQC_SHAKEINCCTX_BYTES];
+#else
     uint64_t *ctx;
+#endif
 } shake128incctx;
 
 // Context for non-incremental API
 typedef struct {
+#if defined(PQCLEAN_FIPS202_STACK_ONLY)
+    uint64_t ctx[PQC_SHAKECTX_BYTES];
+#else
     uint64_t *ctx;
+#endif
 } shake128ctx;
 
 // Context for incremental API
 typedef struct {
+#if defined(PQCLEAN_FIPS202_STACK_ONLY)
+    uint64_t ctx[PQC_SHAKEINCCTX_BYTES];
+#else
     uint64_t *ctx;
+#endif
 } shake256incctx;
 
 // Context for non-incremental API
 typedef struct {
+#if defined(PQCLEAN_FIPS202_STACK_ONLY)
+    uint64_t ctx[PQC_SHAKECTX_BYTES];
+#else
     uint64_t *ctx;
+#endif
 } shake256ctx;
 
 // Context for incremental API
 typedef struct {
+#if defined(PQCLEAN_FIPS202_STACK_ONLY)
+    uint64_t ctx[PQC_SHAKEINCCTX_BYTES];
+#else
     uint64_t *ctx;
+#endif
 } sha3_256incctx;
 
 // Context for incremental API
 typedef struct {
+#if defined(PQCLEAN_FIPS202_STACK_ONLY)
+    uint64_t ctx[PQC_SHAKEINCCTX_BYTES];
+#else
     uint64_t *ctx;
+#endif
 } sha3_384incctx;
 
 // Context for incremental API
 typedef struct {
+#if defined(PQCLEAN_FIPS202_STACK_ONLY)
+    uint64_t ctx[PQC_SHAKEINCCTX_BYTES];
+#else
     uint64_t *ctx;
+#endif
 } sha3_512incctx;
 
 /* Initialize the state and absorb the provided input.
@@ -115,12 +145,10 @@ void shake256_inc_ctx_clone(shake256incctx *dest, const shake256incctx *src);
 void shake256_inc_ctx_release(shake256incctx *state);
 
 /* One-stop SHAKE128 call */
-void shake128(uint8_t *output, size_t outlen,
-              const uint8_t *input, size_t inlen);
+void shake128(uint8_t *output, size_t outlen, const uint8_t *input, size_t inlen);
 
 /* One-stop SHAKE256 call */
-void shake256(uint8_t *output, size_t outlen,
-              const uint8_t *input, size_t inlen);
+void shake256(uint8_t *output, size_t outlen, const uint8_t *input, size_t inlen);
 
 /* Initialize the incremental hashing state */
 void sha3_256_inc_init(sha3_256incctx *state);
