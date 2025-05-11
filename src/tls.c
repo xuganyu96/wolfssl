@@ -8227,18 +8227,11 @@ static void findEccPqc(int *ecc, int *pqc, int *pqc_first, int group)
     }
 }
 
-#ifndef WOLFSSL_MLKEM_NO_MAKE_KEY
-/* Create a key share entry using pqc parameters group on the client side.
- * Generates a key pair.
- *
- * ssl   The SSL/TLS object.
- * kse   The key share entry object.
- * returns 0 on success, otherwise failure.
+#if defined(WOLFSSL_HAVE_MLKEM) && !defined(WOLFSSL_NO_ML_KEM)
+/* Create a key share entry using WolfCrypt's ML-KEM
  */
-static int TLSX_KeyShare_GenPqcKeyClient(WOLFSSL *ssl, KeyShareEntry* kse)
-{
-    int ret = 0;
-    int type = 0;
+static int TLSX_KeyShare_GenMlKemKeyClient(WOLFSSL *ssl, KeyShareEntry *kse) {
+    int ret = 0, type = 0;
 #ifndef WOLFSSL_TLSX_PQC_MLKEM_STORE_OBJ
     KyberKey kem[1];
     byte* privKey = NULL;
@@ -8247,17 +8240,9 @@ static int TLSX_KeyShare_GenPqcKeyClient(WOLFSSL *ssl, KeyShareEntry* kse)
     KyberKey* kem = NULL;
 #endif
 
-    /* This gets called twice. Once during parsing of the key share and once
-     * during the population of the extension. No need to do work the second
-     * time. Just return success if its already been done. */
-    if (kse->pubKey != NULL) {
-        return ret;
-    }
-
-    /* Get the type of key we need from the key share group. */
     ret = mlkem_id2type(kse->group, &type);
     if (ret == WC_NO_ERR_TRACE(NOT_COMPILED_IN)) {
-        WOLFSSL_MSG("Invalid Kyber algorithm specified.");
+        WOLFSSL_MSG("TLSX_KeyShare_GenMlKemKeyClient: Invalid Kyber algorithm specified.");
         ret = BAD_FUNC_ARG;
     }
 
@@ -8362,6 +8347,44 @@ static int TLSX_KeyShare_GenPqcKeyClient(WOLFSSL *ssl, KeyShareEntry* kse)
     }
 
     return ret;
+}
+#endif /* WOLFSSL_HAVE_MLKEM && !WOLFSSL_NO_ML_KEM */
+
+
+#ifndef WOLFSSL_MLKEM_NO_MAKE_KEY
+/* Create a key share entry using pqc parameters group on the client side.
+ * Generates a key pair.
+ *
+ * ssl   The SSL/TLS object.
+ * kse   The key share entry object.
+ * returns 0 on success, otherwise failure.
+ */
+static int TLSX_KeyShare_GenPqcKeyClient(WOLFSSL *ssl, KeyShareEntry* kse)
+{
+    int ret = 0;
+
+    /* This gets called twice. Once during parsing of the key share and once
+     * during the population of the extension. No need to do work the second
+     * time. Just return success if its already been done. */
+    if (kse->pubKey != NULL) {
+        return ret;
+    }
+
+    ret = TLSX_KeyShare_GenMlKemKeyClient(ssl, kse);
+
+    return ret;
+}
+
+static int TLSX_KeyShare_GenPQCleanMlKemKeyClient(WOLFSSL *ssl, KeyShareEntry *kse) {
+    WOLFSSL_MSG("PQClean ML-KEM is not implemented in key share yet");
+    return NOT_COMPILED_IN;
+}
+
+/* Create a key share entry using HQC
+ */
+static int TLSX_KeyShare_GenHQCKeyClient(WOLFSSL *ssl, KeyShareEntry *kse) {
+    WOLFSSL_MSG("HQC is not implemented in key share yet");
+    return NOT_COMPILED_IN;
 }
 
 /* Create a key share entry using both ecdhe and pqc parameters groups.
@@ -9396,7 +9419,7 @@ static int TLSX_KeyShare_ProcessPqcHybridClient(WOLFSSL* ssl,
 
         ret = mlkem_id2type(pqc_group, &type);
         if (ret != 0) {
-            WOLFSSL_MSG("Invalid Kyber algorithm specified.");
+            WOLFSSL_MSG("TLSX_KeyShare_ProcessPqcHybridClient: Invalid Kyber algorithm specified.");
             ret = BAD_FUNC_ARG;
         }
         if (ret == 0) {
@@ -10657,6 +10680,9 @@ static const word16 preferredGroup[] = {
     WOLFSSL_FFDHE_8192,
 #endif
 #ifndef WOLFSSL_NO_ML_KEM
+    PQCLEAN_ML_KEM_512,
+    PQCLEAN_ML_KEM_768,
+    PQCLEAN_ML_KEM_1024,
 #ifdef WOLFSSL_WC_MLKEM
     #ifndef WOLFSSL_NO_ML_KEM_512
     WOLFSSL_ML_KEM_512,
@@ -14653,6 +14679,7 @@ int TLSX_PopulateExtensions(WOLFSSL* ssl, byte isServer)
         #if defined(HAVE_SUPPORTED_CURVES)
             extension = TLSX_Find(ssl->extensions, TLSX_KEY_SHARE);
             if (extension == NULL) {
+                WOLFSSL_MSG("TLSX_PopulateExtensions: ClientHello key_share extension not found");
             #if defined(HAVE_SESSION_TICKET) || !defined(NO_PSK)
                 if (ssl->options.resuming && ssl->session->namedGroup != 0)
                     namedGroup = ssl->session->namedGroup;
@@ -14674,13 +14701,16 @@ int TLSX_PopulateExtensions(WOLFSSL* ssl, byte isServer)
 #endif
                                                                 ) {
                                 namedGroup = ssl->group[i];
+                                WOLFSSL_MSG_EX("TLSX_PopulateExtensions: Using preferred group %d", namedGroup);
                                 set = 1;
                                 break;
                             }
                         }
                     }
-                    if (!set)
+                    if (!set) {
+                        WOLFSSL_MSG("TLSX_PopulateExtensions: user-specified groups did not match preferred groups");
                         namedGroup = WOLFSSL_NAMED_GROUP_INVALID;
+                    }
                 }
                 else {
                     /* Choose the most preferred group. */

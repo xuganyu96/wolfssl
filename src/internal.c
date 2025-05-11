@@ -35245,6 +35245,9 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
             case WOLFSSL_KYBER_LEVEL3:
             case WOLFSSL_KYBER_LEVEL5:
         #endif
+            case PQCLEAN_ML_KEM_512:
+            case PQCLEAN_ML_KEM_768:
+            case PQCLEAN_ML_KEM_1024:
                 return 1;
             default:
                 return 0;
