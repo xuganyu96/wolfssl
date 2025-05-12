@@ -1,7 +1,4 @@
 #include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_kem/ml-kem-1024/clean/api.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_kem/ml-kem-512/clean/api.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_kem/ml-kem-768/clean/api.h>
 #include <wolfssl/wolfcrypt/pqclean_mlkem.h>
 #include <wolfssl/wolfcrypt/random.h>
 #include <wolfssl/wolfcrypt/types.h>
@@ -222,13 +219,68 @@ WOLFSSL_API int wc_PQCleanMlKemKey_PrivateKeySize(PQCleanMlKemKey *key, word32 *
 }
 
 WOLFSSL_API int wc_PQCleanMlKemKey_PublicKeySize(PQCleanMlKemKey *key, word32 *len) {
-    return NOT_COMPILED_IN;
+    int ret = 0;
+
+    if ((key == NULL) || (len == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    switch (key->level) {
+    case 1:
+        *len = PQCLEAN_MLKEM_LEVEL1_PUBLICKEY_SIZE;
+        break;
+    case 3:
+        *len = PQCLEAN_MLKEM_LEVEL3_PUBLICKEY_SIZE;
+        break;
+    case 5:
+        *len = PQCLEAN_MLKEM_LEVEL5_PUBLICKEY_SIZE;
+        break;
+    default:
+        ret = BAD_FUNC_ARG;
+        break;
+    }
+
+    return ret;
 }
 
+/* Treat PQClean KEM as black boxes; encoding simply means copying bytes from the key obj to the
+ * input buffer
+ */
 WOLFSSL_API int wc_PQCleanMlKemKey_EncodePrivateKey(PQCleanMlKemKey *key, byte *out, word32 len) {
-    return NOT_COMPILED_IN;
+    int ret = 0;
+    word32 privKeyLen;
+
+    if ((NULL == key) || (NULL == out))
+        return BAD_FUNC_ARG;
+    if ((ret = wc_PQCleanMlKemKey_PrivateKeySize(key, &privKeyLen)) != 0) {
+        return ret;
+    }
+    if (len < privKeyLen) {
+        return BUFFER_E;
+    }
+    if (!key->sk_set) {
+        return MISSING_KEY;
+    }
+    XMEMCPY(out, key->sk, privKeyLen);
+
+    return ret;
 }
 
 WOLFSSL_API int wc_PQCleanMlKemKey_EncodePublicKey(PQCleanMlKemKey *key, byte *out, word32 len) {
-    return NOT_COMPILED_IN;
+    int ret = 0;
+    word32 pubKeyLen;
+
+    if ((NULL == key) || (NULL == out))
+        return BAD_FUNC_ARG;
+    if ((ret = wc_PQCleanMlKemKey_PublicKeySize(key, &pubKeyLen)) != 0) {
+        return ret;
+    }
+    if (len < pubKeyLen) {
+        return BUFFER_E;
+    }
+    if (!key->pk_set) {
+        return MISSING_KEY;
+    }
+    XMEMCPY(out, key->pk, pubKeyLen);
+
+    return ret;
 }
