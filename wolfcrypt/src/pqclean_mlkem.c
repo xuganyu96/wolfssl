@@ -14,6 +14,7 @@ WOLFSSL_API int wc_PQCleanMlKemKey_Init(PQCleanMlKemKey *key) {
 }
 
 /* TODO: For now heap and devId are ignored */
+/* TODO: need to incorporate heap/devId */
 WOLFSSL_API int wc_PQCleanMlKemKey_InitEx(PQCleanMlKemKey *key, void *heap, int devId) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
@@ -189,32 +190,46 @@ WOLFSSL_API int wc_PQCleanMlKemKey_Decapsulate(PQCleanMlKemKey *key, byte *ss, c
 
 WOLFSSL_API int wc_PQCleanMlKemKey_DecodePrivateKey(PQCleanMlKemKey *key, const byte *in,
                                                     word32 len) {
-#warning "Not implemented!"
-    return 0;
+    return NOT_COMPILED_IN;
 }
 
 WOLFSSL_API int wc_PQCleanMlKemKey_DecodePublicKey(PQCleanMlKemKey *key, const byte *in,
                                                    word32 len) {
-#warning "Not implemented!"
-    return 0;
+    return NOT_COMPILED_IN;
 }
 
 WOLFSSL_API int wc_PQCleanMlKemKey_PrivateKeySize(PQCleanMlKemKey *key, word32 *len) {
-#warning "Not implemented!"
-    return 0;
+    int ret = 0;
+
+    if ((key == NULL) || (len == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    switch (key->level) {
+        case 1:
+            *len = PQCLEAN_MLKEM_LEVEL1_SECRETKEY_SIZE;
+            break;
+        case 3:
+            *len = PQCLEAN_MLKEM_LEVEL3_SECRETKEY_SIZE;
+            break;
+        case 5:
+            *len = PQCLEAN_MLKEM_LEVEL5_SECRETKEY_SIZE;
+            break;
+        default:
+            ret = BAD_FUNC_ARG;
+            break;
+    }
+
+    return ret;
 }
 
 WOLFSSL_API int wc_PQCleanMlKemKey_PublicKeySize(PQCleanMlKemKey *key, word32 *len) {
-#warning "Not implemented!"
-    return 0;
+    return NOT_COMPILED_IN;
 }
 
 WOLFSSL_API int wc_PQCleanMlKemKey_EncodePrivateKey(PQCleanMlKemKey *key, byte *out, word32 len) {
-#warning "Not implemented!"
-    return 0;
+    return NOT_COMPILED_IN;
 }
 
 WOLFSSL_API int wc_PQCleanMlKemKey_EncodePublicKey(PQCleanMlKemKey *key, byte *out, word32 len) {
-#warning "Not implemented!"
-    return 0;
+    return NOT_COMPILED_IN;
 }
