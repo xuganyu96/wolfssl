@@ -9343,6 +9343,7 @@ static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
                                              unsigned char* ssOutput,
                                              word32* ssOutSz)
 {
+    const char caller[] = "TLSX_KeyShare_ProcessPqcClient_ex";
     int       ret = 0;
     KyberKey* kem = (KyberKey*)keyShareEntry->key;
 #ifndef WOLFSSL_TLSX_PQC_MLKEM_STORE_OBJ
@@ -9358,7 +9359,7 @@ static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
     }
 
     if (keyShareEntry->ke == NULL) {
-        WOLFSSL_MSG("Invalid PQC algorithm specified.");
+        WOLFSSL_MSG_EX("%s: Invalid PQC algorithm specified.", caller);
         return BAD_FUNC_ARG;
     }
     if (ssOutSz == NULL)
@@ -9379,7 +9380,7 @@ static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
             ret = mlkem_id2type(keyShareEntry->group, &type);
         }
         if (ret != 0) {
-            WOLFSSL_MSG("Invalid PQC algorithm specified.");
+            WOLFSSL_MSG_EX("%s: Invalid PQC algorithm specified.", caller);
             ret = BAD_FUNC_ARG;
         }
         if (ret == 0) {
@@ -9463,6 +9464,7 @@ static int TLSX_KeyShare_ProcessPqcClient(WOLFSSL* ssl,
 static int TLSX_KeyShare_ProcessPqcHybridClient(WOLFSSL* ssl,
                                                 KeyShareEntry* keyShareEntry)
 {
+    const char caller[] = "TLSX_KeyShare_ProcessPqcHybridClient";
     int      ret = 0;
     int      pqc_group = 0;
     int      ecc_group = 0;
@@ -9480,7 +9482,7 @@ static int TLSX_KeyShare_ProcessPqcHybridClient(WOLFSSL* ssl,
     }
 
     if (keyShareEntry->ke == NULL) {
-        WOLFSSL_MSG("Invalid PQC algorithm specified.");
+        WOLFSSL_MSG_EX("%s: Invalid PQC algorithm specified.", caller);
         return BAD_FUNC_ARG;
     }
 
@@ -10032,6 +10034,102 @@ static int TLSX_KeyShare_New(KeyShareEntry** list, int group, void *heap,
     return 0;
 }
 
+static int TLSX_KeyShare_HandlePQCleanMlKemKeyServer(WOLFSSL* ssl,
+    KeyShareEntry* keyShareEntry, byte* clientData, word16 clientLen,
+    unsigned char* ssOutput, word32* ssOutSz) {
+
+    const char caller[] = "TLSX_KeyShare_HandlePQCleanMlKemKeyServer";
+
+    WOLFSSL_MSG_EX("%s: not implemented yet\n", caller);
+    return NOT_COMPILED_IN;
+}
+
+/* Process ML-KEM key share using wolfcrypt's ML-KEM
+ */
+static int TLSX_KeyShare_HandleMlKemKeyServer(WOLFSSL* ssl,
+    KeyShareEntry* kse, byte* clientData, word16 clientLen,
+    unsigned char* ssOutput, word32* ssOutSz) {
+
+    const char caller[] = "TLSX_KeyShare_HandleMlKemKeyServer";
+
+    int ret = 0;
+    KyberKey kem;
+    byte *ciphertext = NULL;
+    word32 pubKeyLen = 0;
+    word32 ctLen = 0;
+    word32 ssLen = 0;
+    int mlkem_type = 0;
+
+    if (clientData == NULL) {
+        return BAD_FUNC_ARG;
+    }
+
+    ret = mlkem_id2type(kse->group, &mlkem_type);
+    if (ret != 0) {
+        WOLFSSL_MSG_EX("%s: invalid named group %d\n", caller, kse->group);
+        ret = BAD_FUNC_ARG;
+    }
+    if (ret == 0) {
+        ret = wc_KyberKey_Init(mlkem_type, &kem, ssl->heap, ssl->devId);
+        if (ret != 0) WOLFSSL_MSG("Failed to initialize KyberKey\n");
+    }
+    if (ret == 0) {
+        ret = wc_KyberKey_PublicKeySize(&kem, &pubKeyLen);
+        if (ret != 0) WOLFSSL_MSG("Failed to get public key size\n");
+    }
+    if (ret == 0) {
+        ret = wc_KyberKey_CipherTextSize(&kem, &ctLen);
+        if (ret != 0) WOLFSSL_MSG("Failed to get ciphertext size\n");
+    }
+    if (ret == 0) {
+        ret = wc_KyberKey_SharedSecretSize(&kem, &ssLen);
+        if (ret != 0) WOLFSSL_MSG("Failed to get shared secret size\n");
+    }
+    if (ret == 0 && clientLen != pubKeyLen) {
+        ret = BAD_FUNC_ARG;
+        WOLFSSL_MSG_EX("Client data (%d) did not match pubKeyLen (%d)", clientLen, pubKeyLen);
+    }
+    if (ret == 0) {
+        ciphertext = XMALLOC(ctLen, ssl->heap, DYNAMIC_TYPE_TLSX);
+        if (ciphertext == NULL) {
+            WOLFSSL_MSG("Ciphertext memory allocation failure.");
+            ret = MEMORY_E;
+        }
+    }
+    if (ret == 0) {
+        ret = wc_KyberKey_DecodePublicKey(&kem, clientData, pubKeyLen);
+    }
+    if (ret == 0) {
+        ret = wc_KyberKey_Encapsulate(&kem, ciphertext,
+                                      ssOutput, ssl->rng);
+        if (ret != 0) WOLFSSL_MSG("wc_KyberKey encapsulation failure.");
+    }
+
+    if (ret == 0) {
+        XFREE(kse->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+
+        *ssOutSz = ssLen;
+        kse->ke = NULL;
+        kse->keLen = 0;
+
+        kse->pubKey = ciphertext;
+        kse->pubKeyLen = ctLen;
+        ciphertext = NULL;
+
+        /* Set namedGroup so wolfSSL_get_curve_name() can function properly on
+         * the server side. */
+        ssl->namedGroup = kse->group;
+    }
+
+    XFREE(ciphertext, ssl->heap, DYNAMIC_TYPE_TLSX);
+
+    wc_KyberKey_Free(&kem);
+    // XFREE(&kem, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+    kse->key = NULL;
+
+    return ret;
+}
+
 #if defined(WOLFSSL_HAVE_MLKEM) && !defined(WOLFSSL_MLKEM_NO_ENCAPSULATE)
 /* Process the Kyber key share extension on the server side.
  *
@@ -10048,102 +10146,31 @@ static int TLSX_KeyShare_HandlePqcKeyServer(WOLFSSL* ssl,
     KeyShareEntry* keyShareEntry, byte* clientData, word16 clientLen,
     unsigned char* ssOutput, word32* ssOutSz)
 {
+    const char caller[] = "TLSX_KeyShare_HandlePqcKeyServer";
     /* We are on the server side. The key share contains a PQC KEM public key
      * that we are using for an encapsulate operation. The resulting ciphertext
      * is stored in the server key share. */
-    KyberKey* kemKey = (KyberKey*)keyShareEntry->key;
-    byte* ciphertext = NULL;
     int ret = 0;
-    word32 pubSz = 0;
-    word32 ctSz = 0;
-    word32 ssSz = 0;
 
-    if (clientData == NULL) {
-        WOLFSSL_MSG("No KEM public key from the client.");
-        return BAD_FUNC_ARG;
-    }
-
-    if (kemKey == NULL) {
-        int type = 0;
-
-        /* Allocate a Kyber key to hold private key. */
-        kemKey = (KyberKey*) XMALLOC(sizeof(KyberKey), ssl->heap,
-                                     DYNAMIC_TYPE_PRIVATE_KEY);
-        if (kemKey == NULL) {
-            WOLFSSL_MSG("GenPqcKey memory error");
-            ret = MEMORY_E;
-        }
-        if (ret == 0) {
-            ret = mlkem_id2type(keyShareEntry->group, &type);
-        }
-        if (ret != 0) {
-            WOLFSSL_MSG("Invalid PQC algorithm specified.");
+    switch (keyShareEntry->group) {
+        case WOLFSSL_ML_KEM_512:
+        case WOLFSSL_ML_KEM_768:
+        case WOLFSSL_ML_KEM_1024:
+            ret = TLSX_KeyShare_HandleMlKemKeyServer(ssl, keyShareEntry, clientData, clientLen,
+                                                     ssOutput, ssOutSz);
+            break;
+        case PQCLEAN_ML_KEM_512:
+        case PQCLEAN_ML_KEM_768:
+        case PQCLEAN_ML_KEM_1024:
+            ret = TLSX_KeyShare_HandlePQCleanMlKemKeyServer(ssl, keyShareEntry, clientData,
+                                                            clientLen, ssOutput, ssOutSz);
+            break;
+        default:
             ret = BAD_FUNC_ARG;
-        }
-        if (ret == 0) {
-            ret = wc_KyberKey_Init(type, kemKey, ssl->heap, ssl->devId);
-            if (ret != 0) {
-                WOLFSSL_MSG("Error creating Kyber KEM");
-            }
-        }
+            WOLFSSL_MSG_EX("%s: invalid named group\n", caller);
+            break;
     }
 
-    if (ret == 0) {
-        ret = wc_KyberKey_PublicKeySize(kemKey, &pubSz);
-    }
-    if (ret == 0) {
-        ret = wc_KyberKey_CipherTextSize(kemKey, &ctSz);
-    }
-    if (ret == 0) {
-        ret = wc_KyberKey_SharedSecretSize(kemKey, &ssSz);
-    }
-
-    if (ret == 0 && clientLen != pubSz) {
-        WOLFSSL_MSG("Invalid public key.");
-        ret = BAD_FUNC_ARG;
-    }
-
-    if (ret == 0) {
-        ciphertext = (byte*)XMALLOC(ctSz, ssl->heap, DYNAMIC_TYPE_TLSX);
-
-        if (ciphertext == NULL) {
-            WOLFSSL_MSG("Ciphertext memory allocation failure.");
-            ret = MEMORY_E;
-        }
-    }
-
-    if (ret == 0) {
-        ret = wc_KyberKey_DecodePublicKey(kemKey, clientData, pubSz);
-    }
-    if (ret == 0) {
-        ret = wc_KyberKey_Encapsulate(kemKey, ciphertext,
-                                      ssOutput, ssl->rng);
-        if (ret != 0) {
-            WOLFSSL_MSG("wc_KyberKey encapsulation failure.");
-        }
-    }
-
-    if (ret == 0) {
-        XFREE(keyShareEntry->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
-
-        *ssOutSz = ssSz;
-        keyShareEntry->ke = NULL;
-        keyShareEntry->keLen = 0;
-
-        keyShareEntry->pubKey = ciphertext;
-        keyShareEntry->pubKeyLen = ctSz;
-        ciphertext = NULL;
-
-        /* Set namedGroup so wolfSSL_get_curve_name() can function properly on
-         * the server side. */
-        ssl->namedGroup = keyShareEntry->group;
-    }
-
-    XFREE(ciphertext, ssl->heap, DYNAMIC_TYPE_TLSX);
-
-    wc_KyberKey_Free(kemKey);
-    XFREE(kemKey, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
-    keyShareEntry->key = NULL;
     return ret;
 }
 
@@ -10156,6 +10183,7 @@ static int TLSX_KeyShare_HandlePqcHybridKeyServer(WOLFSSL* ssl,
      * key. We send the ECDH public key and the KEM ciphertext back to the
      * client. Additionally, we create the ECDH shared secret here already.
      */
+    const char caller[] = "TLSX_KeyShare_HandlePqcHybridKeyServer";
     int    type;
     byte*  ciphertext = NULL;
     int    ret = 0;
@@ -10210,7 +10238,7 @@ static int TLSX_KeyShare_HandlePqcHybridKeyServer(WOLFSSL* ssl,
             ret = mlkem_id2type(pqc_kse->group, &type);
         }
         if (ret != 0) {
-            WOLFSSL_MSG("Invalid PQC algorithm specified.");
+            WOLFSSL_MSG_EX("%s: Invalid PQC algorithm specified.", caller);
             ret = BAD_FUNC_ARG;
         }
         if (ret == 0) {
