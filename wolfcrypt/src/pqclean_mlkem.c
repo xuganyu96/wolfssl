@@ -1,8 +1,7 @@
-#include "wolfssl/wolfcrypt/pqclean/crypto_kem/ml-kem-512/clean/api.h"
 #include <wolfssl/wolfcrypt/error-crypt.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_kem/ml-kem-1024/clean/kem.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_kem/ml-kem-512/clean/kem.h>
-#include <wolfssl/wolfcrypt/pqclean/crypto_kem/ml-kem-768/clean/kem.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_kem/ml-kem-1024/clean/api.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_kem/ml-kem-512/clean/api.h>
+#include <wolfssl/wolfcrypt/pqclean/crypto_kem/ml-kem-768/clean/api.h>
 #include <wolfssl/wolfcrypt/pqclean_mlkem.h>
 #include <wolfssl/wolfcrypt/random.h>
 #include <wolfssl/wolfcrypt/types.h>
@@ -205,18 +204,18 @@ WOLFSSL_API int wc_PQCleanMlKemKey_PrivateKeySize(PQCleanMlKemKey *key, word32 *
         return BAD_FUNC_ARG;
     }
     switch (key->level) {
-        case 1:
-            *len = PQCLEAN_MLKEM_LEVEL1_SECRETKEY_SIZE;
-            break;
-        case 3:
-            *len = PQCLEAN_MLKEM_LEVEL3_SECRETKEY_SIZE;
-            break;
-        case 5:
-            *len = PQCLEAN_MLKEM_LEVEL5_SECRETKEY_SIZE;
-            break;
-        default:
-            ret = BAD_FUNC_ARG;
-            break;
+    case 1:
+        *len = PQCLEAN_MLKEM_LEVEL1_SECRETKEY_SIZE;
+        break;
+    case 3:
+        *len = PQCLEAN_MLKEM_LEVEL3_SECRETKEY_SIZE;
+        break;
+    case 5:
+        *len = PQCLEAN_MLKEM_LEVEL5_SECRETKEY_SIZE;
+        break;
+    default:
+        ret = BAD_FUNC_ARG;
+        break;
     }
 
     return ret;
