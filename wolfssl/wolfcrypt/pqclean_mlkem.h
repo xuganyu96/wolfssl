@@ -30,14 +30,12 @@
 typedef struct PQCleanMlKemKey {
     /* 1, 3, or 5 */
     int level;
-    /* secret key */
-    byte sk[PQCLEAN_MLKEM_MAX_SECRETKEY_SIZE];
-    /* public key */
-    byte pk[PQCLEAN_MLKEM_MAX_PUBLICKEY_SIZE];
+    byte privKey[PQCLEAN_MLKEM_MAX_SECRETKEY_SIZE];
+    byte pubKey[PQCLEAN_MLKEM_MAX_PUBLICKEY_SIZE];
     /* 1 if secret key is set */
-    byte sk_set;
+    byte privKeySet;
     /* 1 if public key is set */
-    byte pk_set;
+    byte pubKeySet;
 } PQCleanMlKemKey;
 
 /* Public API, copied directly from wolfssl/wolfcrypt/mlkem.h */
