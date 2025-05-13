@@ -1,3 +1,4 @@
+#include "wolfssl/wolfcrypt/logging.h"
 #include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/pqclean_mlkem.h>
 #include <wolfssl/wolfcrypt/random.h>
@@ -74,15 +75,18 @@ WOLFSSL_API int wc_PQCleanMlKemKey_MakeKeyWithRandom(PQCleanMlKemKey *key, const
     }
     int wc_err, pqclean_err;
     if (key->level == 1) {
-        pqclean_err = PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair_derand(key->pk, key->sk, seed);
+        pqclean_err =
+            PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair_derand(key->pubKey, key->privKey, seed);
     } else if (key->level == 3) {
-        pqclean_err = PQCLEAN_MLKEM768_CLEAN_crypto_kem_keypair_derand(key->pk, key->sk, seed);
+        pqclean_err =
+            PQCLEAN_MLKEM768_CLEAN_crypto_kem_keypair_derand(key->pubKey, key->privKey, seed);
     } else { /* key->level must be 5 */
-        pqclean_err = PQCLEAN_MLKEM1024_CLEAN_crypto_kem_keypair_derand(key->pk, key->sk, seed);
+        pqclean_err =
+            PQCLEAN_MLKEM1024_CLEAN_crypto_kem_keypair_derand(key->pubKey, key->privKey, seed);
     }
     if (pqclean_err == 0) {
-        key->pk_set = 1;
-        key->sk_set = 1;
+        key->pubKeySet = 1;
+        key->privKeySet = 1;
     }
     wc_err = (pqclean_err == 0) ? 0 : WC_FAILURE;
     return wc_err;
@@ -124,7 +128,7 @@ WOLFSSL_API int wc_PQCleanMlKemKey_Encapsulate(PQCleanMlKemKey *key, byte *ct, b
     if (!is_valid_level(key->level)) {
         return BAD_FUNC_ARG;
     }
-    if (!key->pk_set) {
+    if (!key->pubKeySet) {
         return MISSING_KEY;
     }
     byte seed[PQCLEAN_MLKEM_SEED_SIZE];
@@ -140,16 +144,16 @@ WOLFSSL_API int wc_PQCleanMlKemKey_EncapsulateWithRandom(PQCleanMlKemKey *key, b
     if (!is_valid_level(key->level)) {
         return BAD_FUNC_ARG;
     }
-    if (!key->pk_set) {
+    if (!key->pubKeySet) {
         return MISSING_KEY;
     }
     int wc_err, pqclean_err;
     if (key->level == 1) {
-        pqclean_err = PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_derand(ct, ss, key->pk, rand);
+        pqclean_err = PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_derand(ct, ss, key->pubKey, rand);
     } else if (key->level == 3) {
-        pqclean_err = PQCLEAN_MLKEM768_CLEAN_crypto_kem_enc_derand(ct, ss, key->pk, rand);
+        pqclean_err = PQCLEAN_MLKEM768_CLEAN_crypto_kem_enc_derand(ct, ss, key->pubKey, rand);
     } else { /* key->level == 5 */
-        pqclean_err = PQCLEAN_MLKEM1024_CLEAN_crypto_kem_enc_derand(ct, ss, key->pk, rand);
+        pqclean_err = PQCLEAN_MLKEM1024_CLEAN_crypto_kem_enc_derand(ct, ss, key->pubKey, rand);
     }
     wc_err = (pqclean_err == 0) ? 0 : WC_FAILURE;
     return wc_err;
@@ -163,7 +167,7 @@ WOLFSSL_API int wc_PQCleanMlKemKey_Decapsulate(PQCleanMlKemKey *key, byte *ss, c
     if (!is_valid_level(key->level)) {
         return BAD_FUNC_ARG;
     }
-    if (!key->sk_set) {
+    if (!key->privKeySet) {
         return MISSING_KEY;
     }
     word32 expected_ctlen;
@@ -174,11 +178,11 @@ WOLFSSL_API int wc_PQCleanMlKemKey_Decapsulate(PQCleanMlKemKey *key, byte *ss, c
 
     int wc_err, pqclean_err;
     if (key->level == 1) {
-        pqclean_err = PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec(ss, ct, key->sk);
+        pqclean_err = PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec(ss, ct, key->privKey);
     } else if (key->level == 3) {
-        pqclean_err = PQCLEAN_MLKEM768_CLEAN_crypto_kem_dec(ss, ct, key->sk);
+        pqclean_err = PQCLEAN_MLKEM768_CLEAN_crypto_kem_dec(ss, ct, key->privKey);
     } else { /* key->level == 5 */
-        pqclean_err = PQCLEAN_MLKEM1024_CLEAN_crypto_kem_dec(ss, ct, key->sk);
+        pqclean_err = PQCLEAN_MLKEM1024_CLEAN_crypto_kem_dec(ss, ct, key->privKey);
     }
     wc_err = (pqclean_err == 0) ? 0 : WC_FAILURE;
     return wc_err;
@@ -186,12 +190,50 @@ WOLFSSL_API int wc_PQCleanMlKemKey_Decapsulate(PQCleanMlKemKey *key, byte *ss, c
 
 WOLFSSL_API int wc_PQCleanMlKemKey_DecodePrivateKey(PQCleanMlKemKey *key, const byte *in,
                                                     word32 len) {
-    return NOT_COMPILED_IN;
+    int ret = 0;
+    word32 PrivKeyLen = 0;
+
+    if ((key == NULL) || (in == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    if ((ret = wc_PQCleanMlKemKey_PrivateKeySize(key, &PrivKeyLen)) != 0) {
+        return ret;
+    }
+    if (PrivKeyLen != len) {
+        return BUFFER_E;
+    }
+    if (key->privKeySet) {
+        WOLFSSL_MSG("PQCleanMlKemKey->privKey is already set");
+        return BAD_FUNC_ARG;
+    }
+    XMEMCPY(key->privKey, in, len);
+    key->privKeySet = 1;
+
+    return ret;
 }
 
 WOLFSSL_API int wc_PQCleanMlKemKey_DecodePublicKey(PQCleanMlKemKey *key, const byte *in,
                                                    word32 len) {
-    return NOT_COMPILED_IN;
+    int ret = 0;
+    word32 pubKeyLen = 0;
+
+    if ((key == NULL) || (in == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    if ((ret = wc_PQCleanMlKemKey_PublicKeySize(key, &pubKeyLen)) != 0) {
+        return ret;
+    }
+    if (pubKeyLen != len) {
+        return BUFFER_E;
+    }
+    if (key->pubKeySet) {
+        WOLFSSL_MSG("PQCleanMlKemKey->pubKey is already set");
+        return PUBLIC_KEY_E;
+    }
+    XMEMCPY(key->pubKey, in, len);
+    key->pubKeySet = 1;
+
+    return ret;
 }
 
 WOLFSSL_API int wc_PQCleanMlKemKey_PrivateKeySize(PQCleanMlKemKey *key, word32 *len) {
@@ -257,10 +299,10 @@ WOLFSSL_API int wc_PQCleanMlKemKey_EncodePrivateKey(PQCleanMlKemKey *key, byte *
     if (len < privKeyLen) {
         return BUFFER_E;
     }
-    if (!key->sk_set) {
+    if (!key->privKeySet) {
         return MISSING_KEY;
     }
-    XMEMCPY(out, key->sk, privKeyLen);
+    XMEMCPY(out, key->privKey, privKeyLen);
 
     return ret;
 }
@@ -277,10 +319,10 @@ WOLFSSL_API int wc_PQCleanMlKemKey_EncodePublicKey(PQCleanMlKemKey *key, byte *o
     if (len < pubKeyLen) {
         return BUFFER_E;
     }
-    if (!key->pk_set) {
+    if (!key->pubKeySet) {
         return MISSING_KEY;
     }
-    XMEMCPY(out, key->pk, pubKeyLen);
+    XMEMCPY(out, key->pubKey, pubKeyLen);
 
     return ret;
 }
