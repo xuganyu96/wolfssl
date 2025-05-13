@@ -9328,6 +9328,8 @@ static int TLSX_KeyShare_ProcessEcc(WOLFSSL* ssl, KeyShareEntry* keyShareEntry)
                 ssl->arrays->preMasterSecret, &ssl->arrays->preMasterSz);
 }
 
+
+
 #if defined(WOLFSSL_HAVE_MLKEM) && !defined(WOLFSSL_MLKEM_NO_DECAPSULATE)
 /* Process the Kyber key share extension on the client side.
  *
@@ -9338,33 +9340,25 @@ static int TLSX_KeyShare_ProcessEcc(WOLFSSL* ssl, KeyShareEntry* keyShareEntry)
  *
  * returns 0 on success and other values indicate failure.
  */
-static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
-                                             KeyShareEntry* keyShareEntry,
-                                             unsigned char* ssOutput,
-                                             word32* ssOutSz)
+static int TLSX_KeyShare_ProcessMlKemClient(WOLFSSL* ssl,
+                                            KeyShareEntry* keyShareEntry,
+                                            unsigned char* ssOutput,
+                                            word32* ssOutSz)
 {
-    const char caller[] = "TLSX_KeyShare_ProcessPqcClient_ex";
+    const char caller[] = "TLSX_KeyShare_ProcessMlKemClient_ex";
     int       ret = 0;
     KyberKey* kem = (KyberKey*)keyShareEntry->key;
+    WOLFSSL_MSG_EX("%s: kse->key points to %p", caller, kem);
 #ifndef WOLFSSL_TLSX_PQC_MLKEM_STORE_OBJ
     word32    privSz = 0;
 #endif
     word32    ctSz = 0;
     word32    ssSz = 0;
 
-    if (ssl->options.side == WOLFSSL_SERVER_END) {
-        /* I am the server, the shared secret has already been generated and
-         * is in ssl->arrays->preMasterSecret, so nothing really to do here. */
-        return 0;
-    }
-
     if (keyShareEntry->ke == NULL) {
         WOLFSSL_MSG_EX("%s: Invalid PQC algorithm specified.", caller);
         return BAD_FUNC_ARG;
     }
-    if (ssOutSz == NULL)
-        return BAD_FUNC_ARG;
-
 #ifndef WOLFSSL_TLSX_PQC_MLKEM_STORE_OBJ
     if (kem == NULL) {
         int type = 0;
@@ -9418,8 +9412,7 @@ static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
 #endif
 
     if (ret == 0) {
-        ret = wc_KyberKey_Decapsulate(kem, ssOutput,
-                                      keyShareEntry->ke, ctSz);
+        ret = wc_KyberKey_Decapsulate(kem, ssOutput, keyShareEntry->ke, ctSz);
         if (ret != 0) {
             WOLFSSL_MSG("wc_KyberKey decapsulation failure.");
             ret = BAD_FUNC_ARG;
@@ -9436,6 +9429,60 @@ static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
 
     XFREE(keyShareEntry->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
     keyShareEntry->ke = NULL;
+
+    return ret;
+}
+
+static int TLSX_KeyShare_ProcessPQCleanMlKemClient(WOLFSSL* ssl,
+                                                   KeyShareEntry* keyShareEntry,
+                                                   unsigned char* ssOutput,
+                                                   word32* ssOutSz) {
+    return NOT_COMPILED_IN;
+}
+
+/* Process a PQC key share on the client side
+ */
+static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
+                                             KeyShareEntry* keyShareEntry,
+                                             unsigned char* ssOutput,
+                                             word32* ssOutSz) {
+    const char caller[] = "TLSX_KeyShare_ProcessPqcClient_ex";
+    int ret = 0;
+
+    /* I am the server, the shared secret has already been generated and
+     * is in ssl->arrays->preMasterSecret, so nothing really to do here. */
+    if (ssl->options.side == WOLFSSL_SERVER_END) return 0;
+    if (ssOutSz == NULL) return BAD_FUNC_ARG;
+
+    if (keyShareEntry->ke == NULL) {
+        WOLFSSL_MSG_EX("%s: keyShareEntry->key is empty", caller);
+        return MISSING_HANDSHAKE_DATA;
+    }
+
+    switch (keyShareEntry->group) {
+#if defined(WOLFSSL_HAVE_MLKEM) && !defined(WOLFSSL_MLKEM_NO_DECAPSULATE)
+        case WOLFSSL_ML_KEM_512:
+        case WOLFSSL_ML_KEM_768:
+        case WOLFSSL_ML_KEM_1024:
+            ret = TLSX_KeyShare_ProcessMlKemClient(ssl, keyShareEntry,
+                                                      ssOutput, ssOutSz);
+            break;
+#endif
+        case PQCLEAN_ML_KEM_512:
+        case PQCLEAN_ML_KEM_768:
+        case PQCLEAN_ML_KEM_1024:
+            ret = TLSX_KeyShare_ProcessPQCleanMlKemClient(ssl, keyShareEntry,
+                                                          ssOutput, ssOutSz);
+        case PQCLEAN_HQC_128:
+        case PQCLEAN_HQC_192:
+        case PQCLEAN_HQC_256:
+            ret = NOT_COMPILED_IN;
+            break;
+        default:
+            WOLFSSL_MSG_EX("%s: invalid named group %d", caller, keyShareEntry->group);
+            ret = BAD_FUNC_ARG;
+    }
+
 
     return ret;
 }
