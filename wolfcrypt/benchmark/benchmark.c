@@ -209,6 +209,7 @@
     #include <wolfssl/wolfcrypt/sphincs.h>
 #endif
 #include <wolfssl/wolfcrypt/pqclean_mlkem.h>
+#include <wolfssl/wolfcrypt/otmlkem.h>
 
 #ifdef WOLF_CRYPTO_CB
     #include <wolfssl/wolfcrypt/cryptocb.h>
@@ -9940,6 +9941,89 @@ exit_encap:
     do {
         for (times = 0; times < agreeTimes || pending > 0; times++) {
             ret = wc_PQCleanMlKemKey_Decapsulate(&key, ss, ct, ctlen);
+            if (ret)
+                goto exit_decap;
+        }
+        count += times;
+    } while (bench_stats_check(start));
+
+exit_decap:
+    bench_stats_asym_finish(name, keySize, "decap", 0, count, start, ret);
+}
+
+void bench_otmlkem(int level) {
+    OneTimeMlKemKey key;
+    int ret = 0, times, count, pending = 0;
+    word32 ctlen;
+    double start;
+    const char *name = NULL;
+    int keySize = 0;
+    unsigned char ct[OTMLKEM_MAX_CIPHERTEXT_SIZE], ss[OTMLKEM_SS_SIZE];
+    switch (level) {
+        case 1:
+            name = "OT-ML-KEM 512 ";
+            keySize = 128;
+            break;
+        case 3:
+            name = "OT-ML-KEM 768 ";
+            keySize = 192;
+            break;
+        case 5:
+            name = "OT-ML-KEM 768 ";
+            keySize = 192;
+            break;
+        default:
+            return;
+    }
+
+    /* bench keygen */
+    bench_stats_start(&count, &start);
+    do {
+        /* while free pending slots in queue, submit ops */
+        for (times = 0; times < agreeTimes || pending > 0; times++) {
+            wc_OneTimeMlKemKey_Free(&key);
+            ret = wc_OneTimeMlKemKey_InitEx(&key, HEAP_HINT, INVALID_DEVID);
+            if (ret != 0)
+                goto keygen_exit;
+
+            ret = wc_OneTimeMlKemKey_SetLevel(&key, level);
+            if (ret != 0)
+                goto keygen_exit;
+            {
+                unsigned char rand[OTMLKEM_SEED_SIZE] = {0,};
+                ret = wc_OneTimeMlKemKey_MakeKeyWithRandom(&key, rand, sizeof(rand));
+            }
+            if (ret != 0)
+                goto keygen_exit;
+            RECORD_MULTI_VALUE_STATS();
+        } /* for times */
+        count += times;
+    } while (bench_stats_check(start));
+
+    keygen_exit:
+        bench_stats_asym_finish(name, keySize, "keygen", 0, count, start, ret);
+
+    /* bench encap */
+    bench_stats_start(&count, &start);
+    do {
+        for (times = 0; times < agreeTimes || pending > 0; times++) {
+            unsigned char rand[OTMLKEM_SEED_SIZE] = {0,};
+            ret = wc_OneTimeMlKemKey_EncapsulateWithRandom(&key, ct, ss, rand, sizeof(rand));
+            if (ret != 0) goto exit_encap;
+        }
+        count += times;
+    } while (bench_stats_check(start));
+
+exit_encap:
+    bench_stats_asym_finish(name, keySize, "encap", 0, count, start, ret);
+
+
+    /* bench decap */
+    wc_OneTimeMlKemKey_CipherTextSize(&key, &ctlen);
+    bench_stats_start(&count, &start);
+    do {
+        for (times = 0; times < agreeTimes || pending > 0; times++) {
+            ret = wc_OneTimeMlKemKey_Decapsulate(&key, ss, ct, ctlen);
             if (ret)
                 goto exit_decap;
         }
