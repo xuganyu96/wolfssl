@@ -1,0 +1,21 @@
+#ifndef SHAKE_PRNG_H
+#define SHAKE_PRNG_H
+
+/**
+ * @file shake_prng.h
+ * @brief Header file of shake_prng.c
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <wolfssl/wolfcrypt/pqclean/common/fips202.h>
+
+typedef shake256incctx seedexpander_state;
+
+void PQCLEAN_HQC128_CLEAN_seedexpander_init(seedexpander_state *state, const uint8_t *seed,
+                                            size_t seedlen);
+
+void PQCLEAN_HQC128_CLEAN_seedexpander(seedexpander_state *state, uint8_t *output, size_t outlen);
+
+void PQCLEAN_HQC128_CLEAN_seedexpander_release(seedexpander_state *state);
+
+#endif
