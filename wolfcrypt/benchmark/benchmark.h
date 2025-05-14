@@ -105,6 +105,7 @@ void bench_dh(int useDeviceID);
 void bench_mlkem(int type);
 void bench_pqcleanmlkem(int level);
 void bench_otmlkem(int level);
+void bench_pqcleanhqc(int level);
 void bench_lms(void);
 void bench_xmss(int hash);
 void bench_ecc_curve(int curveId);

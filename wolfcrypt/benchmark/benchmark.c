@@ -210,6 +210,7 @@
 #endif
 #include <wolfssl/wolfcrypt/pqclean_mlkem.h>
 #include <wolfssl/wolfcrypt/otmlkem.h>
+#include <wolfssl/wolfcrypt/pqclean_hqc.h>
 
 #ifdef WOLF_CRYPTO_CB
     #include <wolfssl/wolfcrypt/cryptocb.h>
@@ -9896,8 +9897,8 @@ void bench_pqcleanmlkem(int level) {
             keySize = 192;
             break;
         case 5:
-            name = "PQCLEAN-ML-KEM 768 ";
-            keySize = 192;
+            name = "PQCLEAN-ML-KEM 1024 ";
+            keySize = 256;
             break;
         default:
             return;
@@ -9979,8 +9980,8 @@ void bench_otmlkem(int level) {
             keySize = 192;
             break;
         case 5:
-            name = "OT-ML-KEM 768 ";
-            keySize = 192;
+            name = "OT-ML-KEM 1024 ";
+            keySize = 256;
             break;
         default:
             return;
@@ -10034,6 +10035,87 @@ exit_encap:
     do {
         for (times = 0; times < agreeTimes || pending > 0; times++) {
             ret = wc_OneTimeMlKemKey_Decapsulate(&key, ss, ct, ctlen);
+            if (ret)
+                goto exit_decap;
+        }
+        count += times;
+    } while (bench_stats_check(start));
+
+exit_decap:
+    bench_stats_asym_finish(name, keySize, "decap", 0, count, start, ret);
+}
+
+void bench_pqcleanhqc(int level) {
+    PQCleanHqcKey key;
+    int ret = 0, times, count, pending = 0;
+    word32 ctlen;
+    double start;
+    const char *name = NULL;
+    int keySize = 0;
+    unsigned char ct[PQCLEAN_HQC_MAX_CIPHERTEXT_SIZE], ss[PQCLEAN_HQC_MAX_SHAREDSECRET_SIZE];
+    switch (level) {
+        case 1:
+            name = "PQCLEAN-HQC-128";
+            keySize = 128;
+            break;
+        case 3:
+            name = "PQCLEAN-HQC-192";
+            keySize = 192;
+            break;
+        case 5:
+            name = "PQCLEAN-HQC-256";
+            keySize = 256;
+            break;
+        default:
+            return;
+    }
+
+    /* bench keygen */
+    bench_stats_start(&count, &start);
+    do {
+        /* while free pending slots in queue, submit ops */
+        for (times = 0; times < agreeTimes || pending > 0; times++) {
+            wc_PQCleanHqcKey_Free(&key);
+            ret = wc_PQCleanHqcKey_InitEx(&key, HEAP_HINT, INVALID_DEVID);
+            if (ret != 0)
+                goto keygen_exit;
+
+            ret = wc_PQCleanHqcKey_SetLevel(&key, level);
+            if (ret != 0)
+                goto keygen_exit;
+            {
+                ret = wc_PQCleanHqcKey_MakeKey(&key, &gRng);
+            }
+            if (ret != 0)
+                goto keygen_exit;
+            RECORD_MULTI_VALUE_STATS();
+        } /* for times */
+        count += times;
+    } while (bench_stats_check(start));
+
+    keygen_exit:
+        bench_stats_asym_finish(name, keySize, "keygen", 0, count, start, ret);
+
+    /* bench encap */
+    bench_stats_start(&count, &start);
+    do {
+        for (times = 0; times < agreeTimes || pending > 0; times++) {
+            ret = wc_PQCleanHqcKey_Encapsulate(&key, ct, ss, &gRng);
+            if (ret != 0) goto exit_encap;
+        }
+        count += times;
+    } while (bench_stats_check(start));
+
+exit_encap:
+    bench_stats_asym_finish(name, keySize, "encap", 0, count, start, ret);
+
+
+    /* bench decap */
+    wc_PQCleanHqcKey_CipherTextSize(&key, &ctlen);
+    bench_stats_start(&count, &start);
+    do {
+        for (times = 0; times < agreeTimes || pending > 0; times++) {
+            ret = wc_PQCleanHqcKey_Decapsulate(&key, ss, ct, ctlen);
             if (ret)
                 goto exit_decap;
         }
