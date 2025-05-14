@@ -1,7 +1,8 @@
 /* one-time ML-KEM
- * https://eprint.iacr.org/2021/844.pdf
  *
- *
+ * constructed from applying the T_H transformation to the CPA subroutines of Kyber
+ * this KEM is suitable only for ephemeral key exchange; security of the scheme degrades
+ * exponentially with respect to the number of key re-uses.
  *
  * @inproceedings{DBLP:conf/eurocrypt/Huguenin-Dumittan22,
  *   author       = {Lo{\"{\i}}s Huguenin{-}Dumittan and
