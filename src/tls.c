@@ -52,6 +52,8 @@
     #include <wolfssl/wolfcrypt/ext_mlkem.h>
 #endif
     #include <wolfssl/wolfcrypt/pqclean_mlkem.h>
+    #include <wolfssl/wolfcrypt/pqclean_hqc.h>
+    #include <wolfssl/wolfcrypt/otmlkem.h>
 #endif /* WOLFSSL_HAVE_MLKEM */
 
 #if defined(WOLFSSL_RENESAS_TSIP_TLS)
@@ -8353,7 +8355,187 @@ static int TLSX_KeyShare_GenMlKemKeyClient(WOLFSSL *ssl, KeyShareEntry *kse) {
 }
 #endif /* WOLFSSL_HAVE_MLKEM && !WOLFSSL_NO_ML_KEM */
 
-static int TLSX_KeyShare_GenPQCleanMlKemKeyClient(WOLFSSL *ssl, KeyShareEntry *kse) {
+static int TLSX_KeyShare_GenOneTimeMlKemKeyClient(WOLFSSL *ssl, KeyShareEntry *kse) {
+    char caller[] = "TLSX_KeyShare_GenOneTimeMlKemKeyClient";
+    int ret = 0;
+
+    /* allocate key object on the stack, allocate pk bytes and sk bytes on heap */
+    OneTimeMlKemKey kem;
+    /* private keys are here; pub keys are at kse-pubKey */
+    byte *privKey = NULL;
+    word32 privKeyLen = 0;
+
+    int level = 0;
+    switch (kse->group) {
+        case OT_ML_KEM_512:
+            level = 1;
+            break;
+        case OT_ML_KEM_768:
+            level = 3;
+            break;
+        case OT_ML_KEM_1024:
+            level = 5;
+            break;
+        default:
+            WOLFSSL_MSG_EX("%s: Invalid OneTime ML-KEM algorithm", caller);
+            ret = BAD_FUNC_ARG;
+    }
+
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_InitEx(&kem, ssl->heap, ssl->devId);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to initialize key", caller);
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_SetLevel(&kem, level);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set level %d", caller, level);
+        if (ret == 0) WOLFSSL_MSG_EX("%s: level set to %d", caller, kem.level);
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_PrivateKeySize(&kem, &privKeyLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to get private key size", caller);
+        if (ret == 0) WOLFSSL_MSG_EX("%s: priv key size %d", caller, privKeyLen);
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_PublicKeySize(&kem, &kse->pubKeyLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to get pub key size", caller);
+    }
+    if (ret == 0) {
+        privKey = XMALLOC(privKeyLen, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+        if (privKey == NULL) {
+            WOLFSSL_MSG_EX("%s: failed to allocate privkey", caller);
+            ret = MEMORY_ERROR;
+        }
+    }
+    if (ret == 0) {
+        kse->pubKey = XMALLOC(kse->pubKeyLen, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+        if (kse->pubKey == NULL) {
+            WOLFSSL_MSG_EX("%s: failed to allocate kse->pubKey", caller);
+            ret = MEMORY_ERROR;
+        }
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_MakeKey(&kem, ssl->rng);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to generate key", caller);
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_EncodePublicKey(&kem, kse->pubKey, kse->pubKeyLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to encode public key", caller);
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_EncodePrivateKey(&kem, privKey, privKeyLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to encode private key", caller);
+    }
+
+
+    if (ret != 0) {
+        wc_OneTimeMlKemKey_Free(&kem);
+        if (privKey) {
+            XFREE(privKey, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+        }
+        if (kse->pubKey) {
+            XFREE(kse->pubKey, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+            kse->pubKey = NULL;
+        }
+    } else {
+        wc_OneTimeMlKemKey_Free(&kem);
+        kse->privKey = privKey;
+        kse->privKeyLen = privKeyLen;
+    }
+    return ret;
+}
+
+static int TLSX_KeyShare_GenPQCleanHqcKeyClient(WOLFSSL *ssl,
+                                                KeyShareEntry *kse) {
+    char caller[] = "TLSX_KeyShare_GenPQCleanHqcKeyClient";
+    int ret = 0;
+
+    /* allocate key object on the stack, allocate pk and sk bytes on heap */
+    PQCleanHqcKey kem;
+    /* private keys are here; pub keys are at kse-pubKey */
+    byte *privKey = NULL;
+    word32 privKeyLen = 0;
+
+    int level = 0;
+    switch (kse->group) {
+        case PQCLEAN_HQC_128:
+            level = 1;
+            break;
+        case PQCLEAN_HQC_192:
+            level = 3;
+            break;
+        case PQCLEAN_HQC_256:
+            level = 5;
+            break;
+        default:
+            WOLFSSL_MSG_EX("%s: invalid named group %d", caller, kse->group);
+            ret = BAD_FUNC_ARG;
+    }
+
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_InitEx(&kem, ssl->heap, ssl->devId);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to initialize key", caller);
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_SetLevel(&kem, level);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set level %d", caller, level);
+        if (ret == 0) WOLFSSL_MSG_EX("%s: level set to %d", caller, kem.level);
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_PrivateKeySize(&kem, &privKeyLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to get private key size", caller);
+        if (ret == 0) WOLFSSL_MSG_EX("%s: priv key size %d", caller, privKeyLen);
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_PublicKeySize(&kem, &kse->pubKeyLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to get pub key size", caller);
+    }
+    if (ret == 0) {
+        privKey = XMALLOC(privKeyLen, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+        if (privKey == NULL) {
+            WOLFSSL_MSG_EX("%s: failed to allocate privkey", caller);
+            ret = MEMORY_ERROR;
+        }
+    }
+    if (ret == 0) {
+        kse->pubKey = XMALLOC(kse->pubKeyLen, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+        if (kse->pubKey == NULL) {
+            WOLFSSL_MSG_EX("%s: failed to allocate kse->pubKey", caller);
+            ret = MEMORY_ERROR;
+        }
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_MakeKey(&kem, ssl->rng);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to generate key", caller);
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_EncodePublicKey(&kem, kse->pubKey, kse->pubKeyLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to encode public key", caller);
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_EncodePrivateKey(&kem, privKey, privKeyLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to encode private key", caller);
+    }
+
+
+    if (ret != 0) {
+        wc_PQCleanHqcKey_Free(&kem);
+        if (privKey) {
+            XFREE(privKey, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+        }
+        if (kse->pubKey) {
+            XFREE(kse->pubKey, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+            kse->pubKey = NULL;
+        }
+    } else {
+        wc_PQCleanHqcKey_Free(&kem);
+        kse->privKey = privKey;
+        kse->privKeyLen = privKeyLen;
+    }
+    return ret;
+}
+
+static int TLSX_KeyShare_GenPQCleanMlKemKeyClient(WOLFSSL *ssl,
+                                                  KeyShareEntry *kse) {
     char caller[] = "TLSX_KeyShare_GenPQCleanMlKemKeyClient";
     int ret = 0;
 
@@ -8442,14 +8624,6 @@ static int TLSX_KeyShare_GenPQCleanMlKemKeyClient(WOLFSSL *ssl, KeyShareEntry *k
     return ret;
 }
 
-/* Create a key share entry using HQC
- */
-static int TLSX_KeyShare_GenHQCKeyClient(WOLFSSL *ssl, KeyShareEntry *kse) {
-    WOLFSSL_MSG("HQC is not implemented in key share yet");
-    return NOT_COMPILED_IN;
-}
-
-
 #ifndef WOLFSSL_MLKEM_NO_MAKE_KEY
 /* Create a key share entry using pqc parameters group on the client side.
  * Generates a key pair.
@@ -8471,6 +8645,11 @@ static int TLSX_KeyShare_GenPqcKeyClient(WOLFSSL *ssl, KeyShareEntry* kse)
     }
 
     switch (kse->group) {
+        case OT_ML_KEM_512:
+        case OT_ML_KEM_768:
+        case OT_ML_KEM_1024:
+            ret = TLSX_KeyShare_GenOneTimeMlKemKeyClient(ssl, kse);
+            break;
         case WOLFSSL_ML_KEM_512:
         case WOLFSSL_ML_KEM_768:
         case WOLFSSL_ML_KEM_1024:
@@ -8484,7 +8663,7 @@ static int TLSX_KeyShare_GenPqcKeyClient(WOLFSSL *ssl, KeyShareEntry* kse)
         case PQCLEAN_HQC_128:
         case PQCLEAN_HQC_192:
         case PQCLEAN_HQC_256:
-            ret = TLSX_KeyShare_GenHQCKeyClient(ssl, kse);
+            ret = TLSX_KeyShare_GenPQCleanHqcKeyClient(ssl, kse);
             break;
         default:
             ret = NOT_COMPILED_IN;
@@ -9435,6 +9614,170 @@ static int TLSX_KeyShare_ProcessMlKemClient(WOLFSSL* ssl,
     return ret;
 }
 
+/* Process a PQCleanHqc key share on the client side
+ */
+static int TLSX_KeyShare_ProcessPQCleanHqcClient(WOLFSSL* ssl,
+                                                 KeyShareEntry* keyShareEntry,
+                                                 unsigned char* ssOutput,
+                                                 word32* ssOutSz) {
+    const char caller[] = "TLSX_KeyShare_ProcessPQCleanHqcClient";
+    int ret = 0;
+
+    /* we will not worry about storing the entire key object yet */
+    PQCleanHqcKey kem;
+    int level = 0;
+    word32 privKeyLen = 0;
+    word32 ctLen = 0;
+    word32 ssLen = 0;
+
+    switch (keyShareEntry->group) {
+        case PQCLEAN_HQC_128:
+            level = 1;
+            break;
+        case PQCLEAN_HQC_192:
+            level = 3;
+            break;
+        case PQCLEAN_HQC_256:
+            level = 5;
+            break;
+        default:
+            WOLFSSL_MSG_EX("%s: invalid named group %d", caller,
+                           keyShareEntry->group);
+            ret = BAD_FUNC_ARG;
+            break;
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_InitEx(&kem, ssl->heap, ssl->devId);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to initialize key", caller);
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_SetLevel(&kem, level);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set level", caller);
+        if (ret == 0) WOLFSSL_MSG_EX("%s: level set to %d", caller, level);
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_SharedSecretSize(&kem, &ssLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set shared secret len",
+                                     caller);
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_CipherTextSize(&kem, &ctLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set ct len", caller);
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_PrivateKeySize(&kem, &privKeyLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set privKeyLen", caller);
+    }
+    if (ret == 0 && privKeyLen != keyShareEntry->privKeyLen) {
+        WOLFSSL_MSG_EX("%s: expected privKeyLen=%d, kse->privKeyLen=%d",
+                       caller, privKeyLen, keyShareEntry->privKeyLen);
+        ret = BUFFER_E;
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_DecodePrivateKey(&kem, keyShareEntry->privKey,
+                                                  privKeyLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set private key", caller);
+    }
+    if (ret == 0) {
+        ret = wc_PQCleanHqcKey_Decapsulate(&kem, ssOutput, keyShareEntry->ke,
+                                             ctLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to decapsulate", caller);
+    }
+    if (ret == 0) *ssOutSz = ssLen;
+
+    wc_PQCleanHqcKey_Free(&kem);
+    /* this kem is stack-allocated; I should consider heap-allocating it */
+    // XFREE(&kem, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+    keyShareEntry->key = NULL;
+    XFREE(keyShareEntry->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+    keyShareEntry->ke = NULL;
+
+    WOLFSSL_LEAVE(caller, ret);
+    return ret;
+}
+
+/* Process a OneTimeMlKem key share on the client side
+ */
+static int TLSX_KeyShare_ProcessOneTimeMlKemClient(WOLFSSL* ssl,
+                                                   KeyShareEntry* keyShareEntry,
+                                                   unsigned char* ssOutput,
+                                                   word32* ssOutSz) {
+    const char caller[] = "TLSX_KeyShare_ProcessOneTimeMlKemClient";
+    int ret = 0;
+
+    /* we will not worry about storing the entire key object yet */
+    OneTimeMlKemKey kem;
+    int level = 0;
+    word32 privKeyLen = 0;
+    word32 ctLen = 0;
+    word32 ssLen = 0;
+
+    switch (keyShareEntry->group) {
+        case OT_ML_KEM_512:
+            level = 1;
+            break;
+        case OT_ML_KEM_768:
+            level = 3;
+            break;
+        case OT_ML_KEM_1024:
+            level = 5;
+            break;
+        default:
+            WOLFSSL_MSG_EX("%s: invalid named group %d", caller,
+                           keyShareEntry->group);
+            ret = BAD_FUNC_ARG;
+            break;
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_InitEx(&kem, ssl->heap, ssl->devId);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to initialize key", caller);
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_SetLevel(&kem, level);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set level", caller);
+        if (ret == 0) WOLFSSL_MSG_EX("%s: level set to %d", caller, level);
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_SharedSecretSize(&kem, &ssLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set shared secret len",
+                                     caller);
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_CipherTextSize(&kem, &ctLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set ct len", caller);
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_PrivateKeySize(&kem, &privKeyLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set privKeyLen", caller);
+    }
+    if (ret == 0 && privKeyLen != keyShareEntry->privKeyLen) {
+        WOLFSSL_MSG_EX("%s: expected privKeyLen=%d, kse->privKeyLen=%d",
+                       caller, privKeyLen, keyShareEntry->privKeyLen);
+        ret = BUFFER_E;
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_DecodePrivateKey(&kem, keyShareEntry->privKey,
+                                                  privKeyLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set private key", caller);
+    }
+    if (ret == 0) {
+        ret = wc_OneTimeMlKemKey_Decapsulate(&kem, ssOutput, keyShareEntry->ke,
+                                             ctLen);
+        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to decapsulate", caller);
+    }
+    if (ret == 0) *ssOutSz = ssLen;
+
+    wc_OneTimeMlKemKey_Free(&kem);
+    /* this kem is stack-allocated; I should consider heap-allocating it */
+    // XFREE(&kem, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+    keyShareEntry->key = NULL;
+    XFREE(keyShareEntry->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+    keyShareEntry->ke = NULL;
+
+    WOLFSSL_LEAVE(caller, ret);
+    return ret;
+}
+
 /* Process a PQCleanMlKem key share on the client side
  */
 static int TLSX_KeyShare_ProcessPQCleanMlKemClient(WOLFSSL* ssl,
@@ -9551,13 +9894,21 @@ static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
             ret = TLSX_KeyShare_ProcessPQCleanMlKemClient(ssl, keyShareEntry,
                                                           ssOutput, ssOutSz);
             break;
+        case OT_ML_KEM_512:
+        case OT_ML_KEM_768:
+        case OT_ML_KEM_1024:
+            ret = TLSX_KeyShare_ProcessOneTimeMlKemClient(ssl, keyShareEntry,
+                                                          ssOutput, ssOutSz);
+            break;
         case PQCLEAN_HQC_128:
         case PQCLEAN_HQC_192:
         case PQCLEAN_HQC_256:
-            ret = NOT_COMPILED_IN;
+            ret = TLSX_KeyShare_ProcessPQCleanHqcClient(ssl, keyShareEntry,
+                                                        ssOutput, ssOutSz);
             break;
         default:
-            WOLFSSL_MSG_EX("%s: invalid named group %d", caller, keyShareEntry->group);
+            WOLFSSL_MSG_EX("%s: invalid named group %d",
+                           caller, keyShareEntry->group);
             ret = BAD_FUNC_ARG;
     }
 
@@ -10159,177 +10510,388 @@ static int TLSX_KeyShare_New(KeyShareEntry** list, int group, void *heap,
     return 0;
 }
 
-static int TLSX_KeyShare_HandlePQCleanMlKemKeyServer(WOLFSSL* ssl, KeyShareEntry* kse,
-                                                     byte* clientData, word16 clientLen,
-                                                     unsigned char* ssOutput, word32* ssOutSz) {
+static int TLSX_KeyShare_HandleOneTimeMlKemKeyServer(
+    WOLFSSL *ssl, KeyShareEntry *kse, byte *clientData, word16 clientLen,
+    unsigned char *ssOutput, word32 *ssOutSz) {
 
-    const char caller[] = "TLSX_KeyShare_HandlePQCleanMlKemKeyServer";
+  const char caller[] = "TLSX_KeyShare_HandleOneTimeMlKemKeyServer";
 
-    int ret = 0;
-    PQCleanMlKemKey kem;
-    byte *ciphertext = NULL;
-    word32 pubKeyLen = 0;
-    word32 ctLen = 0;
-    word32 ssLen = 0;
-    int level = 0;
+  int ret = 0;
+  OneTimeMlKemKey kem;
+  byte *ciphertext = NULL;
+  word32 pubKeyLen = 0;
+  word32 ctLen = 0;
+  word32 ssLen = 0;
+  int level = 0;
 
-    if (clientData  == NULL) return BAD_FUNC_ARG;
-    switch (kse->group) {
-        case PQCLEAN_ML_KEM_512:
-            level = 1;
-            break;
-        case PQCLEAN_ML_KEM_768:
-            level = 3;
-            break;
-        case PQCLEAN_ML_KEM_1024:
-            level = 5;
-            break;
-        default:
-            WOLFSSL_MSG_EX("%s: invalid named group %d", caller, kse->group);
-            ret = BAD_FUNC_ARG;
-            break;
+  if (clientData == NULL)
+    return BAD_FUNC_ARG;
+  switch (kse->group) {
+  case OT_ML_KEM_512:
+    level = 1;
+    break;
+  case OT_ML_KEM_768:
+    level = 3;
+    break;
+  case OT_ML_KEM_1024:
+    level = 5;
+    break;
+  default:
+    WOLFSSL_MSG_EX("%s: invalid named group %d", caller, kse->group);
+    ret = BAD_FUNC_ARG;
+    break;
+  }
+  if (ret == 0) {
+    ret = wc_OneTimeMlKemKey_InitEx(&kem, ssl->heap, ssl->devId);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: failed to initialize key", caller);
+  }
+  if (ret == 0) {
+    ret = wc_OneTimeMlKemKey_SetLevel(&kem, level);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: failed to set level %d", caller, level);
+    else
+      WOLFSSL_MSG_EX("%s: level set to %d", caller, level);
+  }
+  if (ret == 0) {
+    ret = wc_OneTimeMlKemKey_PublicKeySize(&kem, &pubKeyLen);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: Failed to get public key size\n", caller);
+  }
+  if (ret == 0) {
+    ret = wc_OneTimeMlKemKey_CipherTextSize(&kem, &ctLen);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: Failed to get ciphertext size\n", caller);
+  }
+  if (ret == 0) {
+    ret = wc_OneTimeMlKemKey_SharedSecretSize(&kem, &ssLen);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: Failed to get shared secret size\n", caller);
+  }
+  if (ret == 0 && clientLen != pubKeyLen) {
+    ret = BAD_FUNC_ARG;
+    WOLFSSL_MSG_EX("Client data (%d) did not match pubKeyLen (%d)", clientLen,
+                   pubKeyLen);
+  }
+  if (ret == 0) {
+    ciphertext = XMALLOC(ctLen, ssl->heap, DYNAMIC_TYPE_TLSX);
+    if (ciphertext == NULL) {
+      WOLFSSL_MSG_EX("%s: ciphertext memory alloc failed", caller);
+      ret = MEMORY_E;
     }
-    if (ret == 0) {
-        ret = wc_PQCleanMlKemKey_InitEx(&kem, ssl->heap, ssl->devId);
-        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to initialize key", caller);
-    }
-    if (ret == 0) {
-        ret = wc_PQCleanMlKemKey_SetLevel(&kem, level);
-        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to set level %d", caller, level);
-        else WOLFSSL_MSG_EX("%s: level set to %d", caller, level);
-    }
-    if (ret == 0) {
-        ret = wc_PQCleanMlKemKey_PublicKeySize(&kem, &pubKeyLen);
-        if (ret != 0) WOLFSSL_MSG_EX("%s: Failed to get public key size\n", caller);
-    }
-    if (ret == 0) {
-        ret = wc_PQCleanMlKemKey_CipherTextSize(&kem, &ctLen);
-        if (ret != 0) WOLFSSL_MSG_EX("%s: Failed to get ciphertext size\n", caller);
-    }
-    if (ret == 0) {
-        ret = wc_PQCleanMlKemKey_SharedSecretSize(&kem, &ssLen);
-        if (ret != 0) WOLFSSL_MSG_EX("%s: Failed to get shared secret size\n", caller);
-    }
-    if (ret == 0 && clientLen != pubKeyLen) {
-        ret = BAD_FUNC_ARG;
-        WOLFSSL_MSG_EX("Client data (%d) did not match pubKeyLen (%d)", clientLen, pubKeyLen);
-    }
-    if (ret == 0) {
-        ciphertext = XMALLOC(ctLen, ssl->heap, DYNAMIC_TYPE_TLSX);
-        if (ciphertext == NULL) {
-            WOLFSSL_MSG_EX("%s: ciphertext memory alloc failed", caller);
-            ret = MEMORY_E;
-        }
-    }
-    if (ret == 0) {
-        ret = wc_PQCleanMlKemKey_DecodePublicKey(&kem, clientData, pubKeyLen);
-        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to decode public key", caller);
-    }
-    if (ret == 0) {
-        ret = wc_PQCleanMlKemKey_Encapsulate(&kem, ciphertext, ssOutput, ssl->rng);
-        if (ret != 0) WOLFSSL_MSG_EX("%s: failed to encapsulate", caller);
-    }
-    if (ret == 0) {
-        XFREE(kse->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
-        *ssOutSz = ssLen;
-        kse->ke = NULL;
-        kse->keLen = 0;
-        kse->pubKey = ciphertext;
-        kse->pubKeyLen = ctLen;
-        ciphertext = NULL;
-        ssl->namedGroup = kse->group;
-    }
-    XFREE(ciphertext, ssl->heap, DYNAMIC_TYPE_TLSX);
-    wc_PQCleanMlKemKey_Free(&kem);
-    kse->key = NULL;
+  }
+  if (ret == 0) {
+    ret = wc_OneTimeMlKemKey_DecodePublicKey(&kem, clientData, pubKeyLen);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: failed to decode public key", caller);
+  }
+  if (ret == 0) {
+    ret = wc_OneTimeMlKemKey_Encapsulate(&kem, ciphertext, ssOutput, ssl->rng);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: failed to encapsulate", caller);
+  }
+  if (ret == 0) {
+    XFREE(kse->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+    *ssOutSz = ssLen;
+    kse->ke = NULL;
+    kse->keLen = 0;
+    kse->pubKey = ciphertext;
+    kse->pubKeyLen = ctLen;
+    ciphertext = NULL;
+    ssl->namedGroup = kse->group;
+  }
+  XFREE(ciphertext, ssl->heap, DYNAMIC_TYPE_TLSX);
+  wc_OneTimeMlKemKey_Free(&kem);
+  kse->key = NULL;
 
-    return ret;
+  return ret;
+}
+
+static int TLSX_KeyShare_HandlePQCleanHqcKeyServer(
+    WOLFSSL *ssl, KeyShareEntry *kse, byte *clientData, word16 clientLen,
+    unsigned char *ssOutput, word32 *ssOutSz) {
+
+  const char caller[] = "TLSX_KeyShare_HandlePQCleanHqcKeyServer";
+
+  int ret = 0;
+  PQCleanHqcKey kem;
+  byte *ciphertext = NULL;
+  word32 pubKeyLen = 0;
+  word32 ctLen = 0;
+  word32 ssLen = 0;
+  int level = 0;
+
+  if (clientData == NULL)
+    return BAD_FUNC_ARG;
+  switch (kse->group) {
+  case PQCLEAN_HQC_128:
+    level = 1;
+    break;
+  case PQCLEAN_HQC_192:
+    level = 3;
+    break;
+  case PQCLEAN_HQC_256:
+    level = 5;
+    break;
+  default:
+    WOLFSSL_MSG_EX("%s: invalid named group %d", caller, kse->group);
+    ret = BAD_FUNC_ARG;
+    break;
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanHqcKey_InitEx(&kem, ssl->heap, ssl->devId);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: failed to initialize key", caller);
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanHqcKey_SetLevel(&kem, level);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: failed to set level %d", caller, level);
+    else
+      WOLFSSL_MSG_EX("%s: level set to %d", caller, level);
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanHqcKey_PublicKeySize(&kem, &pubKeyLen);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: Failed to get public key size\n", caller);
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanHqcKey_CipherTextSize(&kem, &ctLen);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: Failed to get ciphertext size\n", caller);
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanHqcKey_SharedSecretSize(&kem, &ssLen);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: Failed to get shared secret size\n", caller);
+  }
+  if (ret == 0 && clientLen != pubKeyLen) {
+    ret = BAD_FUNC_ARG;
+    WOLFSSL_MSG_EX("Client data (%d) did not match pubKeyLen (%d)", clientLen,
+                   pubKeyLen);
+  }
+  if (ret == 0) {
+    ciphertext = XMALLOC(ctLen, ssl->heap, DYNAMIC_TYPE_TLSX);
+    if (ciphertext == NULL) {
+      WOLFSSL_MSG_EX("%s: ciphertext memory alloc failed", caller);
+      ret = MEMORY_E;
+    }
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanHqcKey_DecodePublicKey(&kem, clientData, pubKeyLen);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: failed to decode public key", caller);
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanHqcKey_Encapsulate(&kem, ciphertext, ssOutput, ssl->rng);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: failed to encapsulate", caller);
+  }
+  if (ret == 0) {
+    XFREE(kse->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+    *ssOutSz = ssLen;
+    kse->ke = NULL;
+    kse->keLen = 0;
+    kse->pubKey = ciphertext;
+    kse->pubKeyLen = ctLen;
+    ciphertext = NULL;
+    ssl->namedGroup = kse->group;
+  }
+  XFREE(ciphertext, ssl->heap, DYNAMIC_TYPE_TLSX);
+  wc_PQCleanHqcKey_Free(&kem);
+  kse->key = NULL;
+
+  return ret;
+}
+
+static int TLSX_KeyShare_HandlePQCleanMlKemKeyServer(
+    WOLFSSL *ssl, KeyShareEntry *kse, byte *clientData, word16 clientLen,
+    unsigned char *ssOutput, word32 *ssOutSz) {
+
+  const char caller[] = "TLSX_KeyShare_HandlePQCleanMlKemKeyServer";
+
+  int ret = 0;
+  PQCleanMlKemKey kem;
+  byte *ciphertext = NULL;
+  word32 pubKeyLen = 0;
+  word32 ctLen = 0;
+  word32 ssLen = 0;
+  int level = 0;
+
+  if (clientData == NULL)
+    return BAD_FUNC_ARG;
+  switch (kse->group) {
+  case PQCLEAN_ML_KEM_512:
+    level = 1;
+    break;
+  case PQCLEAN_ML_KEM_768:
+    level = 3;
+    break;
+  case PQCLEAN_ML_KEM_1024:
+    level = 5;
+    break;
+  default:
+    WOLFSSL_MSG_EX("%s: invalid named group %d", caller, kse->group);
+    ret = BAD_FUNC_ARG;
+    break;
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanMlKemKey_InitEx(&kem, ssl->heap, ssl->devId);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: failed to initialize key", caller);
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanMlKemKey_SetLevel(&kem, level);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: failed to set level %d", caller, level);
+    else
+      WOLFSSL_MSG_EX("%s: level set to %d", caller, level);
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanMlKemKey_PublicKeySize(&kem, &pubKeyLen);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: Failed to get public key size\n", caller);
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanMlKemKey_CipherTextSize(&kem, &ctLen);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: Failed to get ciphertext size\n", caller);
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanMlKemKey_SharedSecretSize(&kem, &ssLen);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: Failed to get shared secret size\n", caller);
+  }
+  if (ret == 0 && clientLen != pubKeyLen) {
+    ret = BAD_FUNC_ARG;
+    WOLFSSL_MSG_EX("Client data (%d) did not match pubKeyLen (%d)", clientLen,
+                   pubKeyLen);
+  }
+  if (ret == 0) {
+    ciphertext = XMALLOC(ctLen, ssl->heap, DYNAMIC_TYPE_TLSX);
+    if (ciphertext == NULL) {
+      WOLFSSL_MSG_EX("%s: ciphertext memory alloc failed", caller);
+      ret = MEMORY_E;
+    }
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanMlKemKey_DecodePublicKey(&kem, clientData, pubKeyLen);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: failed to decode public key", caller);
+  }
+  if (ret == 0) {
+    ret = wc_PQCleanMlKemKey_Encapsulate(&kem, ciphertext, ssOutput, ssl->rng);
+    if (ret != 0)
+      WOLFSSL_MSG_EX("%s: failed to encapsulate", caller);
+  }
+  if (ret == 0) {
+    XFREE(kse->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+    *ssOutSz = ssLen;
+    kse->ke = NULL;
+    kse->keLen = 0;
+    kse->pubKey = ciphertext;
+    kse->pubKeyLen = ctLen;
+    ciphertext = NULL;
+    ssl->namedGroup = kse->group;
+  }
+  XFREE(ciphertext, ssl->heap, DYNAMIC_TYPE_TLSX);
+  wc_PQCleanMlKemKey_Free(&kem);
+  kse->key = NULL;
+
+  return ret;
 }
 
 /* Process ML-KEM key share using wolfcrypt's ML-KEM
  */
-static int TLSX_KeyShare_HandleMlKemKeyServer(WOLFSSL* ssl,
-    KeyShareEntry* kse, byte* clientData, word16 clientLen,
-    unsigned char* ssOutput, word32* ssOutSz) {
+static int TLSX_KeyShare_HandleMlKemKeyServer(WOLFSSL *ssl, KeyShareEntry *kse,
+                                              byte *clientData,
+                                              word16 clientLen,
+                                              unsigned char *ssOutput,
+                                              word32 *ssOutSz) {
 
-    const char caller[] = "TLSX_KeyShare_HandleMlKemKeyServer";
+  const char caller[] = "TLSX_KeyShare_HandleMlKemKeyServer";
 
-    int ret = 0;
-    KyberKey kem;
-    byte *ciphertext = NULL;
-    word32 pubKeyLen = 0;
-    word32 ctLen = 0;
-    word32 ssLen = 0;
-    int mlkem_type = 0;
+  int ret = 0;
+  KyberKey kem;
+  byte *ciphertext = NULL;
+  word32 pubKeyLen = 0;
+  word32 ctLen = 0;
+  word32 ssLen = 0;
+  int mlkem_type = 0;
 
-    if (clientData == NULL) {
-        return BAD_FUNC_ARG;
-    }
+  if (clientData == NULL) {
+    return BAD_FUNC_ARG;
+  }
 
-    ret = mlkem_id2type(kse->group, &mlkem_type);
-    if (ret != 0) {
-        WOLFSSL_MSG_EX("%s: invalid named group %d\n", caller, kse->group);
-        ret = BAD_FUNC_ARG;
+  ret = mlkem_id2type(kse->group, &mlkem_type);
+  if (ret != 0) {
+    WOLFSSL_MSG_EX("%s: invalid named group %d\n", caller, kse->group);
+    ret = BAD_FUNC_ARG;
+  }
+  if (ret == 0) {
+    ret = wc_KyberKey_Init(mlkem_type, &kem, ssl->heap, ssl->devId);
+    if (ret != 0)
+      WOLFSSL_MSG("Failed to initialize KyberKey\n");
+  }
+  if (ret == 0) {
+    ret = wc_KyberKey_PublicKeySize(&kem, &pubKeyLen);
+    if (ret != 0)
+      WOLFSSL_MSG("Failed to get public key size\n");
+  }
+  if (ret == 0) {
+    ret = wc_KyberKey_CipherTextSize(&kem, &ctLen);
+    if (ret != 0)
+      WOLFSSL_MSG("Failed to get ciphertext size\n");
+  }
+  if (ret == 0) {
+    ret = wc_KyberKey_SharedSecretSize(&kem, &ssLen);
+    if (ret != 0)
+      WOLFSSL_MSG("Failed to get shared secret size\n");
+  }
+  if (ret == 0 && clientLen != pubKeyLen) {
+    ret = BAD_FUNC_ARG;
+    WOLFSSL_MSG_EX("Client data (%d) did not match pubKeyLen (%d)", clientLen,
+                   pubKeyLen);
+  }
+  if (ret == 0) {
+    ciphertext = XMALLOC(ctLen, ssl->heap, DYNAMIC_TYPE_TLSX);
+    if (ciphertext == NULL) {
+      WOLFSSL_MSG("Ciphertext memory allocation failure.");
+      ret = MEMORY_E;
     }
-    if (ret == 0) {
-        ret = wc_KyberKey_Init(mlkem_type, &kem, ssl->heap, ssl->devId);
-        if (ret != 0) WOLFSSL_MSG("Failed to initialize KyberKey\n");
-    }
-    if (ret == 0) {
-        ret = wc_KyberKey_PublicKeySize(&kem, &pubKeyLen);
-        if (ret != 0) WOLFSSL_MSG("Failed to get public key size\n");
-    }
-    if (ret == 0) {
-        ret = wc_KyberKey_CipherTextSize(&kem, &ctLen);
-        if (ret != 0) WOLFSSL_MSG("Failed to get ciphertext size\n");
-    }
-    if (ret == 0) {
-        ret = wc_KyberKey_SharedSecretSize(&kem, &ssLen);
-        if (ret != 0) WOLFSSL_MSG("Failed to get shared secret size\n");
-    }
-    if (ret == 0 && clientLen != pubKeyLen) {
-        ret = BAD_FUNC_ARG;
-        WOLFSSL_MSG_EX("Client data (%d) did not match pubKeyLen (%d)", clientLen, pubKeyLen);
-    }
-    if (ret == 0) {
-        ciphertext = XMALLOC(ctLen, ssl->heap, DYNAMIC_TYPE_TLSX);
-        if (ciphertext == NULL) {
-            WOLFSSL_MSG("Ciphertext memory allocation failure.");
-            ret = MEMORY_E;
-        }
-    }
-    if (ret == 0) {
-        ret = wc_KyberKey_DecodePublicKey(&kem, clientData, pubKeyLen);
-    }
-    if (ret == 0) {
-        ret = wc_KyberKey_Encapsulate(&kem, ciphertext,
-                                      ssOutput, ssl->rng);
-        if (ret != 0) WOLFSSL_MSG("wc_KyberKey encapsulation failure.");
-    }
+  }
+  if (ret == 0) {
+    ret = wc_KyberKey_DecodePublicKey(&kem, clientData, pubKeyLen);
+  }
+  if (ret == 0) {
+    ret = wc_KyberKey_Encapsulate(&kem, ciphertext, ssOutput, ssl->rng);
+    if (ret != 0)
+      WOLFSSL_MSG("wc_KyberKey encapsulation failure.");
+  }
 
-    if (ret == 0) {
-        XFREE(kse->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+  if (ret == 0) {
+    XFREE(kse->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
 
-        *ssOutSz = ssLen;
-        kse->ke = NULL;
-        kse->keLen = 0;
+    *ssOutSz = ssLen;
+    kse->ke = NULL;
+    kse->keLen = 0;
 
-        kse->pubKey = ciphertext;
-        kse->pubKeyLen = ctLen;
-        ciphertext = NULL;
+    kse->pubKey = ciphertext;
+    kse->pubKeyLen = ctLen;
+    ciphertext = NULL;
 
-        /* Set namedGroup so wolfSSL_get_curve_name() can function properly on
-         * the server side. */
-        ssl->namedGroup = kse->group;
-    }
+    /* Set namedGroup so wolfSSL_get_curve_name() can function properly on
+     * the server side. */
+    ssl->namedGroup = kse->group;
+  }
 
-    XFREE(ciphertext, ssl->heap, DYNAMIC_TYPE_TLSX);
+  XFREE(ciphertext, ssl->heap, DYNAMIC_TYPE_TLSX);
 
-    wc_KyberKey_Free(&kem);
-    // XFREE(&kem, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
-    kse->key = NULL;
+  wc_KyberKey_Free(&kem);
+  // XFREE(&kem, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+  kse->key = NULL;
 
-    return ret;
+  return ret;
 }
 
 #if defined(WOLFSSL_HAVE_MLKEM) && !defined(WOLFSSL_MLKEM_NO_ENCAPSULATE)
@@ -10344,36 +10906,49 @@ static int TLSX_KeyShare_HandleMlKemKeyServer(WOLFSSL* ssl,
  *
  * returns 0 on success and other values indicate failure.
  */
-static int TLSX_KeyShare_HandlePqcKeyServer(WOLFSSL* ssl,
-    KeyShareEntry* keyShareEntry, byte* clientData, word16 clientLen,
-    unsigned char* ssOutput, word32* ssOutSz)
-{
-    const char caller[] = "TLSX_KeyShare_HandlePqcKeyServer";
-    /* We are on the server side. The key share contains a PQC KEM public key
-     * that we are using for an encapsulate operation. The resulting ciphertext
-     * is stored in the server key share. */
-    int ret = 0;
+static int TLSX_KeyShare_HandlePqcKeyServer(WOLFSSL *ssl,
+                                            KeyShareEntry *keyShareEntry,
+                                            byte *clientData, word16 clientLen,
+                                            unsigned char *ssOutput,
+                                            word32 *ssOutSz) {
+  const char caller[] = "TLSX_KeyShare_HandlePqcKeyServer";
+  /* We are on the server side. The key share contains a PQC KEM public key
+   * that we are using for an encapsulate operation. The resulting ciphertext
+   * is stored in the server key share. */
+  int ret = 0;
 
-    switch (keyShareEntry->group) {
-        case WOLFSSL_ML_KEM_512:
-        case WOLFSSL_ML_KEM_768:
-        case WOLFSSL_ML_KEM_1024:
-            ret = TLSX_KeyShare_HandleMlKemKeyServer(ssl, keyShareEntry, clientData, clientLen,
-                                                     ssOutput, ssOutSz);
-            break;
-        case PQCLEAN_ML_KEM_512:
-        case PQCLEAN_ML_KEM_768:
-        case PQCLEAN_ML_KEM_1024:
-            ret = TLSX_KeyShare_HandlePQCleanMlKemKeyServer(ssl, keyShareEntry, clientData,
-                                                            clientLen, ssOutput, ssOutSz);
-            break;
-        default:
-            ret = BAD_FUNC_ARG;
-            WOLFSSL_MSG_EX("%s: invalid named group\n", caller);
-            break;
-    }
+  switch (keyShareEntry->group) {
+  case OT_ML_KEM_512:
+  case OT_ML_KEM_768:
+  case OT_ML_KEM_1024:
+    ret = TLSX_KeyShare_HandleOneTimeMlKemKeyServer(
+        ssl, keyShareEntry, clientData, clientLen, ssOutput, ssOutSz);
+    break;
+  case PQCLEAN_HQC_128:
+  case PQCLEAN_HQC_192:
+  case PQCLEAN_HQC_256:
+    ret = TLSX_KeyShare_HandlePQCleanHqcKeyServer(
+        ssl, keyShareEntry, clientData, clientLen, ssOutput, ssOutSz);
+    break;
+  case WOLFSSL_ML_KEM_512:
+  case WOLFSSL_ML_KEM_768:
+  case WOLFSSL_ML_KEM_1024:
+    ret = TLSX_KeyShare_HandleMlKemKeyServer(ssl, keyShareEntry, clientData,
+                                             clientLen, ssOutput, ssOutSz);
+    break;
+  case PQCLEAN_ML_KEM_512:
+  case PQCLEAN_ML_KEM_768:
+  case PQCLEAN_ML_KEM_1024:
+    ret = TLSX_KeyShare_HandlePQCleanMlKemKeyServer(
+        ssl, keyShareEntry, clientData, clientLen, ssOutput, ssOutSz);
+    break;
+  default:
+    ret = BAD_FUNC_ARG;
+    WOLFSSL_MSG_EX("%s: invalid named group\n", caller);
+    break;
+  }
 
-    return ret;
+  return ret;
 }
 
 static int TLSX_KeyShare_HandlePqcHybridKeyServer(WOLFSSL* ssl,
@@ -10971,6 +11546,12 @@ static int TLSX_KeyShare_IsSupported(int namedGroup)
         case PQCLEAN_ML_KEM_512:
         case PQCLEAN_ML_KEM_768:
         case PQCLEAN_ML_KEM_1024:
+        case OT_ML_KEM_512:
+        case OT_ML_KEM_768:
+        case OT_ML_KEM_1024:
+        case PQCLEAN_HQC_128:
+        case PQCLEAN_HQC_192:
+        case PQCLEAN_HQC_256:
             break;
 #endif /* WOLFSSL_HAVE_MLKEM */
         default:
@@ -11107,6 +11688,12 @@ static const word16 preferredGroup[] = {
     #endif
 #endif
 #endif /* WOLFSSL_MLKEM_KYBER */
+    PQCLEAN_HQC_128,
+    PQCLEAN_HQC_192,
+    PQCLEAN_HQC_256,
+    OT_ML_KEM_512,
+    OT_ML_KEM_768,
+    OT_ML_KEM_1024,
     WOLFSSL_NAMED_GROUP_INVALID
 };
 

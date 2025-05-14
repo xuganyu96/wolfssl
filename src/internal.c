@@ -35248,6 +35248,9 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
             case PQCLEAN_ML_KEM_512:
             case PQCLEAN_ML_KEM_768:
             case PQCLEAN_ML_KEM_1024:
+            case OT_ML_KEM_512:
+            case OT_ML_KEM_768:
+            case OT_ML_KEM_1024:
             case PQCLEAN_HQC_128:
             case PQCLEAN_HQC_192:
             case PQCLEAN_HQC_256:
