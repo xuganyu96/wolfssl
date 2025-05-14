@@ -3734,6 +3734,12 @@ static int isValidCurveGroup(word16 name)
         case PQCLEAN_ML_KEM_512:
         case PQCLEAN_ML_KEM_768:
         case PQCLEAN_ML_KEM_1024:
+        case OT_ML_KEM_512:
+        case OT_ML_KEM_768:
+        case OT_ML_KEM_1024:
+        case PQCLEAN_HQC_128:
+        case PQCLEAN_HQC_192:
+        case PQCLEAN_HQC_256:
 #endif
             return 1;
 
