@@ -29992,6 +29992,94 @@ int SetName(byte* output, word32 outputSz, CertName* name)
 }
 
 #ifdef WOLFSSL_ASN_TEMPLATE
+/* Encode the public key in DER. Pass NULL for input to get the size of the
+ * encoding
+ */
+static int EncodePublicKey_ex(int keyType, const void *key, byte *output,
+                              int outLen) {
+    int ret = 0;
+    switch (keyType) {
+    #ifndef NO_RSA
+        case RSA_KEY:
+            ret = SetRsaPublicKey(output, (RsaKey *)key, outLen, 1);
+            if (ret <= 0) {
+                ret = PUBLIC_KEY_E;
+            }
+            break;
+    #endif
+    #ifdef HAVE_ECC
+        case ECC_KEY:
+            ret = SetEccPublicKey(output, (ecc_key *)key, outLen, 1, 0);
+            if (ret <= 0) {
+                ret = PUBLIC_KEY_E;
+            }
+            break;
+    #endif /* HAVE_ECC */
+    #ifdef HAVE_ED25519
+        case ED25519_KEY:
+            ret = wc_Ed25519PublicKeyToDer((ed25519_key *)key, output,
+                                           (word32)outLen, 1);
+            if (ret <= 0) {
+                ret = PUBLIC_KEY_E;
+            }
+            break;
+    #endif
+    #ifdef HAVE_ED448
+        case ED448_KEY:
+            ret = wc_Ed448PublicKeyToDer((ed448_key *)key, output, (word32)outLen, 1);
+            if (ret <= 0) {
+                ret = PUBLIC_KEY_E;
+            }
+            break;
+    #endif
+    #if defined(HAVE_FALCON)
+        case FALCON_LEVEL1_KEY:
+        case FALCON_LEVEL5_KEY:
+            ret = wc_Falcon_PublicKeyToDer((falcon_key *)key, output,
+                                           (word32)outLen, 1);
+            if (ret <= 0) {
+                ret = PUBLIC_KEY_E;
+            }
+            break;
+    #endif /* HAVE_FALCON */
+    #if defined(HAVE_DILITHIUM) && !defined(WOLFSSL_DILITHIUM_NO_ASN1)
+        #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
+        case DILITHIUM_LEVEL2_KEY:
+        case DILITHIUM_LEVEL3_KEY:
+        case DILITHIUM_LEVEL5_KEY:
+        #endif
+        case ML_DSA_LEVEL2_KEY:
+        case ML_DSA_LEVEL3_KEY:
+        case ML_DSA_LEVEL5_KEY:
+            ret = wc_Dilithium_PublicKeyToDer((dilithium_key *)key, output,
+                                              (word32)outLen, 1);
+            if (ret <= 0) {
+                ret = PUBLIC_KEY_E;
+            }
+            break;
+    #endif /* HAVE_DILITHIUM */
+    #if defined(HAVE_SPHINCS)
+        case SPHINCS_FAST_LEVEL1_KEY:
+        case SPHINCS_FAST_LEVEL3_KEY:
+        case SPHINCS_FAST_LEVEL5_KEY:
+        case SPHINCS_SMALL_LEVEL1_KEY:
+        case SPHINCS_SMALL_LEVEL3_KEY:
+        case SPHINCS_SMALL_LEVEL5_KEY:
+            ret = wc_Sphincs_PublicKeyToDer((sphincs_key *)key, output,
+                                            (word32)outLen, 1);
+            if (ret <= 0) {
+                ret = PUBLIC_KEY_E;
+            }
+            break;
+    #endif /* HAVE_SPHINCS */
+        default:
+            ret = PUBLIC_KEY_E;
+            break;
+    }
+
+    return ret;
+}
+
 static int EncodePublicKey(int keyType, byte* output, int outLen,
                            RsaKey* rsaKey, ecc_key* eccKey,
                            ed25519_key* ed25519Key, ed448_key* ed448Key,
@@ -31706,6 +31794,7 @@ static int MakeAnyCert(Cert* cert, byte* derBuffer, word32 derSz,
 {
 #ifndef WOLFSSL_ASN_TEMPLATE
     int ret;
+    void *key;
 #ifdef WOLFSSL_SMALL_STACK
     DerCert* der;
 #else
@@ -31715,69 +31804,93 @@ static int MakeAnyCert(Cert* cert, byte* derBuffer, word32 derSz,
     if (derBuffer == NULL)
         return BAD_FUNC_ARG;
 
-    if (eccKey)
+    if (eccKey) {
         cert->keyType = ECC_KEY;
-    else if (rsaKey)
+        key = eccKey;
+    } else if (rsaKey) {
         cert->keyType = RSA_KEY;
-    else if (dsaKey)
+        key = rsaKey;
+    } else if (dsaKey) {
         cert->keyType = DSA_KEY;
-    else if (ed25519Key)
+        key = dsaKey;
+    } else if (ed25519Key) {
         cert->keyType = ED25519_KEY;
-    else if (ed448Key)
+        key = ed25519Key;
+    } else if (ed448Key) {
         cert->keyType = ED448_KEY;
+        key = ed488Key;
+    }
 #ifdef HAVE_FALCON
-    else if ((falconKey != NULL) && (falconKey->level == 1))
+    else if ((falconKey != NULL) && (falconKey->level == 1)) {
         cert->keyType = FALCON_LEVEL1_KEY;
-    else if ((falconKey != NULL) && (falconKey->level == 5))
+         key = falconKey;
+    }
+    else if ((falconKey != NULL) && (falconKey->level == 5)) {
         cert->keyType = FALCON_LEVEL5_KEY;
+         key = falconKey;
+         }
 #endif /* HAVE_FALCON */
 #ifdef HAVE_DILITHIUM
     #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
     else if ((dilithiumKey != NULL) &&
                 (dilithiumKey->params->level == WC_ML_DSA_44_DRAFT)) {
         cert->keyType = DILITHIUM_LEVEL2_KEY;
+         key = dilithiumKey;
     }
     else if ((dilithiumKey != NULL) &&
                 (dilithiumKey->params->level == WC_ML_DSA_65_DRAFT)) {
         cert->keyType = DILITHIUM_LEVEL3_KEY;
+         key = dilithiumKey;
     }
     else if ((dilithiumKey != NULL) &&
                 (dilithiumKey->params->level == WC_ML_DSA_87_DRAFT)) {
         cert->keyType = DILITHIUM_LEVEL5_KEY;
+         key = dilithiumKey;
     }
     #endif
     else if ((dilithiumKey != NULL) &&
                 (dilithiumKey->params->level == WC_ML_DSA_44)) {
         cert->keyType = ML_DSA_LEVEL2_KEY;
+         key = dilithiumKey;
     }
     else if ((dilithiumKey != NULL) &&
                 (dilithiumKey->params->level == WC_ML_DSA_65)) {
         cert->keyType = ML_DSA_LEVEL3_KEY;
+         key = dilithiumKey;
     }
     else if ((dilithiumKey != NULL) &&
                 (dilithiumKey->params->level == WC_ML_DSA_87)) {
         cert->keyType = ML_DSA_LEVEL5_KEY;
+         key = dilithiumKey;
     }
 #endif /* HAVE_DILITHIUM */
 #ifdef HAVE_SPHINCS
     else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
-             && (sphincsKey->optim == SPHINCS_FAST_VARIANT))
+             && (sphincsKey->optim == SPHINCS_FAST_VARIANT)) {
         cert->keyType = SPHINCS_FAST_LEVEL1_KEY;
-    else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
-             && (sphincsKey->optim == SPHINCS_FAST_VARIANT))
+        key = sphincsKey;
+    } else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
+             && (sphincsKey->optim == SPHINCS_FAST_VARIANT)) {
         cert->keyType = SPHINCS_FAST_LEVEL3_KEY;
-    else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
-             && (sphincsKey->optim == SPHINCS_FAST_VARIANT))
+        key = sphincsKey;
+    } else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
+             && (sphincsKey->optim == SPHINCS_FAST_VARIANT)) {
         cert->keyType = SPHINCS_FAST_LEVEL5_KEY;
-    else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
-             && (sphincsKey->optim == SPHINCS_SMALL_VARIANT))
+        key = sphincsKey;
+    } else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
+             && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
         cert->keyType = SPHINCS_SMALL_LEVEL1_KEY;
-    else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
-             && (sphincsKey->optim == SPHINCS_SMALL_VARIANT))
+        key = sphincsKey;
+    } else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
+             && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
         cert->keyType = SPHINCS_SMALL_LEVEL3_KEY;
+        key = sphincsKey;
+    }
     else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
-             && (sphincsKey->optim == SPHINCS_SMALL_VARIANT))
+             && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
         cert->keyType = SPHINCS_SMALL_LEVEL5_KEY;
+        key = sphincsKey;
+    }
 #endif /* HAVE_SPHINCS */
     else
         return BAD_FUNC_ARG;
@@ -31811,6 +31924,7 @@ static int MakeAnyCert(Cert* cert, byte* derBuffer, word32 derSz,
     word32 extSz = 0;
     int sz = 0;
     int ret = 0;
+    void *key;
     word32 issRawLen = 0;
     word32 sbjRawLen = 0;
 
@@ -31825,25 +31939,32 @@ static int MakeAnyCert(Cert* cert, byte* derBuffer, word32 derSz,
         /* Set key type into certificate object based on key passed in. */
         if (rsaKey) {
             cert->keyType = RSA_KEY;
+            key = rsaKey;
         }
         else if (eccKey) {
             cert->keyType = ECC_KEY;
+            key = eccKey;
         }
         else if (dsaKey) {
             cert->keyType = DSA_KEY;
+            key = dsaKey;
         }
         else if (ed25519Key) {
             cert->keyType = ED25519_KEY;
+            key = ed25519Key;
         }
         else if (ed448Key) {
             cert->keyType = ED448_KEY;
+            key = ed448Key;
         }
 #ifdef HAVE_FALCON
         else if ((falconKey != NULL) && (falconKey->level == 1)) {
             cert->keyType = FALCON_LEVEL1_KEY;
+            key = falconKey;
         }
         else if ((falconKey != NULL) && (falconKey->level == 5)) {
             cert->keyType = FALCON_LEVEL5_KEY;
+            key = falconKey;
         }
 #endif /* HAVE_FALCON */
 #ifdef HAVE_DILITHIUM
@@ -31851,53 +31972,65 @@ static int MakeAnyCert(Cert* cert, byte* derBuffer, word32 derSz,
         else if ((dilithiumKey != NULL) &&
                     (dilithiumKey->params->level == WC_ML_DSA_44_DRAFT)) {
             cert->keyType = DILITHIUM_LEVEL2_KEY;
+            key = dilithiumKey;
         }
         else if ((dilithiumKey != NULL) &&
                     (dilithiumKey->params->level == WC_ML_DSA_65_DRAFT)) {
             cert->keyType = DILITHIUM_LEVEL3_KEY;
+            key = dilithiumKey;
         }
         else if ((dilithiumKey != NULL) &&
                     (dilithiumKey->params->level == WC_ML_DSA_87_DRAFT)) {
             cert->keyType = DILITHIUM_LEVEL5_KEY;
+            key = dilithiumKey;
         }
     #endif
         else if ((dilithiumKey != NULL) &&
                     (dilithiumKey->level == WC_ML_DSA_44)) {
             cert->keyType = ML_DSA_LEVEL2_KEY;
+            key = dilithiumKey;
         }
         else if ((dilithiumKey != NULL) &&
                     (dilithiumKey->level == WC_ML_DSA_65)) {
             cert->keyType = ML_DSA_LEVEL3_KEY;
+            key = dilithiumKey;
         }
         else if ((dilithiumKey != NULL) &&
                     (dilithiumKey->level == WC_ML_DSA_87)) {
             cert->keyType = ML_DSA_LEVEL5_KEY;
+            key = dilithiumKey;
         }
 #endif /* HAVE_DILITHIUM */
 #ifdef HAVE_SPHINCS
         else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
                  && (sphincsKey->optim == SPHINCS_FAST_VARIANT)) {
             cert->keyType = SPHINCS_FAST_LEVEL1_KEY;
+            key = sphincsKey ;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
                  && (sphincsKey->optim == SPHINCS_FAST_VARIANT)) {
             cert->keyType = SPHINCS_FAST_LEVEL3_KEY;
+            key = sphincsKey ;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
                  && (sphincsKey->optim == SPHINCS_FAST_VARIANT)) {
             cert->keyType = SPHINCS_FAST_LEVEL5_KEY;
+            key = sphincsKey ;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 1)
                  && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
             cert->keyType = SPHINCS_SMALL_LEVEL1_KEY;
+            key = sphincsKey ;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 3)
                  && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
             cert->keyType = SPHINCS_SMALL_LEVEL3_KEY;
+            key = sphincsKey ;
         }
         else if ((sphincsKey != NULL) && (sphincsKey->level == 5)
                  && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
             cert->keyType = SPHINCS_SMALL_LEVEL5_KEY;
+            key = sphincsKey ;
         }
 #endif /* HAVE_SPHINCS */
         else {
@@ -31946,9 +32079,10 @@ static int MakeAnyCert(Cert* cert, byte* derBuffer, word32 derSz,
     }
     if (ret >= 0) {
         /* Calculate public key encoding size. */
-        ret = EncodePublicKey(cert->keyType, NULL, 0, rsaKey,
-                eccKey, ed25519Key, ed448Key, dsaKey, falconKey,
-                dilithiumKey, sphincsKey);
+        // ret = EncodePublicKey(cert->keyType, NULL, 0, rsaKey,
+        //         eccKey, ed25519Key, ed448Key, dsaKey, falconKey,
+        //         dilithiumKey, sphincsKey);
+        ret = EncodePublicKey_ex(cert->keyType, key, NULL, 0);
         publicKeySz = (word32)ret;
     }
     if (ret >= 0) {
@@ -32123,13 +32257,14 @@ static int MakeAnyCert(Cert* cert, byte* derBuffer, word32 derSz,
     }
     if (ret >= 0) {
         /* Encode public key into buffer. */
-        ret = EncodePublicKey(cert->keyType,
-            (byte*)dataASN[X509CERTASN_IDX_TBS_SPUBKEYINFO_SEQ]
-                           .data.buffer.data,
-            (int)dataASN[X509CERTASN_IDX_TBS_SPUBKEYINFO_SEQ]
-                           .data.buffer.length,
-            rsaKey, eccKey, ed25519Key, ed448Key, dsaKey,
-            falconKey, dilithiumKey, sphincsKey);
+        byte *pubKeyDer = (byte*)dataASN[X509CERTASN_IDX_TBS_SPUBKEYINFO_SEQ].data.buffer.data;
+        int pubKeyDerSz = (int)dataASN[X509CERTASN_IDX_TBS_SPUBKEYINFO_SEQ].data.buffer.length;
+        // ret = EncodePublicKey(cert->keyType,
+        //     pubKeyDer,
+        //     pubKeyDerSz,
+        //     rsaKey, eccKey, ed25519Key, ed448Key, dsaKey,
+        //     falconKey, dilithiumKey, sphincsKey);
+        ret = EncodePublicKey_ex(cert->keyType, key, pubKeyDer, pubKeyDerSz);
     }
     if ((ret >= 0) && (!dataASN[X509CERTASN_IDX_TBS_EXT_SEQ].noOut)) {
         /* Encode extensions into buffer. */
