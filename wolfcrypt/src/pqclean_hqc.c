@@ -6,12 +6,12 @@
 #include <wolfssl/wolfcrypt/random.h>
 #include <wolfssl/wolfcrypt/types.h>
 
-WOLFSSL_API int wc_PQCleanHqcKey_Init(PQCleanHqcKey *key) {
+int wc_PQCleanHqcKey_Init(PQCleanHqcKey *key) {
     return wc_PQCleanHqcKey_InitEx(key, NULL, INVALID_DEVID);
 }
 
 /* public and private keys are stack allocated, no need to use heap */
-WOLFSSL_API int wc_PQCleanHqcKey_InitEx(PQCleanHqcKey *key, void *heap, int devId) {
+int wc_PQCleanHqcKey_InitEx(PQCleanHqcKey *key, void *heap, int devId) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -21,7 +21,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_InitEx(PQCleanHqcKey *key, void *heap, int devI
 
 /* Clear all data from key. Similar to Init, but this function will never fail
  */
-WOLFSSL_API int wc_PQCleanHqcKey_Free(PQCleanHqcKey *key) {
+int wc_PQCleanHqcKey_Free(PQCleanHqcKey *key) {
     if (key != NULL) {
         XMEMSET(key, 0, sizeof(PQCleanHqcKey));
     }
@@ -31,7 +31,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_Free(PQCleanHqcKey *key) {
 /* Return 1 if level is valid */
 static int is_valid_level(int level) { return (level == 1) || (level == 3) || (level == 5); }
 
-WOLFSSL_API int wc_PQCleanHqcKey_SetLevel(PQCleanHqcKey *key, int level) {
+int wc_PQCleanHqcKey_SetLevel(PQCleanHqcKey *key, int level) {
     if ((key == NULL) || !is_valid_level(level)) {
         return BAD_FUNC_ARG;
     }
@@ -39,7 +39,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_SetLevel(PQCleanHqcKey *key, int level) {
     return 0;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_GetLevel(PQCleanHqcKey *key, int *level) {
+int wc_PQCleanHqcKey_GetLevel(PQCleanHqcKey *key, int *level) {
     if ((NULL == key) || (NULL == level)) {
         return BAD_FUNC_ARG;
     }
@@ -50,7 +50,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_GetLevel(PQCleanHqcKey *key, int *level) {
     return 0;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_MakeKey(PQCleanHqcKey *key, WC_RNG *rng) {
+int wc_PQCleanHqcKey_MakeKey(PQCleanHqcKey *key, WC_RNG *rng) {
     int ret = 0;
 
     if ((NULL == key) || (NULL == rng))
@@ -79,11 +79,11 @@ WOLFSSL_API int wc_PQCleanHqcKey_MakeKey(PQCleanHqcKey *key, WC_RNG *rng) {
 }
 
 /* HQC seeds are not straightforwardly exposed */
-WOLFSSL_API int wc_PQCleanHqcKey_MakeKeyWithRandom(PQCleanHqcKey *key, const byte *rand, int len) {
+int wc_PQCleanHqcKey_MakeKeyWithRandom(PQCleanHqcKey *key, const byte *rand, int len) {
     return NOT_COMPILED_IN;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_CipherTextSize(PQCleanHqcKey *key, word32 *len) {
+int wc_PQCleanHqcKey_CipherTextSize(PQCleanHqcKey *key, word32 *len) {
     if ((NULL == key) || (NULL == len))
         return BAD_FUNC_ARG;
     if (!is_valid_level(key->level))
@@ -102,7 +102,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_CipherTextSize(PQCleanHqcKey *key, word32 *len)
     return 0;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_SharedSecretSize(PQCleanHqcKey *key, word32 *len) {
+int wc_PQCleanHqcKey_SharedSecretSize(PQCleanHqcKey *key, word32 *len) {
     if ((NULL == key) || (NULL == len))
         return BAD_FUNC_ARG;
     if (!is_valid_level(key->level))
@@ -121,7 +121,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_SharedSecretSize(PQCleanHqcKey *key, word32 *le
     return 0;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_Encapsulate(PQCleanHqcKey *key, byte *ct, byte *ss, WC_RNG *rng) {
+int wc_PQCleanHqcKey_Encapsulate(PQCleanHqcKey *key, byte *ct, byte *ss, WC_RNG *rng) {
     int ret = 0;
     if ((key == NULL) || (ct == NULL) || (ss == NULL) || (rng == NULL)) {
         return BAD_FUNC_ARG;
@@ -146,12 +146,12 @@ WOLFSSL_API int wc_PQCleanHqcKey_Encapsulate(PQCleanHqcKey *key, byte *ct, byte 
     return (ret == 0) ? 0 : BAD_FUNC_ARG;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_EncapsulateWithRandom(PQCleanHqcKey *key, byte *ct, byte *ss,
+int wc_PQCleanHqcKey_EncapsulateWithRandom(PQCleanHqcKey *key, byte *ct, byte *ss,
                                                        const byte *rand, int len) {
     return NOT_COMPILED_IN;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_Decapsulate(PQCleanHqcKey *key, byte *ss, const byte *ct,
+int wc_PQCleanHqcKey_Decapsulate(PQCleanHqcKey *key, byte *ss, const byte *ct,
                                              word32 len) {
     int ret = 0;
     word32 ctLen = 0;
@@ -190,7 +190,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_Decapsulate(PQCleanHqcKey *key, byte *ss, const
     return ret;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_DecodePrivateKey(PQCleanHqcKey *key, const byte *in, word32 len) {
+int wc_PQCleanHqcKey_DecodePrivateKey(PQCleanHqcKey *key, const byte *in, word32 len) {
     int ret = 0;
     word32 privKeyLen = 0;
     if ((key == NULL) || (in == NULL))
@@ -217,7 +217,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_DecodePrivateKey(PQCleanHqcKey *key, const byte
     return ret;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_DecodePublicKey(PQCleanHqcKey *key, const byte *in, word32 len) {
+int wc_PQCleanHqcKey_DecodePublicKey(PQCleanHqcKey *key, const byte *in, word32 len) {
     int ret = 0;
     word32 pubKeyLen = 0;
     if ((key == NULL) || (in == NULL))
@@ -244,7 +244,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_DecodePublicKey(PQCleanHqcKey *key, const byte 
     return ret;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_PrivateKeySize(PQCleanHqcKey *key, word32 *len) {
+int wc_PQCleanHqcKey_PrivateKeySize(PQCleanHqcKey *key, word32 *len) {
     if ((NULL == key) || (NULL == len))
         return BAD_FUNC_ARG;
     if (!is_valid_level(key->level))
@@ -263,7 +263,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_PrivateKeySize(PQCleanHqcKey *key, word32 *len)
     return 0;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_PublicKeySize(PQCleanHqcKey *key, word32 *len) {
+int wc_PQCleanHqcKey_PublicKeySize(PQCleanHqcKey *key, word32 *len) {
     if ((NULL == key) || (NULL == len))
         return BAD_FUNC_ARG;
     if (!is_valid_level(key->level))
@@ -282,7 +282,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_PublicKeySize(PQCleanHqcKey *key, word32 *len) 
     return 0;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_EncodePrivateKey(PQCleanHqcKey *key, byte *out, word32 len) {
+int wc_PQCleanHqcKey_EncodePrivateKey(PQCleanHqcKey *key, byte *out, word32 len) {
     word32 privKeyLen = 0;
     if ((key == NULL) || (out == NULL)) {
         return BAD_FUNC_ARG;
@@ -307,7 +307,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_EncodePrivateKey(PQCleanHqcKey *key, byte *out,
     return 0;
 }
 
-WOLFSSL_API int wc_PQCleanHqcKey_EncodePublicKey(PQCleanHqcKey *key, byte *out, word32 len) {
+int wc_PQCleanHqcKey_EncodePublicKey(PQCleanHqcKey *key, byte *out, word32 len) {
     word32 pubKeyLen = 0;
     if ((key == NULL) || (out == NULL)) {
         return BAD_FUNC_ARG;
@@ -331,3 +331,14 @@ WOLFSSL_API int wc_PQCleanHqcKey_EncodePublicKey(PQCleanHqcKey *key, byte *out, 
 
     return 0;
 }
+
+int wc_PQCleanHqcKey_PublicKeyToDer(PQCleanHqcKey *key, byte *out,
+                                                word32 len, int withAlg) {
+    return NOT_COMPILED_IN;
+}
+
+int wc_PQCleanHqcKey_PrivateKeyToDer(PQCleanHqcKey *key, byte *out,
+                                                 word32 len) {
+    return NOT_COMPILED_IN;
+}
+

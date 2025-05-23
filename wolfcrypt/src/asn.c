@@ -177,6 +177,8 @@ ASN Options:
 #if defined(HAVE_SPHINCS)
     #include <wolfssl/wolfcrypt/sphincs.h>
 #endif
+#include <wolfssl/wolfcrypt/pqclean_mlkem.h>
+#include <wolfssl/wolfcrypt/pqclean_hqc.h>
 
 #ifdef WOLFSSL_QNX_CAAM
     #include <wolfssl/wolfcrypt/port/caam/wolfcaam.h>
@@ -26006,6 +26008,19 @@ wcchar END_PUB_KEY          = "-----END PUBLIC KEY-----";
     wcchar BEGIN_SPHINCS_SMALL_LEVEL5_PRIV = "-----BEGIN SPHINCS_SMALL_LEVEL5 PRIVATE KEY-----";
     wcchar END_SPHINCS_SMALL_LEVEL5_PRIV   = "-----END SPHINCS_SMALL_LEVEL5 PRIVATE KEY-----";
 #endif /* HAVE_SPHINCS */
+    wcchar BEGIN_ML_KEM_LEVEL1_PRIV = "-----BEGIN ML_KEM_LEVEL1 PRIVATE KEY-----";
+    wcchar BEGIN_ML_KEM_LEVEL3_PRIV = "-----BEGIN ML_KEM_LEVEL1 PRIVATE KEY-----";
+    wcchar BEGIN_ML_KEM_LEVEL5_PRIV = "-----BEGIN ML_KEM_LEVEL5 PRIVATE KEY-----";
+    wcchar BEGIN_HQC_LEVEL1_PRIV = "-----BEGIN HQC_LEVEL1 PRIVATE KEY-----";
+    wcchar BEGIN_HQC_LEVEL3_PRIV = "-----BEGIN HQC_LEVEL1 PRIVATE KEY-----";
+    wcchar BEGIN_HQC_LEVEL5_PRIV = "-----BEGIN HQC_LEVEL5 PRIVATE KEY-----";
+    wcchar END_ML_KEM_LEVEL1_PRIV = "-----END ML_KEM_LEVEL1 PRIVATE KEY-----";
+    wcchar END_ML_KEM_LEVEL3_PRIV = "-----END ML_KEM_LEVEL1 PRIVATE KEY-----";
+    wcchar END_ML_KEM_LEVEL5_PRIV = "-----END ML_KEM_LEVEL5 PRIVATE KEY-----";
+    wcchar END_HQC_LEVEL1_PRIV = "-----END HQC_LEVEL1 PRIVATE KEY-----";
+    wcchar END_HQC_LEVEL3_PRIV = "-----END HQC_LEVEL1 PRIVATE KEY-----";
+    wcchar END_HQC_LEVEL5_PRIV = "-----END HQC_LEVEL5 PRIVATE KEY-----";
+
 
 const int pem_struct_min_sz = XSTR_SIZEOF("-----BEGIN X509 CRL-----"
                                              "-----END X509 CRL-----");
@@ -26205,6 +26220,36 @@ int wc_PemGetHeaderFooter(int type, const char** header, const char** footer)
             ret = 0;
             break;
 #endif /* HAVE_SPHINCS */
+        case ML_KEM_LEVEL1_TYPE:
+            if (header) *header = BEGIN_ML_KEM_LEVEL1_PRIV;
+            if (footer) *footer = END_ML_KEM_LEVEL1_PRIV;
+            ret = 0;
+            break;
+        case ML_KEM_LEVEL3_TYPE:
+            if (header) *header = BEGIN_ML_KEM_LEVEL3_PRIV;
+            if (footer) *footer = END_ML_KEM_LEVEL3_PRIV;
+            ret = 0;
+            break;
+        case ML_KEM_LEVEL5_TYPE:
+            if (header) *header = BEGIN_ML_KEM_LEVEL5_PRIV;
+            if (footer) *footer = END_ML_KEM_LEVEL5_PRIV;
+            ret = 0;
+            break;
+        case HQC_LEVEL1_TYPE:
+            if (header) *header = BEGIN_HQC_LEVEL1_PRIV;
+            if (footer) *footer = END_HQC_LEVEL1_PRIV;
+            ret = 0;
+            break;
+        case HQC_LEVEL3_TYPE:
+            if (header) *header = BEGIN_HQC_LEVEL3_PRIV;
+            if (footer) *footer = END_HQC_LEVEL3_PRIV;
+            ret = 0;
+            break;
+        case HQC_LEVEL5_TYPE:
+            if (header) *header = BEGIN_HQC_LEVEL5_PRIV;
+            if (footer) *footer = END_HQC_LEVEL5_PRIV;
+            ret = 0;
+            break;
         case PUBLICKEY_TYPE:
         case ECC_PUBLICKEY_TYPE:
             if (header) *header = BEGIN_PUB_KEY;
@@ -30129,6 +30174,24 @@ static int EncodePublicKey_ex(int keyType, const void *key, byte *output,
             }
             break;
     #endif /* HAVE_SPHINCS */
+        case ML_KEM_LEVEL1_KEY:
+        case ML_KEM_LEVEL3_KEY:
+        case ML_KEM_LEVEL5_KEY:
+            ret = wc_PQCleanMlKemKey_PublicKeyToDer((PQCleanMlKemKey *)key, output,
+                                                    (word32)outLen, 1);
+            if (ret <= 0) {
+                ret = PUBLIC_KEY_E;
+            }
+            break;
+        case HQC_LEVEL1_KEY:
+        case HQC_LEVEL3_KEY:
+        case HQC_LEVEL5_KEY:
+            ret = wc_PQCleanHqcKey_PublicKeyToDer((PQCleanHqcKey *)key, output,
+                                                  (word32)outLen, 1);
+            if (ret <= 0) {
+                ret = PUBLIC_KEY_E;
+            }
+            break;
         default:
             ret = PUBLIC_KEY_E;
             break;
@@ -31847,7 +31910,8 @@ static int MakeAnyCert(Cert* cert, byte* derBuffer, word32 derSz,
                        RsaKey* rsaKey, ecc_key* eccKey, WC_RNG* rng,
                        DsaKey* dsaKey, ed25519_key* ed25519Key,
                        ed448_key* ed448Key, falcon_key* falconKey,
-                       dilithium_key* dilithiumKey, sphincs_key* sphincsKey)
+                       dilithium_key* dilithiumKey, sphincs_key* sphincsKey,
+                       PQCleanMlKemKey *mlkemKey, PQCleanHqcKey *hqcKey)
 {
 #ifndef WOLFSSL_ASN_TEMPLATE
     int ret;
@@ -32088,9 +32152,26 @@ static int MakeAnyCert(Cert* cert, byte* derBuffer, word32 derSz,
                  && (sphincsKey->optim == SPHINCS_SMALL_VARIANT)) {
             cert->keyType = SPHINCS_SMALL_LEVEL5_KEY;
             key = sphincsKey ;
-        }
 #endif /* HAVE_SPHINCS */
-        else {
+        } else if ((mlkemKey != NULL) && (mlkemKey->level == 1)) {
+            cert->keyType = ML_KEM_LEVEL1_KEY;
+            key = mlkemKey;
+        } else if ((mlkemKey != NULL) && (mlkemKey->level == 3)) {
+            cert->keyType = ML_KEM_LEVEL3_KEY;
+            key = mlkemKey;
+        } else if ((mlkemKey != NULL) && (mlkemKey->level == 5)) {
+            cert->keyType = ML_KEM_LEVEL5_KEY;
+            key = mlkemKey;
+        } else if ((hqcKey != NULL) && (hqcKey->level == 1)) {
+            cert->keyType = ML_KEM_LEVEL1_KEY;
+            key = hqcKey;
+        } else if ((hqcKey != NULL) && (hqcKey->level == 3)) {
+            cert->keyType = ML_KEM_LEVEL3_KEY;
+            key = hqcKey;
+        } else if ((hqcKey != NULL) && (hqcKey->level == 5)) {
+            cert->keyType = ML_KEM_LEVEL5_KEY;
+            key = hqcKey;
+        } else {
             ret = BAD_FUNC_ARG;
         }
     }
@@ -32364,6 +32445,8 @@ int wc_MakeCert_ex(Cert* cert, byte* derBuffer, word32 derSz, int keyType,
     falcon_key*        falconKey = NULL;
     dilithium_key*     dilithiumKey = NULL;
     sphincs_key*       sphincsKey = NULL;
+    PQCleanMlKemKey    *mlkemKey = NULL;
+    PQCleanHqcKey      *hqcKey = NULL;
 
     if (keyType == RSA_TYPE)
         rsaKey = (RsaKey*)key;
@@ -32405,10 +32488,23 @@ int wc_MakeCert_ex(Cert* cert, byte* derBuffer, word32 derSz, int keyType,
         sphincsKey = (sphincs_key*)key;
     else if (keyType == SPHINCS_SMALL_LEVEL5_TYPE)
         sphincsKey = (sphincs_key*)key;
+    else if (keyType == ML_KEM_LEVEL1_TYPE)
+        mlkemKey = (PQCleanMlKemKey *)key;
+    else if (keyType == ML_KEM_LEVEL3_TYPE)
+        mlkemKey = (PQCleanMlKemKey *)key;
+    else if (keyType == ML_KEM_LEVEL5_TYPE)
+        mlkemKey = (PQCleanMlKemKey *)key;
+    else if (keyType == HQC_LEVEL1_TYPE)
+        hqcKey = (PQCleanHqcKey *)key;
+    else if (keyType == HQC_LEVEL3_TYPE)
+        hqcKey = (PQCleanHqcKey *)key;
+    else if (keyType == HQC_LEVEL5_TYPE)
+        hqcKey = (PQCleanHqcKey *)key;
+
 
     return MakeAnyCert(cert, derBuffer, derSz, rsaKey, eccKey, rng, dsaKey,
                        ed25519Key, ed448Key, falconKey, dilithiumKey,
-                       sphincsKey);
+                       sphincsKey, mlkemKey, hqcKey);
 }
 
 /* Make an x509 Certificate v3 RSA or ECC from cert input, write to buffer */
@@ -32417,7 +32513,7 @@ int wc_MakeCert(Cert* cert, byte* derBuffer, word32 derSz, RsaKey* rsaKey,
              ecc_key* eccKey, WC_RNG* rng)
 {
     return MakeAnyCert(cert, derBuffer, derSz, rsaKey, eccKey, rng, NULL, NULL,
-                       NULL, NULL, NULL, NULL);
+                       NULL, NULL, NULL, NULL, NULL, NULL);
 }
 
 

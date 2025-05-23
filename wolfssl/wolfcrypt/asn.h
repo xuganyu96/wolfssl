@@ -1182,7 +1182,7 @@ enum Misc_ASN {
     MAX_DER_DIGEST_ASN_SZ = MAX_ENCODED_DIG_ASN_SZ + MAX_ALGO_SZ + MAX_SEQ_SZ,
                             /* Maximum DER digest ASN header size */
                             /* Max X509 header length indicates the max length + 2 ('\n', '\0') */
-    MAX_X509_HEADER_SZ  = (37 + 2), /* Maximum PEM Header/Footer Size */
+    MAX_X509_HEADER_SZ  = (37 + 2 + 5), /* Maximum PEM Header/Footer Size */
 #ifdef WOLFSSL_CERT_GEN
     #ifdef WOLFSSL_CERT_REQ
                           /* Max encoded cert req attributes length */
@@ -2456,7 +2456,13 @@ enum cert_enums {
     SPHINCS_FAST_LEVEL5_KEY  = 26,
     SPHINCS_SMALL_LEVEL1_KEY = 27,
     SPHINCS_SMALL_LEVEL3_KEY = 28,
-    SPHINCS_SMALL_LEVEL5_KEY = 29
+    SPHINCS_SMALL_LEVEL5_KEY = 29,
+    ML_KEM_LEVEL1_KEY        = 30,
+    ML_KEM_LEVEL3_KEY        = 31,
+    ML_KEM_LEVEL5_KEY        = 32,
+    HQC_LEVEL1_KEY           = 33,
+    HQC_LEVEL3_KEY           = 34,
+    HQC_LEVEL5_KEY           = 35,
 };
 
 #endif /* WOLFSSL_CERT_GEN */
