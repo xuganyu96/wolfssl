@@ -4373,6 +4373,23 @@ static word32 SetBitString16Bit(word16 val, byte* output)
         {43, 206, 15, 6, 9, 7};
 #endif /* HAVE_SPHINCS */
 
+/* 2.16.840.1.101.3.4.4.1 */
+static const byte keyMlKem_Level1Oid[] = {0x60, 0x86, 0x48, 0x01, 0x65,
+                                          0x03, 0x04, 0x04, 0x01};
+/* 2.16.840.1.101.3.4.4.2 */
+static const byte keyMlKem_Level3Oid[] = {0x60, 0x86, 0x48, 0x01, 0x65,
+                                          0x03, 0x04, 0x04, 0x02};
+/* 2.16.840.1.101.3.4.4.3 */
+static const byte keyMlKem_Level5Oid[] = {0x60, 0x86, 0x48, 0x01, 0x65,
+                                          0x03, 0x04, 0x04, 0x03};
+static const byte keyOneTimeMlKem_Level1Oid[] = {0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x04,0x04};
+static const byte keyOneTimeMlKem_Level3Oid[] = {0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x04,0x05};
+static const byte keyOneTimeMlKem_Level5Oid[] = {0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x04,0x06};
+static const byte keyHqc_Level1Oid[] = {0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x04,0x07};
+static const byte keyHqc_Level3Oid[] = {0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x04,0x08};
+static const byte keyHqc_Level5Oid[] = {0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x04,0x09};
+static const byte keyMceliece_Level1Oid[] = {0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x04,0x0a};
+
 /* curveType */
 #ifdef HAVE_ECC
     /* See "ecc_sets" table in ecc.c */
@@ -5351,6 +5368,46 @@ const byte* OidFromId(word32 id, word32 type, word32* oidSz)
                 case SPHINCS_SMALL_LEVEL5k:
                     oid = keySphincsSmall_Level5Oid;
                     *oidSz = sizeof(keySphincsSmall_Level5Oid);
+                    break;
+                case ML_KEM_LEVEL1k:
+                    oid = keyMlKem_Level1Oid;
+                    *oidSz = sizeof(keyMlKem_Level1Oid);
+                    break;
+                case ML_KEM_LEVEL3k:
+                    oid = keyMlKem_Level3Oid;
+                    *oidSz = sizeof(keyMlKem_Level3Oid);
+                    break;
+                case ML_KEM_LEVEL5k:
+                    oid = keyMlKem_Level5Oid;
+                    *oidSz = sizeof(keyMlKem_Level5Oid);
+                    break;
+                case OT_ML_KEM_LEVEL1k:
+                    oid = keyOneTimeMlKem_Level1Oid;
+                    *oidSz = sizeof(keyOneTimeMlKem_Level1Oid);
+                    break;
+                case OT_ML_KEM_LEVEL3k:
+                    oid = keyOneTimeMlKem_Level3Oid;
+                    *oidSz = sizeof(keyOneTimeMlKem_Level3Oid);
+                    break;
+                case OT_ML_KEM_LEVEL5k:
+                    oid = keyOneTimeMlKem_Level5Oid;
+                    *oidSz = sizeof(keyOneTimeMlKem_Level5Oid);
+                    break;
+                case HQC_LEVEL1k:
+                    oid = keyHqc_Level1Oid;
+                    *oidSz = sizeof(keyHqc_Level1Oid);
+                    break;
+                case HQC_LEVEL3k:
+                    oid = keyHqc_Level3Oid;
+                    *oidSz = sizeof(keyHqc_Level3Oid);
+                    break;
+                case HQC_LEVEL5k:
+                    oid = keyHqc_Level5Oid;
+                    *oidSz = sizeof(keyHqc_Level5Oid);
+                    break;
+                case MCELIECE_LEVEL1k:
+                    oid = keyMceliece_Level1Oid;
+                    *oidSz = sizeof(keyMceliece_Level1Oid);
                     break;
                 #endif /* HAVE_SPHINCS */
                 default:

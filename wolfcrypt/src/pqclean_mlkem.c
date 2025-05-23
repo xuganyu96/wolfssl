@@ -1,18 +1,22 @@
-#include "wolfssl/wolfcrypt/logging.h"
+#include <wolfssl/wolfcrypt/asn.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
+#include <wolfssl/wolfcrypt/logging.h>
+#include <wolfssl/wolfcrypt/oid_sum.h>
 #include <wolfssl/wolfcrypt/pqclean_mlkem.h>
 #include <wolfssl/wolfcrypt/random.h>
 #include <wolfssl/wolfcrypt/types.h>
 
-static int is_valid_level(int level) { return ((level == 1) || (level == 3) || (level == 5)); }
+static int is_valid_level(int level) {
+    return ((level == 1) || (level == 3) || (level == 5));
+}
 
-WOLFSSL_API int wc_PQCleanMlKemKey_Init(PQCleanMlKemKey *key) {
+int wc_PQCleanMlKemKey_Init(PQCleanMlKemKey *key) {
     return wc_PQCleanMlKemKey_InitEx(key, NULL, INVALID_DEVID);
 }
 
 /* TODO: For now heap and devId are ignored */
 /* TODO: need to incorporate heap/devId */
-WOLFSSL_API int wc_PQCleanMlKemKey_InitEx(PQCleanMlKemKey *key, void *heap, int devId) {
+int wc_PQCleanMlKemKey_InitEx(PQCleanMlKemKey *key, void *heap, int devId) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -20,7 +24,7 @@ WOLFSSL_API int wc_PQCleanMlKemKey_InitEx(PQCleanMlKemKey *key, void *heap, int 
     return 0;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_SetLevel(PQCleanMlKemKey *key, int level) {
+int wc_PQCleanMlKemKey_SetLevel(PQCleanMlKemKey *key, int level) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -31,7 +35,7 @@ WOLFSSL_API int wc_PQCleanMlKemKey_SetLevel(PQCleanMlKemKey *key, int level) {
     return 0;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_GetLevel(PQCleanMlKemKey *key, int *level) {
+int wc_PQCleanMlKemKey_GetLevel(PQCleanMlKemKey *key, int *level) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -43,14 +47,14 @@ WOLFSSL_API int wc_PQCleanMlKemKey_GetLevel(PQCleanMlKemKey *key, int *level) {
 }
 
 /* This function should never fail */
-WOLFSSL_API int wc_PQCleanMlKemKey_Free(PQCleanMlKemKey *key) {
+int wc_PQCleanMlKemKey_Free(PQCleanMlKemKey *key) {
     if (key != NULL) {
         XMEMSET(key, 0, sizeof(PQCleanMlKemKey));
     }
     return 0;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_MakeKey(PQCleanMlKemKey *key, WC_RNG *rng) {
+int wc_PQCleanMlKemKey_MakeKey(PQCleanMlKemKey *key, WC_RNG *rng) {
     if ((key == NULL) || (rng == NULL)) {
         return BAD_FUNC_ARG;
     }
@@ -64,8 +68,8 @@ WOLFSSL_API int wc_PQCleanMlKemKey_MakeKey(PQCleanMlKemKey *key, WC_RNG *rng) {
     return wc_err;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_MakeKeyWithRandom(PQCleanMlKemKey *key, const byte *seed,
-                                                     int len) {
+int wc_PQCleanMlKemKey_MakeKeyWithRandom(PQCleanMlKemKey *key, const byte *seed,
+                                         int len) {
     if ((key == NULL) || (seed == NULL) || (len != PQCLEAN_MLKEM_SEED_SIZE)) {
         /* len != PQCLEAN_MLKEM_SEED_SIZE feels redundant */
         return BAD_FUNC_ARG;
@@ -75,14 +79,14 @@ WOLFSSL_API int wc_PQCleanMlKemKey_MakeKeyWithRandom(PQCleanMlKemKey *key, const
     }
     int wc_err, pqclean_err;
     if (key->level == 1) {
-        pqclean_err =
-            PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair_derand(key->pubKey, key->privKey, seed);
+        pqclean_err = PQCLEAN_MLKEM512_CLEAN_crypto_kem_keypair_derand(
+            key->pubKey, key->privKey, seed);
     } else if (key->level == 3) {
-        pqclean_err =
-            PQCLEAN_MLKEM768_CLEAN_crypto_kem_keypair_derand(key->pubKey, key->privKey, seed);
+        pqclean_err = PQCLEAN_MLKEM768_CLEAN_crypto_kem_keypair_derand(
+            key->pubKey, key->privKey, seed);
     } else { /* key->level must be 5 */
-        pqclean_err =
-            PQCLEAN_MLKEM1024_CLEAN_crypto_kem_keypair_derand(key->pubKey, key->privKey, seed);
+        pqclean_err = PQCLEAN_MLKEM1024_CLEAN_crypto_kem_keypair_derand(
+            key->pubKey, key->privKey, seed);
     }
     if (pqclean_err == 0) {
         key->pubKeySet = 1;
@@ -92,7 +96,7 @@ WOLFSSL_API int wc_PQCleanMlKemKey_MakeKeyWithRandom(PQCleanMlKemKey *key, const
     return wc_err;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_CipherTextSize(PQCleanMlKemKey *key, word32 *len) {
+int wc_PQCleanMlKemKey_CipherTextSize(PQCleanMlKemKey *key, word32 *len) {
     if ((key == NULL) || (len == NULL)) {
         return BAD_FUNC_ARG;
     }
@@ -109,7 +113,7 @@ WOLFSSL_API int wc_PQCleanMlKemKey_CipherTextSize(PQCleanMlKemKey *key, word32 *
     return 0;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_SharedSecretSize(PQCleanMlKemKey *key, word32 *len) {
+int wc_PQCleanMlKemKey_SharedSecretSize(PQCleanMlKemKey *key, word32 *len) {
     if ((key == NULL) || (len == NULL)) {
         return BAD_FUNC_ARG;
     }
@@ -120,8 +124,8 @@ WOLFSSL_API int wc_PQCleanMlKemKey_SharedSecretSize(PQCleanMlKemKey *key, word32
     return 0;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_Encapsulate(PQCleanMlKemKey *key, byte *ct, byte *ss,
-                                               WC_RNG *rng) {
+int wc_PQCleanMlKemKey_Encapsulate(PQCleanMlKemKey *key, byte *ct, byte *ss,
+                                   WC_RNG *rng) {
     if ((key == NULL) || (ct == NULL) || (ss == NULL) || (rng == NULL)) {
         return BAD_FUNC_ARG;
     }
@@ -133,11 +137,13 @@ WOLFSSL_API int wc_PQCleanMlKemKey_Encapsulate(PQCleanMlKemKey *key, byte *ct, b
     }
     byte seed[PQCLEAN_MLKEM_SEED_SIZE];
     wc_RNG_GenerateBlock(rng, seed, sizeof(seed));
-    return wc_PQCleanMlKemKey_EncapsulateWithRandom(key, ct, ss, seed, sizeof(seed));
+    return wc_PQCleanMlKemKey_EncapsulateWithRandom(key, ct, ss, seed,
+                                                    sizeof(seed));
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_EncapsulateWithRandom(PQCleanMlKemKey *key, byte *ct, byte *ss,
-                                                         const byte *rand, int len) {
+int wc_PQCleanMlKemKey_EncapsulateWithRandom(PQCleanMlKemKey *key, byte *ct,
+                                             byte *ss, const byte *rand,
+                                             int len) {
     if ((key == NULL) || (ct == NULL) || (ss == NULL) || (rand == NULL)) {
         return BAD_FUNC_ARG;
     }
@@ -149,18 +155,21 @@ WOLFSSL_API int wc_PQCleanMlKemKey_EncapsulateWithRandom(PQCleanMlKemKey *key, b
     }
     int wc_err, pqclean_err;
     if (key->level == 1) {
-        pqclean_err = PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_derand(ct, ss, key->pubKey, rand);
+        pqclean_err = PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc_derand(
+            ct, ss, key->pubKey, rand);
     } else if (key->level == 3) {
-        pqclean_err = PQCLEAN_MLKEM768_CLEAN_crypto_kem_enc_derand(ct, ss, key->pubKey, rand);
+        pqclean_err = PQCLEAN_MLKEM768_CLEAN_crypto_kem_enc_derand(
+            ct, ss, key->pubKey, rand);
     } else { /* key->level == 5 */
-        pqclean_err = PQCLEAN_MLKEM1024_CLEAN_crypto_kem_enc_derand(ct, ss, key->pubKey, rand);
+        pqclean_err = PQCLEAN_MLKEM1024_CLEAN_crypto_kem_enc_derand(
+            ct, ss, key->pubKey, rand);
     }
     wc_err = (pqclean_err == 0) ? 0 : WC_FAILURE;
     return wc_err;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_Decapsulate(PQCleanMlKemKey *key, byte *ss, const byte *ct,
-                                               word32 len) {
+int wc_PQCleanMlKemKey_Decapsulate(PQCleanMlKemKey *key, byte *ss,
+                                   const byte *ct, word32 len) {
     if ((key == NULL) || (ss == NULL) || (ct == NULL)) {
         return BAD_FUNC_ARG;
     }
@@ -178,18 +187,21 @@ WOLFSSL_API int wc_PQCleanMlKemKey_Decapsulate(PQCleanMlKemKey *key, byte *ss, c
 
     int wc_err, pqclean_err;
     if (key->level == 1) {
-        pqclean_err = PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec(ss, ct, key->privKey);
+        pqclean_err =
+            PQCLEAN_MLKEM512_CLEAN_crypto_kem_dec(ss, ct, key->privKey);
     } else if (key->level == 3) {
-        pqclean_err = PQCLEAN_MLKEM768_CLEAN_crypto_kem_dec(ss, ct, key->privKey);
+        pqclean_err =
+            PQCLEAN_MLKEM768_CLEAN_crypto_kem_dec(ss, ct, key->privKey);
     } else { /* key->level == 5 */
-        pqclean_err = PQCLEAN_MLKEM1024_CLEAN_crypto_kem_dec(ss, ct, key->privKey);
+        pqclean_err =
+            PQCLEAN_MLKEM1024_CLEAN_crypto_kem_dec(ss, ct, key->privKey);
     }
     wc_err = (pqclean_err == 0) ? 0 : WC_FAILURE;
     return wc_err;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_DecodePrivateKey(PQCleanMlKemKey *key, const byte *in,
-                                                    word32 len) {
+int wc_PQCleanMlKemKey_DecodePrivateKey(PQCleanMlKemKey *key, const byte *in,
+                                        word32 len) {
     int ret = 0;
     word32 PrivKeyLen = 0;
 
@@ -212,8 +224,8 @@ WOLFSSL_API int wc_PQCleanMlKemKey_DecodePrivateKey(PQCleanMlKemKey *key, const 
     return ret;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_DecodePublicKey(PQCleanMlKemKey *key, const byte *in,
-                                                   word32 len) {
+int wc_PQCleanMlKemKey_DecodePublicKey(PQCleanMlKemKey *key, const byte *in,
+                                       word32 len) {
     int ret = 0;
     word32 pubKeyLen = 0;
 
@@ -236,7 +248,7 @@ WOLFSSL_API int wc_PQCleanMlKemKey_DecodePublicKey(PQCleanMlKemKey *key, const b
     return ret;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_PrivateKeySize(PQCleanMlKemKey *key, word32 *len) {
+int wc_PQCleanMlKemKey_PrivateKeySize(PQCleanMlKemKey *key, word32 *len) {
     int ret = 0;
 
     if ((key == NULL) || (len == NULL)) {
@@ -260,7 +272,7 @@ WOLFSSL_API int wc_PQCleanMlKemKey_PrivateKeySize(PQCleanMlKemKey *key, word32 *
     return ret;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_PublicKeySize(PQCleanMlKemKey *key, word32 *len) {
+int wc_PQCleanMlKemKey_PublicKeySize(PQCleanMlKemKey *key, word32 *len) {
     int ret = 0;
 
     if ((key == NULL) || (len == NULL)) {
@@ -284,10 +296,11 @@ WOLFSSL_API int wc_PQCleanMlKemKey_PublicKeySize(PQCleanMlKemKey *key, word32 *l
     return ret;
 }
 
-/* Treat PQClean KEM as black boxes; encoding simply means copying bytes from the key obj to the
- * input buffer
+/* Treat PQClean KEM as black boxes; encoding simply means copying bytes from
+ * the key obj to the input buffer
  */
-WOLFSSL_API int wc_PQCleanMlKemKey_EncodePrivateKey(PQCleanMlKemKey *key, byte *out, word32 len) {
+int wc_PQCleanMlKemKey_EncodePrivateKey(PQCleanMlKemKey *key, byte *out,
+                                        word32 len) {
     int ret = 0;
     word32 privKeyLen;
 
@@ -307,7 +320,8 @@ WOLFSSL_API int wc_PQCleanMlKemKey_EncodePrivateKey(PQCleanMlKemKey *key, byte *
     return ret;
 }
 
-WOLFSSL_API int wc_PQCleanMlKemKey_EncodePublicKey(PQCleanMlKemKey *key, byte *out, word32 len) {
+int wc_PQCleanMlKemKey_EncodePublicKey(PQCleanMlKemKey *key, byte *out,
+                                       word32 len) {
     int ret = 0;
     word32 pubKeyLen;
 
@@ -323,6 +337,123 @@ WOLFSSL_API int wc_PQCleanMlKemKey_EncodePublicKey(PQCleanMlKemKey *key, byte *o
         return MISSING_KEY;
     }
     XMEMCPY(out, key->pubKey, pubKeyLen);
+
+    return ret;
+}
+
+/* Copy public key bytes to the output buffer. `len` should contains the
+ * capacity of the output buffer at function call, but will be filled with the
+ * length of the actual data after return.
+ *
+ * If `out` is NULL, then `len` will be filled with the expected length
+ *
+ * Return 0 on success.
+ *
+ * TODO: this is very similar to EncodePublicKey, maybe it's better to switch
+ * into one function
+ */
+static int export_public(PQCleanMlKemKey *key, byte *out, word32 *len) {
+    int ret;
+    word32 pubKeyLen;
+
+    if ((key == NULL) || (len == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    if (!key->pubKeySet) {
+        return MISSING_KEY;
+    }
+
+    if ((ret = wc_PQCleanMlKemKey_PublicKeySize(key, &pubKeyLen)) != 0) {
+        return ret;
+    }
+
+    if (out == NULL) { /* do not write pubkey; only update length */
+        *len = pubKeyLen;
+        return ret;
+    } else if (*len < pubKeyLen) { /* not enough space */
+        return BUFFER_E;
+    } else {
+        memcpy(out, key->pubKey, pubKeyLen);
+        *len = pubKeyLen;
+    }
+
+    return ret;
+}
+
+/* write the OID sum to `oid`.
+ *
+ * Return 0 on success
+ */
+static int get_oid_sum(PQCleanMlKemKey *key, enum Key_Sum *oid) {
+    if ((key == NULL) || (oid == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    switch (key->level) {
+    case 1:
+        *oid = ML_KEM_LEVEL1k;
+        break;
+    case 3:
+        *oid = ML_KEM_LEVEL3k;
+        break;
+    case 5:
+        *oid = ML_KEM_LEVEL5k;
+        break;
+    default:
+        return BAD_FUNC_ARG;
+    }
+    return 0;
+}
+
+/* Encode ML-KEM public key according to DER
+ *
+ * Pass NULL for ouptut to get the size of the encoding
+ *
+ * Return 0 upon success
+ */
+int wc_PQCleanMlKemKey_PublicKeyToDer(PQCleanMlKemKey *key, byte *out,
+                                      word32 len, int withAlg) {
+    int ret;
+    byte pubKey[PQCLEAN_MLKEM_MAX_PUBLICKEY_SIZE];
+    word32 pubKeyLen = (word32)sizeof(pubKey);
+    enum Key_Sum oid; /* actually the OID sum but whatever */
+
+    if (key == NULL) {
+        return BAD_FUNC_ARG;
+    }
+    if ((ret = get_oid_sum(key, &oid)) < 0) {
+        return ret;
+    }
+
+    ret = export_public(key, pubKey, &pubKeyLen);
+    if (ret == 0) {
+        ret = SetAsymKeyDerPublic(pubKey, pubKeyLen, out, len, oid, withAlg);
+    }
+
+    return ret;
+}
+
+/* Enocde ML-KEM private key according to DER
+ *
+ * Return 0 upon success
+ */
+int wc_PQCleanMlKemKey_PrivateKeyToDer(PQCleanMlKemKey *key, byte *out,
+                                       word32 len) {
+    int ret = 0;
+    if (key == NULL) {
+        return BAD_FUNC_ARG;
+    }
+    if (!key->privKeySet) {
+        return MISSING_KEY;
+    }
+    word32 privKeyLen;
+    enum Key_Sum oid;
+    if ((ret = wc_PQCleanMlKemKey_PrivateKeySize(key, &privKeyLen)) < 0) {
+        return ret;
+    }
+    if ((ret = get_oid_sum(key, &oid)) < 0) {
+        return ret;
+    }
+    ret = SetAsymKeyDer(key->privKey, privKeyLen, NULL, 0, out, len, oid);
 
     return ret;
 }
