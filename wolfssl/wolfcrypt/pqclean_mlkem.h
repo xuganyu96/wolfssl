@@ -89,9 +89,18 @@ WOLFSSL_API int wc_PQCleanMlKemKey_EncodePublicKey(PQCleanMlKemKey *key,
                                                    byte *out, word32 len);
 
 WOLFSSL_API int wc_PQCleanMlKemKey_PublicKeyToDer(PQCleanMlKemKey *key,
-                                                  byte *output, word32 inLen, int withAlg);
+                                                  byte *output, word32 inLen,
+                                                  int withAlg);
 
 WOLFSSL_API int wc_PQCleanMlKemKey_PrivateKeyToDer(PQCleanMlKemKey *key,
                                                    byte *output, word32 len);
 
+// TODO: unforunate names here `encode/decode` actually means import/export,
+//       so the actuall encode/decode (to DER) has to be KeyToDer and DerToKey
+WOLFSSL_API int wc_PQCleanMlKemKey_DerToPrivateKey(const byte *input,
+                                                   word32 *inOutIdx,
+                                                   PQCleanMlKemKey *key,
+                                                   word32 inSz);
+
+WOLFSSL_API int wc_PQCleanMlKemKey_get_oid_sum(PQCleanMlKemKey *key, enum Key_Sum *oid);
 #endif

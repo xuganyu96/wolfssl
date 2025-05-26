@@ -457,3 +457,84 @@ int wc_PQCleanMlKemKey_PrivateKeyToDer(PQCleanMlKemKey *key, byte *out,
 
     return ret;
 }
+
+static int mapOidToSecLevel(int keyType) {
+    switch (keyType) {
+    case ML_KEM_LEVEL1k:
+        return 1;
+    case ML_KEM_LEVEL3k:
+        return 3;
+    case ML_KEM_LEVEL5k:
+        return 5;
+    default:
+        return BAD_FUNC_ARG;
+    }
+}
+
+int wc_PQCleanMlKemKey_DerToPrivateKey(const byte *input, word32 *inOutIdx,
+                                       PQCleanMlKemKey *key, word32 inSz) {
+    WOLFSSL_ENTER("wc_PQCleanMlKemKey_DerToPrivateKey");
+    int ret = 0;
+    int keytype; /* enum Key_Sum */
+    const byte *privKey = NULL;
+    const byte *pubKey = NULL;
+    word32 privKeyLen = 0, pubKeyLen = 0;
+
+    if ((input == NULL) || (inOutIdx == NULL) || (key == NULL) || (inSz == 0)) {
+        return BAD_FUNC_ARG;
+    }
+
+    if (ret == 0) {
+        if (key->level == 0) {
+            /* level not set by caller, decode from DER */
+            keytype = ANONk;
+            WOLFSSL_MSG_EX("keytype is ANONk");
+        } else {
+            /* TODO: need to covert the case where key level is set by caller
+             * and the DER buffer needs to be parsed with expectation
+             */
+            ret = BAD_FUNC_ARG;
+        }
+    }
+
+    if (ret == 0) {
+        ret = DecodeAsymKey_Assign(input, inOutIdx, inSz, &privKey, &privKeyLen,
+                                   &pubKey, &pubKeyLen, &keytype);
+        WOLFSSL_LEAVE("DecodeAsymKey_Assign", ret);
+        if (ret == 0) {
+            ret = mapOidToSecLevel(keytype);
+            if (ret > 0) {
+                ret = wc_PQCleanMlKemKey_SetLevel(key, ret);
+            }
+        }
+    }
+
+    if (ret == 0) {
+        /* copy private key to the key object */
+        ret = wc_PQCleanMlKemKey_DecodePrivateKey(key, privKey, privKeyLen);
+        WOLFSSL_MSG_EX("level is %d, privKeyLen %d", key->level, privKeyLen);
+    }
+
+    WOLFSSL_LEAVE("wc_PQCleanMlKemKey_DerToPrivateKey", ret);
+    return ret;
+}
+
+int wc_PQCleanMlKemKey_get_oid_sum(PQCleanMlKemKey *key, enum Key_Sum *oid) {
+    if (key == NULL || oid == NULL) {
+        return BAD_FUNC_ARG;
+    }
+    switch (key->level) {
+    case 1:
+        *oid = ML_KEM_LEVEL1k;
+        break;
+    case 3:
+        *oid = ML_KEM_LEVEL3k;
+        break;
+    case 5:
+        *oid = ML_KEM_LEVEL5k;
+        break;
+    default:
+        return BAD_FUNC_ARG;
+    }
+    return 0;
+}
