@@ -3297,6 +3297,26 @@ static WC_INLINE void AddSuiteHashSigAlgo(byte* hashSigAlgo, byte macAlgo,
         }
         else
     #endif /* HAVE_DILITHIUM */
+        if (sigAlgo == mlkem_level1_sa_algo) {
+            ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
+                ML_KEM_LEVEL1_SA_MAJOR, ML_KEM_LEVEL1_SA_MINOR);
+        } else if (sigAlgo == mlkem_level3_sa_algo) {
+            ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
+                ML_KEM_LEVEL3_SA_MAJOR, ML_KEM_LEVEL3_SA_MINOR);
+        } else if (sigAlgo == mlkem_level5_sa_algo) {
+            ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
+                ML_KEM_LEVEL5_SA_MAJOR, ML_KEM_LEVEL5_SA_MINOR);
+        } else if (sigAlgo == hqc_level1_sa_algo) {
+            ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
+                HQC_LEVEL1_SA_MAJOR, HQC_LEVEL1_SA_MINOR);
+        } else if (sigAlgo == hqc_level3_sa_algo) {
+            ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
+                HQC_LEVEL3_SA_MAJOR, HQC_LEVEL3_SA_MINOR);
+        } else if (sigAlgo == hqc_level5_sa_algo) {
+            ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
+                HQC_LEVEL5_SA_MAJOR, HQC_LEVEL5_SA_MINOR);
+        }
+        else
 #ifdef WC_RSA_PSS
         if (sigAlgo == rsa_pss_sa_algo) {
             /* RSA PSS is sig then mac */
@@ -3375,6 +3395,16 @@ void InitSuitesHashSigAlgo(byte* hashSigAlgo, int haveSig, int tls1_2,
             keySz, &idx);
     }
 #endif /* HAVE_DILITHIUM */
+    /* GYX: ml-kem and hqc authentication methods should not be unconditionally
+     * added, but for now I control the server, so the choice of signature
+     * algorithm is made by the server based no which private key is loaded
+     */
+    AddSuiteHashSigAlgo(hashSigAlgo, no_mac, mlkem_level1_sa_algo, keySz, &idx);
+    AddSuiteHashSigAlgo(hashSigAlgo, no_mac, mlkem_level3_sa_algo, keySz, &idx);
+    AddSuiteHashSigAlgo(hashSigAlgo, no_mac, mlkem_level5_sa_algo, keySz, &idx);
+    AddSuiteHashSigAlgo(hashSigAlgo, no_mac, hqc_level1_sa_algo, keySz, &idx);
+    AddSuiteHashSigAlgo(hashSigAlgo, no_mac, hqc_level3_sa_algo, keySz, &idx);
+    AddSuiteHashSigAlgo(hashSigAlgo, no_mac, hqc_level5_sa_algo, keySz, &idx);
     if (haveSig & SIG_RSA) {
     #ifdef WC_RSA_PSS
         if (tls1_2) {
@@ -4614,6 +4644,30 @@ void DecodeSigAlg(const byte* input, byte* hashAlgo, byte* hsType)
             }
             break;
     #endif /* HAVE_DILITHIUM */
+        case ML_KEM_SA_MAJOR:
+            if (input[1] == ML_KEM_LEVEL1_SA_MINOR) {
+                *hsType = mlkem_level1_sa_algo;
+                *hashAlgo = sha256_mac;
+            } else if (input[1] == ML_KEM_LEVEL3_SA_MINOR) {
+                *hsType = mlkem_level3_sa_algo;
+                *hashAlgo = sha384_mac;
+            } else if (input[1] == ML_KEM_LEVEL5_SA_MINOR) {
+                *hsType = mlkem_level5_sa_algo;
+                *hashAlgo = sha512_mac;
+            }
+            break;
+        case HQC_SA_MAJOR:
+            if (input[1] == HQC_LEVEL1_SA_MINOR) {
+                *hsType = hqc_level1_sa_algo;
+                *hashAlgo = sha256_mac;
+            } else if (input[1] == HQC_LEVEL3_SA_MINOR) {
+                *hsType = hqc_level3_sa_algo;
+                *hashAlgo = sha384_mac;
+            } else if (input[1] == HQC_LEVEL5_SA_MINOR) {
+                *hsType = hqc_level5_sa_algo;
+                *hashAlgo = sha512_mac;
+            }
+            break;
         default:
             *hashAlgo = input[0];
             *hsType   = input[1];
@@ -28896,6 +28950,7 @@ int PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo, word32 hashSigAlgoSz,
          * Using the one in the certificate - if any.
          */
         ssl->options.sigAlgo = ssl->buffers.keyType;
+        WOLFSSL_MSG_EX("ssl->options.sigAlgo = %d", ssl->options.sigAlgo);
     #endif
     }
     else {
@@ -28917,18 +28972,26 @@ int PickHashSigAlgo(WOLFSSL* ssl, const byte* hashSigAlgo, word32 hashSigAlgoSz,
         byte hashAlgo = 0, sigAlgo = 0;
 
         DecodeSigAlg(&hashSigAlgo[i], &hashAlgo, &sigAlgo);
+        // WOLFSSL_MSG_EX("hash=%d, sig=%d", hashAlgo, sigAlgo);
         /* Keep looking if hash algorithm not strong enough. */
-        if (hashAlgo < minHash)
+        if (hashAlgo < minHash) {
+            // WOLFSSL_MSG_EX("hash=%d is less than minHash=%d", hashAlgo, minHash);
             continue;
+        }
         /* Keep looking if signature algorithm isn't supported by cert. */
-        if (!MatchSigAlgo(ssl, sigAlgo))
+        if (!MatchSigAlgo(ssl, sigAlgo)) {
+            // WOLFSSL_MSG_EX("sig=%d is not matched", sigAlgo);
             continue;
+        }
 
         if (matchSuites) {
             /* Keep looking if peer algorithm isn't supported in our ssl->suites
              * or ssl->ctx->suites. */
             if (!SupportedHashSigAlgo(ssl, &hashSigAlgo[i])) {
+                // WOLFSSL_MSG_EX("hash=%d sig=%d unsupported", hashAlgo, sigAlgo);
                 continue;
+            } else {
+                WOLFSSL_MSG_EX("Hash=%d sig=%d supported", hashAlgo, sigAlgo);
             }
         }
 
@@ -37441,6 +37504,7 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
                 WOLFSSL_MSG("Verified suite validity");
                 cs->cipherSuite0 = suites->suites[i];
                 cs->cipherSuite  = suites->suites[i+1];
+                WOLFSSL_LEAVE("CompareSuites", 0);
                 return 0;
             }
             else {
@@ -37458,7 +37522,7 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
         word16 i, j;
         const Suites* suites = WOLFSSL_SUITES(ssl);
 
-        WOLFSSL_ENTER("MatchSuite");
+        WOLFSSL_ENTER("MatchSuite_ex");
 
         /* & 0x1 equivalent % 2 */
         if (peerSuites->suiteSz == 0 || peerSuites->suiteSz & 0x1)
@@ -37472,8 +37536,10 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
             for (i = 0; i < suites->suiteSz; i += 2) {
                 for (j = 0; j < peerSuites->suiteSz; j += 2) {
                     ret = CompareSuites(ssl, suites, peerSuites, i, j, cs, extensions);
-                    if (ret != WC_NO_ERR_TRACE(MATCH_SUITE_ERROR))
+                    if (ret != WC_NO_ERR_TRACE(MATCH_SUITE_ERROR)) {
+                        WOLFSSL_LEAVE("MatchSuite_ex", ret);
                         return ret;
+                    }
                 }
             }
         }
@@ -37482,8 +37548,10 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
             for (j = 0; j < peerSuites->suiteSz; j += 2) {
                 for (i = 0; i < suites->suiteSz; i += 2) {
                     ret = CompareSuites(ssl, suites, peerSuites, i, j, cs, extensions);
-                    if (ret != WC_NO_ERR_TRACE(MATCH_SUITE_ERROR))
+                    if (ret != WC_NO_ERR_TRACE(MATCH_SUITE_ERROR)) {
+                        WOLFSSL_LEAVE("MatchSuite_ex", ret);
                         return ret;
+                    }
                 }
             }
         }

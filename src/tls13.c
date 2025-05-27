@@ -5789,6 +5789,7 @@ static int DoTls13CertificateRequest(WOLFSSL* ssl, const byte* input,
             || ssl->ctx->certSetupCb != NULL
         #endif
             ) {
+        WOLFSSL_MSG_EX("ClientHello's hashSigAlgoSz %d", peerSuites.hashSigAlgoSz);
         if (PickHashSigAlgo(ssl, peerSuites.hashSigAlgo,
                             peerSuites.hashSigAlgoSz, 0) != 0) {
             WOLFSSL_ERROR_VERBOSE(INVALID_PARAMETER);
