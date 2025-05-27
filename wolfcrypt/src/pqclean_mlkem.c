@@ -512,7 +512,7 @@ int wc_PQCleanMlKemKey_DerToPrivateKey(const byte *input, word32 *inOutIdx,
     if (ret == 0) {
         /* copy private key to the key object */
         ret = wc_PQCleanMlKemKey_DecodePrivateKey(key, privKey, privKeyLen);
-        WOLFSSL_MSG_EX("level is %d, privKeyLen %d", key->level, privKeyLen);
+        WOLFSSL_MSG_EX("PQCleanMlKemKey->level is %d, privKeyLen %d", key->level, privKeyLen);
     }
 
     WOLFSSL_LEAVE("wc_PQCleanMlKemKey_DerToPrivateKey", ret);

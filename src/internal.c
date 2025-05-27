@@ -6932,6 +6932,8 @@ int SetSSL_CTX(WOLFSSL* ssl, WOLFSSL_CTX* ctx, int writeDup)
     ssl->options.haveStaticECC    = ctx->haveStaticECC;
     ssl->options.haveFalconSig    = ctx->haveFalconSig;
     ssl->options.haveDilithiumSig = ctx->haveDilithiumSig;
+    ssl->options.haveMlKemAuth = ctx->haveMlKemAuth;
+    ssl->options.haveHqcAuth = ctx->haveHqcAuth;
 
 #ifndef NO_PSK
     ssl->options.havePSK       = (word16)(ctx->havePSK);

@@ -1265,7 +1265,7 @@ static int ProcessBufferTryDecode(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
         ret = ProcessBufferTryDecodeMlKem(ctx, ssl, der, keyFormat, heap,
                                           keyType, keySz);
         if (*keyFormat != 0) {
-            WOLFSSL_MSG_EX("Tried decode ML-KEM: keyFormat=%d", *keyFormat);
+            WOLFSSL_MSG_EX("Tried decode ML-KEM: keyFormat=0x%08x", *keyFormat);
         }
         matchAnyKey = 1;
     }
@@ -1549,6 +1549,7 @@ static int ProcessBufferPrivateKey(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
 static void wolfssl_set_have_from_key_oid(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
     int keyOID)
 {
+    WOLFSSL_ENTER("wolfssl_set_have_from_key_oid");
     /* Set which private key algorithm available based on key OID. */
     switch (keyOID) {
         case ECDSAk:
@@ -1609,6 +1610,24 @@ static void wolfssl_set_have_from_key_oid(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
             }
             break;
     #endif /* HAVE_DILITHIUM */
+        case ML_KEM_LEVEL1k:
+        case ML_KEM_LEVEL3k:
+        case ML_KEM_LEVEL5k:
+            if (ssl != NULL) {
+                ssl->options.haveMlKemAuth = 1;
+            } else {
+                ctx->haveMlKemAuth = 1;
+            }
+            break;
+        case HQC_LEVEL1k:
+        case HQC_LEVEL3k:
+        case HQC_LEVEL5k:
+            if (ssl != NULL) {
+                ssl->options.haveHqcAuth = 1;
+            } else {
+                ctx->haveHqcAuth = 1;
+            }
+            break;
         default:
             WOLFSSL_MSG("Cert key not supported");
             break;
@@ -1908,6 +1927,31 @@ static int ProcessBufferCertPublicKey(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
                     ctx->minDilithiumKeySz, DILITHIUM_MAX_KEY_SIZE, keySz,
                     DILITHIUM_KEY_SIZE_E);
             }
+            break;
+        case ML_KEM_LEVEL1k:
+            keyType = mlkem_level1_sa_algo;
+            keySz = PQCLEAN_MLKEM_LEVEL1_PUBLICKEY_SIZE;
+            /* TODO: skip key size check for now */
+            break;
+        case ML_KEM_LEVEL3k:
+            keyType = mlkem_level3_sa_algo;
+            keySz = PQCLEAN_MLKEM_LEVEL3_PUBLICKEY_SIZE;
+            break;
+        case ML_KEM_LEVEL5k:
+            keyType = mlkem_level5_sa_algo;
+            keySz = PQCLEAN_MLKEM_LEVEL5_PUBLICKEY_SIZE;
+            break;
+        case HQC_LEVEL1k:
+            keyType = hqc_level1_sa_algo;
+            keySz = PQCLEAN_HQC_LEVEL1_PUBLICKEY_SIZE;
+            break;
+        case HQC_LEVEL3k:
+            keyType = hqc_level3_sa_algo;
+            keySz = PQCLEAN_HQC_LEVEL3_PUBLICKEY_SIZE;
+            break;
+        case HQC_LEVEL5k:
+            keyType = hqc_level5_sa_algo;
+            keySz = PQCLEAN_HQC_LEVEL5_PUBLICKEY_SIZE;
             break;
     #endif /* HAVE_DILITHIUM */
 

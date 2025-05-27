@@ -3875,6 +3875,8 @@ struct WOLFSSL_CTX {
     byte        haveECDSAsig:1;   /* server cert signed w/ ECDSA */
     byte        haveFalconSig:1;  /* server cert signed w/ Falcon */
     byte        haveDilithiumSig:1;/* server cert signed w/ Dilithium */
+    byte        haveMlKemAuth:1;    /* certificate authentication using ML-KEM */
+    byte        haveHqcAuth:1;      /* certificate authentication using using HQC */
     byte        haveStaticECC:1;  /* static server ECC private key */
     byte        partialWrite:1;   /* only one msg per write call */
     byte        autoRetry:1;      /* retry read/write on a WANT_{READ|WRITE} */
@@ -4336,6 +4338,9 @@ enum SignatureAlgorithm {
     mlkem_level1_sa_algo         = 18,
     mlkem_level3_sa_algo         = 19,
     mlkem_level5_sa_algo         = 20,
+    hqc_level1_sa_algo           = 21,
+    hqc_level3_sa_algo           = 22,
+    hqc_level5_sa_algo           = 23,
     invalid_sa_algo              = 255
 };
 
@@ -4995,6 +5000,8 @@ struct Options {
     word16            haveStaticECC:1;    /* static server ECC private key */
     word16            haveFalconSig:1;    /* server Falcon signed cert */
     word16            haveDilithiumSig:1; /* server Dilithium signed cert */
+    word16            haveMlKemAuth:1;    /* certificate authentication using ML-KEM */
+    word16            haveHqcAuth:1;      /* certificate authentication using using HQC */
     word16            havePeerCert:1;     /* do we have peer's cert */
     word16            havePeerVerify:1;   /* and peer's cert verify */
     word16            usingPSK_cipher:1;  /* are using psk as cipher */
