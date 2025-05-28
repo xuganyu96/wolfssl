@@ -16792,6 +16792,28 @@ int ProcessPeerCerts(WOLFSSL* ssl, byte* input, word32* inOutIdx,
                         break;
                     }
                 #endif /* HAVE_DILITHIUM */
+                    /* GYX: this logic means any ml-kem/hqc key will trigger
+                     * haveMlKemAuth/haveHqcAuth, which does not account for illegal cases such as
+                     * when ML-KEM/HQC certificate is not the leaf certificate, but for now I
+                     * control certificate generation, so I don't have to deal with this */
+                    case ML_KEM_LEVEL1k:
+                    case ML_KEM_LEVEL3k:
+                    case ML_KEM_LEVEL5k:
+                    {
+                        WOLFSSL_MSG("Found ML-KEM key in certificate");
+                        ssl->options.haveMlKemAuth = 1;
+                        /* GYX: allocate key, init, set level, import */
+                        break;
+                    }
+                    case HQC_LEVEL1k:
+                    case HQC_LEVEL3k:
+                    case HQC_LEVEL5k:
+                    {
+                        WOLFSSL_MSG("Found HQC key in certificate");
+                        ssl->options.haveHqcAuth = 1;
+                        /* GYX: allocate key, init, set level, import */
+                        break;
+                    }
                     default:
                         break;
                 }
