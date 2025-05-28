@@ -14581,7 +14581,7 @@ int wolfSSL_accept_TLSv13(WOLFSSL* ssl)
             }
 #endif
             ssl->options.acceptState = TLS13_CERT_SENT;
-            WOLFSSL_MSG("accept state CERT_SENT");
+            WOLFSSL_MSG("accept state TLS13_CERT_SENT");
             FALL_THROUGH;
 
         case TLS13_CERT_SENT :
