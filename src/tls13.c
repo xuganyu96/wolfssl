@@ -14580,14 +14580,22 @@ int wolfSSL_accept_TLSv13(WOLFSSL* ssl)
                 }
             }
 #endif
-            ssl->options.acceptState = TLS13_CERT_SENT;
-            WOLFSSL_MSG("accept state TLS13_CERT_SENT");
+            if (ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth) {
+                ssl->options.acceptState = KEMTLS_CERT_SENT;
+                WOLFSSL_MSG("accept state KEMTLS_CERT_SENT");
+                WOLFSSL_MSG("Need to implement DoKemTlsClientKemCiphertext");
+                WOLFSSL_ERROR(NOT_COMPILED_IN);
+                return WOLFSSL_FATAL_ERROR;
+            } else {
+                ssl->options.acceptState = TLS13_CERT_SENT;
+                WOLFSSL_MSG("accept state TLS13_CERT_SENT");
+            }
             FALL_THROUGH;
 
         case TLS13_CERT_SENT :
 #if !defined(NO_CERTS) && (!defined(NO_RSA) || defined(HAVE_ECC) || \
-     defined(HAVE_ED25519) || defined(HAVE_ED448) || defined(HAVE_FALCON) || \
-     defined(HAVE_DILITHIUM))
+    defined(HAVE_ED25519) || defined(HAVE_ED448) || defined(HAVE_FALCON) || \
+    defined(HAVE_DILITHIUM))
             if (!ssl->options.resuming && ssl->options.sendVerify) {
                 if ((ssl->error = SendTls13CertificateVerify(ssl)) != 0) {
                     WOLFSSL_ERROR(ssl->error);

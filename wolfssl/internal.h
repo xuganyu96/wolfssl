@@ -4811,6 +4811,9 @@ enum AcceptStateTls13 {
     TLS13_ACCEPT_THIRD_REPLY_DONE,
     TLS13_SERVER_EXTENSIONS_SENT,
     TLS13_CERT_REQ_SENT,
+    /* server's sent KEM certificate and will start waiting for KemCiphertext
+     */
+    KEMTLS_CERT_SENT,
     TLS13_CERT_SENT,
     TLS13_CERT_VERIFY_SENT,
     TLS13_ACCEPT_FINISHED_SENT,
