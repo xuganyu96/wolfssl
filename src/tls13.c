@@ -106,6 +106,7 @@
 
 #include <wolfssl/internal.h>
 #include <wolfssl/error-ssl.h>
+#include <wolfssl/kemtls.h>
 #include <wolfssl/wolfcrypt/asn.h>
 #include <wolfssl/wolfcrypt/dh.h>
 #include <wolfssl/wolfcrypt/kdf.h>
@@ -13355,7 +13356,7 @@ int wolfSSL_connect_TLSv13(WOLFSSL* ssl)
 
         case HELLO_AGAIN_REPLY:
             /* Get the response/s from the server. */
-            while (ssl->options.serverState < SERVER_FINISHED_COMPLETE) {
+            while (ssl->options.serverState < SERVER_CERT_COMPLETE) {
 #ifdef WOLFSSL_DTLS13
                 if (!IsAtLeastTLSv1_3(ssl->version)) {
         #ifndef WOLFSSL_NO_TLS12
@@ -13377,6 +13378,26 @@ int wolfSSL_connect_TLSv13(WOLFSSL* ssl)
                     }
                 }
 #endif /* WOLFSSL_DTLS13 */
+            }
+            /* GYX: DoTls13Certificate happened before this line so we can check
+             * some flag and let connect_KEMTLS() hijack the control flow */
+            WOLFSSL_MSG("serverState is at SERVER_CERT_COMPLETE");
+            if (ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth) {
+                /* GYX: DoTls13Certificate needs to set haveMlKemAuth or haveHqcAuth */
+                ssl->error = connect_KEMTLS(ssl);
+                if (ssl->error != 0) {
+                    WOLFSSL_ERROR(ssl->error);
+                    return WOLFSSL_FATAL_ERROR;
+                } else {
+                    return WOLFSSL_SUCCESS;
+                }
+            }
+
+            while (ssl->options.serverState < SERVER_FINISHED_COMPLETE) {
+                if ((ssl->error = ProcessReply(ssl)) < 0) {
+                    WOLFSSL_ERROR(ssl->error);
+                    return WOLFSSL_FATAL_ERROR;
+                }
             }
 
             ssl->options.connectState = FIRST_REPLY_DONE;
@@ -14583,9 +14604,14 @@ int wolfSSL_accept_TLSv13(WOLFSSL* ssl)
             if (ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth) {
                 ssl->options.acceptState = KEMTLS_CERT_SENT;
                 WOLFSSL_MSG("accept state KEMTLS_CERT_SENT");
-                WOLFSSL_MSG("Need to implement DoKemTlsClientKemCiphertext");
-                WOLFSSL_ERROR(NOT_COMPILED_IN);
-                return WOLFSSL_FATAL_ERROR;
+                /* GYX: hijacking the control flow is not optimal */
+                ssl->error = accept_KEMTLS(ssl);
+                if (ssl->error == 0) {
+                    return WOLFSSL_SUCCESS;
+                } else {
+                    WOLFSSL_ERROR(ssl->error);
+                    return WOLFSSL_FATAL_ERROR;
+                }
             } else {
                 ssl->options.acceptState = TLS13_CERT_SENT;
                 WOLFSSL_MSG("accept state TLS13_CERT_SENT");

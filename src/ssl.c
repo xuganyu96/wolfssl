@@ -10210,6 +10210,7 @@ int wolfSSL_DTLS_SetCookieSecret(WOLFSSL* ssl,
 
     #if defined(WOLFSSL_NO_TLS12) && defined(NO_OLD_TLS) && \
         defined(WOLFSSL_TLS13)
+        WOLFSSL_MSG("TLS 1.3");
         return wolfSSL_connect_TLSv13(ssl);
     #else
         #ifdef WOLFSSL_TLS13
