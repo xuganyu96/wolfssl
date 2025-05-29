@@ -13,4 +13,7 @@
 WOLFSSL_API int accept_KEMTLS(WOLFSSL *ssl);
 WOLFSSL_API int connect_KEMTLS(WOLFSSL *ssl);
 
+WOLFSSL_API int handle_PQCleanMlKemKey_cert(WOLFSSL *ssl, DecodedCert *cert);
+WOLFSSL_API int handle_PQCleanHqcKey_cert(WOLFSSL *ssl, DecodedCert *cert);
+
 #endif /* WOLFSSL_KEMTLS_H */

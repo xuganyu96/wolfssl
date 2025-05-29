@@ -19,7 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-#include "wolfssl/wolfcrypt/pqclean_mlkem.h"
+#include "wolfssl/wolfcrypt/types.h"
 #include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 /*
@@ -92,6 +92,7 @@
 #ifndef WOLFCRYPT_ONLY
 
 #include <wolfssl/internal.h>
+#include <wolfssl/kemtls.h>
 #include <wolfssl/error-ssl.h>
 #include <wolfssl/wolfcrypt/asn.h>
 #include <wolfssl/wolfcrypt/dh.h>
@@ -8999,6 +9000,16 @@ void FreeHandshakeResources(WOLFSSL* ssl)
         ssl->peerMlKemKeyPresent = 0;
         FreeKey(ssl, DYNAMIC_TYPE_HQC, (void **)&ssl->peerHqcKey);
         ssl->peerHqcKey = 0;
+        if (ssl->kemCiphertext) {
+            XFREE(ssl->kemCiphertext, ssl->heap, DYNAMIC_TYPE_KEMCT);
+            ssl->kemCiphertext = NULL;
+            ssl->kemCiphertextSz = 0;
+        }
+        if (ssl->kemSharedSecret) {
+            XFREE(ssl->kemSharedSecret, ssl->heap, DYNAMIC_TYPE_KEMSS);
+            ssl->kemSharedSecret = NULL;
+            ssl->kemSharedSecretSz = 0;
+        }
     }
 
 #ifdef HAVE_ECC
@@ -16827,41 +16838,7 @@ int ProcessPeerCerts(WOLFSSL* ssl, byte* input, word32* inOutIdx,
                     case ML_KEM_LEVEL5k:
                     {
                         WOLFSSL_MSG("Found ML-KEM key in certificate");
-                        int mlkem_ret = 0;
-                        if (ssl->peerMlKemKey == NULL) {
-                            mlkem_ret = AllocKey(ssl, DYNAMIC_TYPE_MLKEM,
-                                                 (void **)&ssl->peerMlKemKey);
-                        } else if (ssl->peerMlKemKeyPresent) {
-                            WOLFSSL_MSG("Reusing peerMlKemKey is not implemented");
-                            mlkem_ret = NOT_COMPILED_IN;
-                        }
-
-                        if (mlkem_ret == 0) {
-                            if (args->dCert->keyOID == ML_KEM_LEVEL1k) {
-                                mlkem_ret = wc_PQCleanMlKemKey_SetLevel(ssl->peerMlKemKey, 1);
-                            } else if (args->dCert->keyOID == ML_KEM_LEVEL3k) {
-                                mlkem_ret = wc_PQCleanMlKemKey_SetLevel(ssl->peerMlKemKey, 3);
-                            } else if (args->dCert->keyOID == ML_KEM_LEVEL5k) {
-                                mlkem_ret = wc_PQCleanMlKemKey_SetLevel(ssl->peerMlKemKey, 5);
-                            } else {
-                                /* GYX: UNREACHABLE! */
-                            }
-                        }
-
-                        if (mlkem_ret == 0) {
-                            mlkem_ret = wc_PQCleanMlKemKey_DecodePublicKey(
-                                        ssl->peerMlKemKey,
-                                        args->dCert->publicKey,
-                                        args->dCert->pubKeySize);
-                        }
-
-                        if (mlkem_ret == 0) {
-                            WOLFSSL_MSG("GYX: Loaded peer ML-KEM key");
-                            ssl->peerMlKemKeyPresent = 1;
-                            ssl->options.haveMlKemAuth = 1;
-                        } else {
-                            ret = PEER_KEY_ERROR;
-                        }
+                        ret = handle_PQCleanMlKemKey_cert(ssl, args->dCert);
                         break;
                     }
                     case HQC_LEVEL1k:
@@ -16869,10 +16846,7 @@ int ProcessPeerCerts(WOLFSSL* ssl, byte* input, word32* inOutIdx,
                     case HQC_LEVEL5k:
                     {
                         WOLFSSL_MSG("GYX: Found HQC key in certificate");
-                        WOLFSSL_MSG("GYX: HQC auth is not ready");
-                        ret = NOT_COMPILED_IN;
-                        ssl->options.haveHqcAuth = 1;
-                        /* GYX: allocate key, init, set level, import */
+                        ret = handle_PQCleanHqcKey_cert(ssl, args->dCert);
                         break;
                     }
                     default:

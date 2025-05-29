@@ -13383,7 +13383,6 @@ int wolfSSL_connect_TLSv13(WOLFSSL* ssl)
              * some flag and let connect_KEMTLS() hijack the control flow */
             WOLFSSL_MSG("serverState is at SERVER_CERT_COMPLETE");
             if (ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth) {
-                /* GYX: DoTls13Certificate needs to set haveMlKemAuth or haveHqcAuth */
                 ssl->error = connect_KEMTLS(ssl);
                 if (ssl->error != 0) {
                     WOLFSSL_ERROR(ssl->error);

@@ -6039,6 +6039,10 @@ struct WOLFSSL {
     byte peerMlKemKeyPresent;
     PQCleanHqcKey *peerHqcKey;
     byte peerHqcKeyPresent;
+    byte *kemCiphertext;
+    word32 kemCiphertextSz;
+    byte *kemSharedSecret;
+    word32 kemSharedSecretSz;
 #ifdef HAVE_LIBZ
     z_stream        c_stream;           /* compression   stream */
     z_stream        d_stream;           /* decompression stream */
