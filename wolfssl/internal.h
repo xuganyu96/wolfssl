@@ -6035,6 +6035,10 @@ struct WOLFSSL {
     dilithium_key*  peerDilithiumKey;
     byte            peerDilithiumKeyPresent;
 #endif
+    PQCleanMlKemKey *peerMlKemKey;
+    byte peerMlKemKeyPresent;
+    PQCleanHqcKey *peerHqcKey;
+    byte peerHqcKeyPresent;
 #ifdef HAVE_LIBZ
     z_stream        c_stream;           /* compression   stream */
     z_stream        d_stream;           /* decompression stream */
