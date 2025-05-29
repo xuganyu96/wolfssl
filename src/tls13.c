@@ -2329,8 +2329,8 @@ static void AddTls13HandShakeHeader(byte* output, word32 length,
  * type        The type of record layer message.
  * ssl         The SSL/TLS object. (DTLS)
  */
-static void AddTls13Headers(byte* output, word32 length, byte type,
-                            WOLFSSL* ssl)
+void AddTls13Headers(byte* output, word32 length, byte type,
+                     WOLFSSL* ssl)
 {
     word32 lengthAdj = HANDSHAKE_HEADER_SZ;
     word32 outputAdj = RECORD_HEADER_SZ;

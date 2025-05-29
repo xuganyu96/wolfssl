@@ -1,9 +1,63 @@
+#include "wolfssl/internal.h"
 #include "wolfssl/wolfcrypt/pqclean_mlkem.h"
 #include <wolfssl/kemtls.h>
 #include <wolfssl/wolfcrypt/logging.h>
 
+/* Construct and send client's KemCiphertext message. The body of the message
+ * contains the raw ciphertext, which is generated at ProcessPeerCerts
+ */
 static int SendKemTlsClientKemCiphertext(WOLFSSL *ssl) {
-    return NOT_COMPILED_IN;
+    WOLFSSL_ENTER("SendKemTlsClientKemCiphertext");
+    int ret;
+
+    byte *output; /* output points to the start of the record */
+    byte *input;  /* input points to the start of the handshake msg (i.e. the
+                     fragment) */
+    int sendSz, outputSz;
+    enum HandShakeType hsType = client_key_exchange;
+
+    if ((ssl->kemCiphertext == NULL) || (ssl->kemCiphertextSz == 0)) {
+        WOLFSSL_MSG("GYX: KEM ciphertext is missing");
+        return BAD_FUNC_ARG;
+    }
+
+    outputSz = ssl->kemCiphertextSz + MAX_MSG_EXTRA;
+    if ((ret = CheckAvailableSize(ssl, outputSz)) != 0) {
+        WOLFSSL_MSG_EX("GYX: output buffer size insufficient, need %d",
+                       outputSz);
+        return ret;
+    }
+
+    output =
+        ssl->buffers.outputBuffer.buffer + ssl->buffers.outputBuffer.length;
+    input = output + RECORD_HEADER_SZ;
+    AddTls13Headers(output, ssl->kemCiphertextSz, hsType, ssl);
+    XMEMCPY(input + HANDSHAKE_HEADER_SZ, ssl->kemCiphertext,
+            ssl->kemCiphertextSz);
+    sendSz = BuildTls13Message(ssl, output, outputSz, input,
+                               HANDSHAKE_HEADER_SZ + ssl->kemCiphertextSz,
+                               handshake, 1, 0, 0);
+    if (sendSz < 0) {
+        return BUILD_MSG_ERROR;
+    }
+
+    /* GYX: ignore the callback section for now */
+
+    ssl->buffers.outputBuffer.length += sendSz;
+    if (ssl->options.groupMessages) {
+        WOLFSSL_MSG(
+            "GYX: delay sending ClientKemCiphertext because groupMessages");
+        WOLFSSL_LEAVE("SendKemTlsClientKemCiphertext", ret);
+        return ret;
+    }
+    ret = SendBuffered(ssl);
+    if (ret != 0 && ret != WANT_WRITE) {
+        WOLFSSL_LEAVE("SendKemTlsClientKemCiphertext", ret);
+        return ret;
+    }
+
+    WOLFSSL_LEAVE("SendKemTlsClientKemCiphertext", ret);
+    return ret;
 }
 
 int accept_KEMTLS(WOLFSSL *ssl) {
@@ -14,11 +68,23 @@ int accept_KEMTLS(WOLFSSL *ssl) {
     return ret;
 }
 
+/* Handle client workflow in KEMTLS handshake after processing server
+ * certificates
+ *
+ * ssl->error will be assigned OUTSIDE this function; do not assign to
+ * ssl->error
+ */
 int connect_KEMTLS(WOLFSSL *ssl) {
     WOLFSSL_ENTER("connect_KEMTLS");
-
     int ret;
-    ret = SendKemTlsClientKemCiphertext(ssl);
+
+    if ((ret = SendKemTlsClientKemCiphertext(ssl)) != 0) {
+        return ret;
+    }
+    ssl->options.connectState = CLIENT_KEM_CIPHERTEXT_SENT;
+    WOLFSSL_MSG("connectState: CLIENT_KEM_CIPHERTEXT_SENT");
+
+    /* GYX: next we need to handle server's Finished */
 
     WOLFSSL_LEAVE("connect_KEMTLS", ret);
     return ret;
