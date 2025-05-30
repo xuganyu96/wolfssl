@@ -4,6 +4,32 @@
 #include <wolfssl/kemtls.h>
 #include <wolfssl/wolfcrypt/logging.h>
 
+static void dump_hex(byte *data, word32 len) {
+    if (len == 0 || data == NULL)
+        return;
+    fprintf(stderr, "GYX: Dump (%5d bytes): ", len);
+
+    if (len <= 24) { /* print the whole thing */
+        for (word32 i = 0; i < len; i++) {
+            fprintf(stderr, "%02x", data[i]);
+            if (i + 1 < len) {
+                fprintf(stderr, ":");
+            }
+        }
+        fprintf(stderr, "\n");
+        return;
+    }
+    /* print the first 4 bytes and the last 4 bytes */
+    for (int i = 0; i < 12; i++) {
+        fprintf(stderr, "%02x:", data[i]);
+    }
+    fprintf(stderr, "...");
+    for (int i = len - 12; i < len; i++) {
+        fprintf(stderr, ":%02x", data[i]);
+    }
+    fprintf(stderr, "\n");
+}
+
 /* Construct and send client's KemCiphertext message. The body of the message
  * contains the raw ciphertext, which is generated at ProcessPeerCerts
  */
@@ -78,6 +104,7 @@ int accept_KEMTLS(WOLFSSL *ssl) {
     }
 
     /* GYX: send server finish */
+    ret = NOT_COMPILED_IN;
 
     WOLFSSL_LEAVE("accept_KEMTLS", ret);
     return ret;
@@ -119,12 +146,12 @@ int connect_KEMTLS(WOLFSSL *ssl) {
 int DoKemTlsClientKemCiphertext(WOLFSSL *ssl, byte *input, word32 *inOutIdx,
                                 word32 totalSz) {
     WOLFSSL_ENTER("DoKemTlsClientKemCiphertext");
-    WOLFSSL_MSG("GYX: DoKemTlsClientKemCiphertext not implemented");
     int ret = 0;
     word32 idx = 0; /* read key buffer from beginning */
     word32 ctLen, ssLen;
 
     /* First allocate for key, then check for ciphertext size */
+    WOLFSSL_MSG_EX("GYX: DoKemTlsClientKemCiphertext inOutIdx=%d", *inOutIdx);
     WOLFSSL_MSG_EX("GYX: ssl->buffers.keyType=%d", ssl->buffers.keyType);
 
     /* decode private key from ssl-buffer, set level, get expected ct size */
@@ -186,7 +213,7 @@ int DoKemTlsClientKemCiphertext(WOLFSSL *ssl, byte *input, word32 *inOutIdx,
         if (!ssl->kemCiphertext) {
             ret = MEMORY_E;
         }
-        XMEMCPY(ssl->kemCiphertext, input, ctLen);
+        XMEMCPY(ssl->kemCiphertext, input + *inOutIdx, ctLen);
         ssl->kemCiphertextSz = ctLen;
         ssl->kemSharedSecret = XMALLOC(ssLen, ssl->heap, DYNAMIC_TYPE_KEMSS);
         if (!ssl->kemSharedSecret) {
@@ -220,8 +247,12 @@ int DoKemTlsClientKemCiphertext(WOLFSSL *ssl, byte *input, word32 *inOutIdx,
     }
 
     if (ret == 0) {
-        WOLFSSL_MSG("GYX: successfully decapsulated");
-        WOLFSSL_BUFFER(ssl->kemSharedSecret, ssl->kemSharedSecretSz);
+        WOLFSSL_MSG("GYX: server-side ciphertext");
+        dump_hex(ssl->kemCiphertext, ssl->kemCiphertextSz);
+        WOLFSSL_MSG("GYX: server-side shared secret");
+        dump_hex(ssl->kemSharedSecret, ssl->kemSharedSecretSz);
+        ssl->options.clientState = CLIENT_KEM_CIPHERTEXT_DONE;
+        *inOutIdx += totalSz;
     }
 
     FreeKey(ssl, (int)ssl->hsType, &ssl->hsKey);
@@ -300,8 +331,10 @@ int handle_PQCleanMlKemKey_cert(WOLFSSL *ssl, DecodedCert *cert) {
     }
 
     if (ret == 0) {
-        WOLFSSL_MSG("GYX: handled peer ML-KEM key");
-        WOLFSSL_BUFFER(ssl->kemSharedSecret, ssl->kemSharedSecretSz);
+        WOLFSSL_MSG("GYX: client-side ciphertext");
+        dump_hex(ssl->kemCiphertext, ssl->kemCiphertextSz);
+        WOLFSSL_MSG("GYX: client-side shared secret");
+        dump_hex(ssl->kemSharedSecret, ssl->kemSharedSecretSz);
         ssl->peerMlKemKeyPresent = 1;
         ssl->options.haveMlKemAuth = 1;
     }
