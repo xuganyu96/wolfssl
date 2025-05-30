@@ -285,7 +285,8 @@ static int Tls13HKDFExpandKeyLabel(WOLFSSL* ssl, byte* okm, word32 okmLen,
  *
  * ssl        The SSL/TLS object.
  * output     The buffer to hold the derived key.
- * outputLen  The length of the derived key.
+ * outputLen  The length of the derived key, input -1 to let hashAlgo determine
+ *            the length fo the derived key.
  * secret     The secret used to derive the key (HMAC secret).
  * label      The label used to distinguish the context.
  * labelLen   The length of the label.
@@ -294,9 +295,9 @@ static int Tls13HKDFExpandKeyLabel(WOLFSSL* ssl, byte* okm, word32 okmLen,
  * hashAlgo   The hash algorithm to use in the HMAC.
  * returns 0 on success, otherwise failure.
  */
-static int DeriveKeyMsg(WOLFSSL* ssl, byte* output, int outputLen,
-                        const byte* secret, const byte* label, word32 labelLen,
-                        byte* msg, int msgLen, int hashAlgo)
+int DeriveKeyMsg(WOLFSSL* ssl, byte* output, int outputLen,
+                 const byte* secret, const byte* label, word32 labelLen,
+                 byte* msg, int msgLen, int hashAlgo)
 {
     byte        hash[WC_MAX_DIGEST_SIZE];
     Digest      digest;

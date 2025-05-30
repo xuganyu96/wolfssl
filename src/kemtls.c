@@ -1,8 +1,38 @@
-#include "wolfssl/internal.h"
-#include "wolfssl/wolfcrypt/pqclean_hqc.h"
-#include "wolfssl/wolfcrypt/pqclean_mlkem.h"
 #include <wolfssl/kemtls.h>
 #include <wolfssl/wolfcrypt/logging.h>
+
+/* Convert TLS mac ID to a hash algorithm ID
+ *
+ * mac Mac ID to convert
+ * returns hash ID on success, or the NONE type.
+ *
+ * Shamelessly copied from Gonzalez et al.
+ */
+static WC_INLINE int mac2hash(int mac) {
+    int hash;
+    switch (mac) {
+#ifndef NO_SHA256
+    case sha256_mac:
+        hash = WC_SHA256;
+        break;
+#endif
+
+#ifdef WOLFSSL_SHA384
+    case sha384_mac:
+        hash = WC_SHA384;
+        break;
+#endif
+
+#ifdef WOLFSSL_TLS13_SHA512
+    case sha512_mac:
+        hash = WC_SHA512;
+        break;
+#endif
+    default:
+        hash = WC_HASH_TYPE_NONE;
+    }
+    return hash;
+}
 
 static void dump_hex(byte *data, word32 len) {
     if (len == 0 || data == NULL)
@@ -30,8 +60,9 @@ static void dump_hex(byte *data, word32 len) {
     fprintf(stderr, "\n");
 }
 
-/* Construct and send client's KemCiphertext message. The body of the message
- * contains the raw ciphertext, which is generated at ProcessPeerCerts
+/* Construct and send client's KemCiphertext message. The KEM pubkey is obtained
+ * from peer's certificate. Derive the authenticated shared secret.
+ *
  */
 static int SendKemTlsClientKemCiphertext(WOLFSSL *ssl) {
     WOLFSSL_ENTER("SendKemTlsClientKemCiphertext");
@@ -68,8 +99,6 @@ static int SendKemTlsClientKemCiphertext(WOLFSSL *ssl) {
         return BUILD_MSG_ERROR;
     }
 
-    /* GYX: ignore the callback section for now */
-
     ssl->buffers.outputBuffer.length += sendSz;
     if (ssl->options.groupMessages) {
         WOLFSSL_MSG(
@@ -82,6 +111,34 @@ static int SendKemTlsClientKemCiphertext(WOLFSSL *ssl) {
         WOLFSSL_LEAVE("SendKemTlsClientKemCiphertext", ret);
         return ret;
     }
+
+    /* derive authenticated shared secret: implicit authentication */
+    byte key_dHS[WC_MAX_DIGEST_SIZE]; /* derived handshake secret is the KEM
+                                       * shared secret from the key exchange */
+    static char derivedLabel[] = "derived";
+    word32 labelLen = 7 + 1; /* strlen(label) plus null terminator */
+    ret = DeriveKeyMsg(ssl, key_dHS, -1, ssl->arrays->preMasterSecret,
+                       (byte *)derivedLabel, labelLen, NULL, 0,
+                       ssl->specs.mac_algorithm);
+    if (ret != 0) {
+        WOLFSSL_MSG_EX("GYX: failed to obtain dHS (err=%d)", ret);
+        return ret;
+    }
+    WOLFSSL_MSG_EX("GYX: mac_algorithm is %d", ssl->specs.mac_algorithm);
+    WOLFSSL_MSG_EX("GYX: hash size is %d", ssl->specs.hash_size);
+    dump_hex(key_dHS, ssl->specs.hash_size);
+
+    ret = wc_Tls13_HKDF_Extract(ssl->arrays->preMasterSecret, key_dHS,
+                                ssl->specs.hash_size, ssl->kemSharedSecret,
+                                ssl->kemSharedSecretSz,
+                                mac2hash(ssl->specs.mac_algorithm));
+    if (ret != 0) {
+        WOLFSSL_MSG_EX("GYX: failed to extract preMasterSecret (aHS) (err=%d)",
+                       ret);
+        return ret;
+    }
+    WOLFSSL_MSG_EX("GYX: preMasterSecret dump:");
+    dump_hex(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
 
     WOLFSSL_LEAVE("SendKemTlsClientKemCiphertext", ret);
     return ret;

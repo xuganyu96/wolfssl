@@ -2335,6 +2335,10 @@ WOLFSSL_LOCAL int DoTls13ServerHello(WOLFSSL* ssl, const byte* input,
                                      word32* inOutIdx, word32 helloSz,
                                      byte* extMsgType);
 WOLFSSL_LOCAL int RestartHandshakeHash(WOLFSSL* ssl);
+WOLFSSL_LOCAL int DeriveKeyMsg(WOLFSSL* ssl, byte* output, int outputLen,
+                               const byte* secret, const byte* label,
+                               word32 labelLen, byte* msg, int msgLen,
+                               int hashAlgo);
 
 WOLFSSL_LOCAL int Tls13DeriveKey(WOLFSSL *ssl, byte *output, int outputLen,
     const byte *secret, const byte *label, word32 labelLen, int hashAlgo,
