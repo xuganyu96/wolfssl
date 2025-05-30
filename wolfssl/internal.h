@@ -4774,6 +4774,7 @@ enum ConnectState {
     FIRST_REPLY_THIRD,
     FIRST_REPLY_FOURTH,
     CLIENT_KEM_CIPHERTEXT_SENT,
+    CLIENT_KEM_FINISHED_SENT,
     FINISHED_DONE,
     SECOND_REPLY_DONE,
 
@@ -6775,6 +6776,7 @@ WOLFSSL_LOCAL word32 MacSize(const WOLFSSL* ssl);
 #ifndef NO_WOLFSSL_CLIENT
     WOLFSSL_LOCAL int HaveUniqueSessionObj(WOLFSSL* ssl);
     WOLFSSL_LOCAL int SendClientHello(WOLFSSL* ssl);
+    WOLFSSL_LOCAL int SendTls13Finished(WOLFSSL *ssl);
     WOLFSSL_LOCAL int DoHelloVerifyRequest(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
         word32 size);
     #ifdef WOLFSSL_TLS13

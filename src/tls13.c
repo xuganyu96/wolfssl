@@ -11052,7 +11052,7 @@ int DoTls13Finished(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
  * ssl  The SSL/TLS object.
  * returns 0 on success, otherwise failure.
  */
-static int SendTls13Finished(WOLFSSL* ssl)
+int SendTls13Finished(WOLFSSL* ssl)
 {
     byte  finishedSz = ssl->specs.hash_size;
     byte* input;
