@@ -12093,6 +12093,7 @@ static int SendTls13NewSessionTicket(WOLFSSL* ssl)
  */
 static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
 {
+    WOLFSSL_ENTER("SanityCheckTls13MsgReceived");
     /* verify not a duplicate, mark received, check state */
     switch (type) {
 
@@ -12307,6 +12308,10 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
             }
             ssl->msgsReceived.got_certificate = 1;
 
+            break;
+
+        case client_key_exchange:
+            /* GYX: do sanity check later */
             break;
 
 #ifndef NO_WOLFSSL_CLIENT
@@ -12790,6 +12795,14 @@ int DoTls13HandShakeMsgType(WOLFSSL* ssl, byte* input, word32* inOutIdx,
         ret = DoTls13Certificate(ssl, input, inOutIdx, size);
         break;
 #endif
+
+    case client_key_exchange:
+        /* there is no client_key_exchange in TLS 1.3 so it can be safely interpreted
+         * as client KemCiphertext
+         */
+        WOLFSSL_MSG("GYX: processing client KemCiphertext");
+        ret = DoKemTlsClientKemCiphertext(ssl, input, inOutIdx, size);
+        break;
 
 #if !defined(NO_RSA) || defined(HAVE_ECC) || defined(HAVE_ED25519) || \
     defined(HAVE_ED448) || defined(HAVE_FALCON) || defined(HAVE_DILITHIUM)

@@ -60,9 +60,23 @@ static int SendKemTlsClientKemCiphertext(WOLFSSL *ssl) {
     return ret;
 }
 
+/* Handle server workflow in KEMTLS handshake after sending a KEM certificate
+ *
+ * ssl->errror will be assigned outside this function; do not assign to
+ * ssl->error
+ */
 int accept_KEMTLS(WOLFSSL *ssl) {
     WOLFSSL_ENTER("accept_KEMTLS");
-    int ret = NOT_COMPILED_IN;
+    int ret;
+
+    while (ssl->options.clientState < CLIENT_KEM_CIPHERTEXT_DONE) {
+        ret = ProcessReply(ssl);
+        if (ret != 0) {
+            return ret;
+        }
+    }
+
+    /* GYX: send server finish */
 
     WOLFSSL_LEAVE("accept_KEMTLS", ret);
     return ret;
@@ -85,8 +99,21 @@ int connect_KEMTLS(WOLFSSL *ssl) {
     WOLFSSL_MSG("connectState: CLIENT_KEM_CIPHERTEXT_SENT");
 
     /* GYX: next we need to handle server's Finished */
+    ret = NOT_COMPILED_IN;
 
     WOLFSSL_LEAVE("connect_KEMTLS", ret);
+    return ret;
+}
+
+/* Handle client's KemCiphertext
+ */
+int DoKemTlsClientKemCiphertext(WOLFSSL *ssl, byte *input, word32 *inOutIdx,
+                                word32 totalSz) {
+    WOLFSSL_ENTER("DoKemTlsClientKemCiphertext");
+    WOLFSSL_MSG("GYX: DoKemTlsClientKemCiphertext not implemented");
+    int ret = NOT_COMPILED_IN;
+
+    WOLFSSL_LEAVE("DoKemTlsClientKemCiphertext", ret);
     return ret;
 }
 
