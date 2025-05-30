@@ -4813,9 +4813,10 @@ enum AcceptStateTls13 {
     TLS13_ACCEPT_THIRD_REPLY_DONE,
     TLS13_SERVER_EXTENSIONS_SENT,
     TLS13_CERT_REQ_SENT,
-    /* server's sent KEM certificate and will start waiting for KemCiphertext
-     */
+    /* server's sent KEM certificate, wait for KemCiphertext */
     KEMTLS_CERT_SENT,
+    /* server's decapsulated client's KEM ciphertext */
+    KEMTLS_CIPHERTEXT_PROCESSED,
     TLS13_CERT_SENT,
     TLS13_CERT_VERIFY_SENT,
     TLS13_ACCEPT_FINISHED_SENT,
@@ -6041,6 +6042,9 @@ struct WOLFSSL {
     byte peerMlKemKeyPresent;
     PQCleanHqcKey *peerHqcKey;
     byte peerHqcKeyPresent;
+    /* GYX: for now we only do unilateral authentication, so there is exactly
+     * one KemCiphertext. Later when we expand to mutual authentication, we
+     * need to distinguish between self ciphertext or peer ciphertext*/
     byte *kemCiphertext;
     word32 kemCiphertextSz;
     byte *kemSharedSecret;

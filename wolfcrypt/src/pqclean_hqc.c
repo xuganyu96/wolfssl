@@ -29,7 +29,9 @@ int wc_PQCleanHqcKey_Free(PQCleanHqcKey *key) {
 }
 
 /* Return 1 if level is valid */
-static int is_valid_level(int level) { return (level == 1) || (level == 3) || (level == 5); }
+static int is_valid_level(int level) {
+    return (level == 1) || (level == 3) || (level == 5);
+}
 
 int wc_PQCleanHqcKey_SetLevel(PQCleanHqcKey *key, int level) {
     if ((key == NULL) || !is_valid_level(level)) {
@@ -60,13 +62,16 @@ int wc_PQCleanHqcKey_MakeKey(PQCleanHqcKey *key, WC_RNG *rng) {
 
     switch (key->level) {
     case 1:
-        ret = PQCLEAN_HQC128_CLEAN_crypto_kem_keypair(key->pubKey, key->privKey, rng);
+        ret = PQCLEAN_HQC128_CLEAN_crypto_kem_keypair(key->pubKey, key->privKey,
+                                                      rng);
         break;
     case 3:
-        ret = PQCLEAN_HQC192_CLEAN_crypto_kem_keypair(key->pubKey, key->privKey, rng);
+        ret = PQCLEAN_HQC192_CLEAN_crypto_kem_keypair(key->pubKey, key->privKey,
+                                                      rng);
         break;
     case 5:
-        ret = PQCLEAN_HQC256_CLEAN_crypto_kem_keypair(key->pubKey, key->privKey, rng);
+        ret = PQCLEAN_HQC256_CLEAN_crypto_kem_keypair(key->pubKey, key->privKey,
+                                                      rng);
         break;
         /* level already validated */
     }
@@ -79,7 +84,8 @@ int wc_PQCleanHqcKey_MakeKey(PQCleanHqcKey *key, WC_RNG *rng) {
 }
 
 /* HQC seeds are not straightforwardly exposed */
-int wc_PQCleanHqcKey_MakeKeyWithRandom(PQCleanHqcKey *key, const byte *rand, int len) {
+int wc_PQCleanHqcKey_MakeKeyWithRandom(PQCleanHqcKey *key, const byte *rand,
+                                       int len) {
     return NOT_COMPILED_IN;
 }
 
@@ -121,7 +127,8 @@ int wc_PQCleanHqcKey_SharedSecretSize(PQCleanHqcKey *key, word32 *len) {
     return 0;
 }
 
-int wc_PQCleanHqcKey_Encapsulate(PQCleanHqcKey *key, byte *ct, byte *ss, WC_RNG *rng) {
+int wc_PQCleanHqcKey_Encapsulate(PQCleanHqcKey *key, byte *ct, byte *ss,
+                                 WC_RNG *rng) {
     int ret = 0;
     if ((key == NULL) || (ct == NULL) || (ss == NULL) || (rng == NULL)) {
         return BAD_FUNC_ARG;
@@ -146,13 +153,14 @@ int wc_PQCleanHqcKey_Encapsulate(PQCleanHqcKey *key, byte *ct, byte *ss, WC_RNG 
     return (ret == 0) ? 0 : BAD_FUNC_ARG;
 }
 
-int wc_PQCleanHqcKey_EncapsulateWithRandom(PQCleanHqcKey *key, byte *ct, byte *ss,
-                                                       const byte *rand, int len) {
+int wc_PQCleanHqcKey_EncapsulateWithRandom(PQCleanHqcKey *key, byte *ct,
+                                           byte *ss, const byte *rand,
+                                           int len) {
     return NOT_COMPILED_IN;
 }
 
 int wc_PQCleanHqcKey_Decapsulate(PQCleanHqcKey *key, byte *ss, const byte *ct,
-                                             word32 len) {
+                                 word32 len) {
     int ret = 0;
     word32 ctLen = 0;
 
@@ -190,7 +198,8 @@ int wc_PQCleanHqcKey_Decapsulate(PQCleanHqcKey *key, byte *ss, const byte *ct,
     return ret;
 }
 
-int wc_PQCleanHqcKey_DecodePrivateKey(PQCleanHqcKey *key, const byte *in, word32 len) {
+int wc_PQCleanHqcKey_DecodePrivateKey(PQCleanHqcKey *key, const byte *in,
+                                      word32 len) {
     int ret = 0;
     word32 privKeyLen = 0;
     if ((key == NULL) || (in == NULL))
@@ -217,7 +226,8 @@ int wc_PQCleanHqcKey_DecodePrivateKey(PQCleanHqcKey *key, const byte *in, word32
     return ret;
 }
 
-int wc_PQCleanHqcKey_DecodePublicKey(PQCleanHqcKey *key, const byte *in, word32 len) {
+int wc_PQCleanHqcKey_DecodePublicKey(PQCleanHqcKey *key, const byte *in,
+                                     word32 len) {
     int ret = 0;
     word32 pubKeyLen = 0;
     if ((key == NULL) || (in == NULL))
@@ -282,7 +292,8 @@ int wc_PQCleanHqcKey_PublicKeySize(PQCleanHqcKey *key, word32 *len) {
     return 0;
 }
 
-int wc_PQCleanHqcKey_EncodePrivateKey(PQCleanHqcKey *key, byte *out, word32 len) {
+int wc_PQCleanHqcKey_EncodePrivateKey(PQCleanHqcKey *key, byte *out,
+                                      word32 len) {
     word32 privKeyLen = 0;
     if ((key == NULL) || (out == NULL)) {
         return BAD_FUNC_ARG;
@@ -307,7 +318,8 @@ int wc_PQCleanHqcKey_EncodePrivateKey(PQCleanHqcKey *key, byte *out, word32 len)
     return 0;
 }
 
-int wc_PQCleanHqcKey_EncodePublicKey(PQCleanHqcKey *key, byte *out, word32 len) {
+int wc_PQCleanHqcKey_EncodePublicKey(PQCleanHqcKey *key, byte *out,
+                                     word32 len) {
     word32 pubKeyLen = 0;
     if ((key == NULL) || (out == NULL)) {
         return BAD_FUNC_ARG;
@@ -332,13 +344,16 @@ int wc_PQCleanHqcKey_EncodePublicKey(PQCleanHqcKey *key, byte *out, word32 len) 
     return 0;
 }
 
-int wc_PQCleanHqcKey_PublicKeyToDer(PQCleanHqcKey *key, byte *out,
-                                                word32 len, int withAlg) {
+int wc_PQCleanHqcKey_PublicKeyToDer(PQCleanHqcKey *key, byte *out, word32 len,
+                                    int withAlg) {
     return NOT_COMPILED_IN;
 }
 
 int wc_PQCleanHqcKey_PrivateKeyToDer(PQCleanHqcKey *key, byte *out,
-                                                 word32 len) {
+                                     word32 len) {
     return NOT_COMPILED_IN;
 }
 
+int wc_PQCleanHqcKey_DerToPrivateKey(PQCleanHqcKey *key, byte *in, word32 len) {
+    return NOT_COMPILED_IN;
+}

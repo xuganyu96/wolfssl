@@ -490,7 +490,7 @@ int wc_PQCleanMlKemKey_DerToPrivateKey(const byte *input, word32 *inOutIdx,
             keytype = ANONk;
             WOLFSSL_MSG_EX("keytype is ANONk");
         } else {
-            /* TODO: need to covert the case where key level is set by caller
+            /* TODO: need to cover the case where key level is set by caller
              * and the DER buffer needs to be parsed with expectation
              */
             ret = BAD_FUNC_ARG;

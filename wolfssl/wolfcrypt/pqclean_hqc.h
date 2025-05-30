@@ -94,5 +94,7 @@ WOLFSSL_API int wc_PQCleanHqcKey_PublicKeyToDer(PQCleanHqcKey *key, byte *out,
                                                 word32 len, int withAlg);
 WOLFSSL_API int wc_PQCleanHqcKey_PrivateKeyToDer(PQCleanHqcKey *key, byte *out,
                                                  word32 len);
+WOLFSSL_API int wc_PQCleanHqcKey_DerToPrivateKey(PQCleanHqcKey *key, byte *in,
+                                                 word32 len);
 
 #endif

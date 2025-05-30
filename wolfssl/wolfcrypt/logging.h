@@ -102,6 +102,8 @@ WOLFSSL_API void wolfSSL_Debugging_OFF(void);
 
 WOLFSSL_API void wolfSSL_SetLoggingPrefix(const char* prefix);
 
+WOLFSSL_LOCAL void WOLFSSL_DUMP_HEX(const char *prefix, const byte *data, word32 len);
+
 #ifdef HAVE_WC_INTROSPECTION
     WOLFSSL_API const char *wolfSSL_configure_args(void);
     WOLFSSL_API const char *wolfSSL_global_cflags(void);

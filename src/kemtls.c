@@ -1,4 +1,5 @@
 #include "wolfssl/internal.h"
+#include "wolfssl/wolfcrypt/pqclean_hqc.h"
 #include "wolfssl/wolfcrypt/pqclean_mlkem.h"
 #include <wolfssl/kemtls.h>
 #include <wolfssl/wolfcrypt/logging.h>
@@ -105,14 +106,125 @@ int connect_KEMTLS(WOLFSSL *ssl) {
     return ret;
 }
 
-/* Handle client's KemCiphertext
+/* Handle client's KemCiphertext.
+ *
+ * Client ciphertext is decapsulated using server's private key. The shared
+ * secret will be stored on the ssl object to be used in Finish. Advance
+ * acceptState
+ *
+ * KemCiphertext should contain raw ciphertext, so input[inOutIdx] should be the
+ * begin of the ciphertext. If totalSz does not match the expected ciphertext
+ * length then report error.
  */
 int DoKemTlsClientKemCiphertext(WOLFSSL *ssl, byte *input, word32 *inOutIdx,
                                 word32 totalSz) {
     WOLFSSL_ENTER("DoKemTlsClientKemCiphertext");
     WOLFSSL_MSG("GYX: DoKemTlsClientKemCiphertext not implemented");
-    int ret = NOT_COMPILED_IN;
+    int ret = 0;
+    word32 idx = 0; /* read key buffer from beginning */
+    word32 ctLen, ssLen;
 
+    /* First allocate for key, then check for ciphertext size */
+    WOLFSSL_MSG_EX("GYX: ssl->buffers.keyType=%d", ssl->buffers.keyType);
+
+    /* decode private key from ssl-buffer, set level, get expected ct size */
+    switch (ssl->buffers.keyType) {
+    case mlkem_level1_sa_algo:
+    case mlkem_level3_sa_algo:
+    case mlkem_level5_sa_algo:
+        ssl->hsType = DYNAMIC_TYPE_MLKEM;
+        ret = AllocKey(ssl, ssl->hsType, &ssl->hsKey);
+        if (ret == 0) {
+            /* DerToPrivateKey will set level, do not set level manually */
+            ret = wc_PQCleanMlKemKey_DerToPrivateKey(ssl->buffers.key->buffer,
+                                                     &idx, ssl->hsKey,
+                                                     ssl->buffers.key->length);
+            if (ret != 0)
+                WOLFSSL_MSG_EX("%s returned %d",
+                               "wc_PQCleanMlKemKey_DecodePrivateKey", ret);
+        }
+        if (ret == 0) {
+            ret = wc_PQCleanMlKemKey_CipherTextSize(ssl->hsKey, &ctLen);
+        }
+        if (ret == 0) {
+            ret = wc_PQCleanMlKemKey_SharedSecretSize(ssl->hsKey, &ssLen);
+        }
+        break;
+    case hqc_level1_sa_algo:
+    case hqc_level3_sa_algo:
+    case hqc_level5_sa_algo:
+        ssl->hsType = DYNAMIC_TYPE_HQC;
+        ret = AllocKey(ssl, ssl->hsType, &ssl->hsKey);
+        if (ret == 0) {
+            ret = wc_PQCleanHqcKey_DerToPrivateKey(
+                ssl->hsKey, ssl->buffers.key->buffer, ssl->buffers.key->length);
+        }
+        if (ret == 0) {
+            ret = wc_PQCleanHqcKey_CipherTextSize(ssl->hsKey, &ctLen);
+        }
+        if (ret == 0) {
+            ret = wc_PQCleanHqcKey_SharedSecretSize(ssl->hsKey, &ssLen);
+        }
+        break;
+    default:
+        ret = BAD_FUNC_ARG;
+        WOLFSSL_MSG_EX("GYX: unsupported key type %d", ssl->buffers.keyType);
+        return ret;
+    }
+
+    if (ret == 0) {
+        if (ctLen != totalSz) {
+            WOLFSSL_MSG_EX("GYX: expected ctLen=%d, input len=%d", ctLen,
+                           totalSz);
+            ret = BUFFER_E;
+        }
+    }
+
+    /* allocate for kemCiphertext and kemSharedSecret */
+    if (ret == 0) {
+        ssl->kemCiphertext = XMALLOC(ctLen, ssl->heap, DYNAMIC_TYPE_KEMCT);
+        if (!ssl->kemCiphertext) {
+            ret = MEMORY_E;
+        }
+        XMEMCPY(ssl->kemCiphertext, input, ctLen);
+        ssl->kemCiphertextSz = ctLen;
+        ssl->kemSharedSecret = XMALLOC(ssLen, ssl->heap, DYNAMIC_TYPE_KEMSS);
+        if (!ssl->kemSharedSecret) {
+            ret = MEMORY_E;
+        }
+        ssl->kemSharedSecretSz = ssLen;
+    }
+
+    /* decapsulate */
+    if (ret == 0) {
+        switch (ssl->buffers.keyType) {
+        case mlkem_level1_sa_algo:
+        case mlkem_level3_sa_algo:
+        case mlkem_level5_sa_algo:
+            ret = wc_PQCleanMlKemKey_Decapsulate(
+                ssl->hsKey, ssl->kemSharedSecret, ssl->kemCiphertext,
+                ssl->kemCiphertextSz);
+            break;
+        case hqc_level1_sa_algo:
+        case hqc_level3_sa_algo:
+        case hqc_level5_sa_algo:
+            ret = wc_PQCleanHqcKey_Decapsulate(ssl->hsKey, ssl->kemSharedSecret,
+                                               ssl->kemCiphertext,
+                                               ssl->kemCiphertextSz);
+            break;
+        default:
+            WOLFSSL_MSG_EX("GYX: unsupported key type %d",
+                           ssl->buffers.keyType);
+            ret = BAD_FUNC_ARG;
+        }
+    }
+
+    if (ret == 0) {
+        WOLFSSL_MSG("GYX: successfully decapsulated");
+        WOLFSSL_BUFFER(ssl->kemSharedSecret, ssl->kemSharedSecretSz);
+    }
+
+    FreeKey(ssl, (int)ssl->hsType, &ssl->hsKey);
     WOLFSSL_LEAVE("DoKemTlsClientKemCiphertext", ret);
     return ret;
 }
@@ -189,6 +301,7 @@ int handle_PQCleanMlKemKey_cert(WOLFSSL *ssl, DecodedCert *cert) {
 
     if (ret == 0) {
         WOLFSSL_MSG("GYX: handled peer ML-KEM key");
+        WOLFSSL_BUFFER(ssl->kemSharedSecret, ssl->kemSharedSecretSz);
         ssl->peerMlKemKeyPresent = 1;
         ssl->options.haveMlKemAuth = 1;
     }

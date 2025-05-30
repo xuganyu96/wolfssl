@@ -6921,7 +6921,7 @@ int DoTls13ClientHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
     ssl->session->sessionIDSz = sessIdSz;
     if (sessIdSz > 0)
         XMEMCPY(ssl->session->sessionID, input + args->idx, sessIdSz);
-    args->idx += sessIdSz;
+
 
 #ifdef WOLFSSL_DTLS13
     /* legacy_cookie */
