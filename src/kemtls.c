@@ -50,12 +50,13 @@ static void dump_hex(byte *data, word32 len) {
         fprintf(stderr, "\n");
         return;
     }
-    /* print the first 4 bytes and the last 4 bytes */
-    for (int i = 0; i < 12; i++) {
+    /* print the first and the last a few bytes */
+    int prefix_len = 8;
+    for (int i = 0; i < prefix_len; i++) {
         fprintf(stderr, "%02x:", data[i]);
     }
     fprintf(stderr, "...");
-    for (int i = len - 12; i < len; i++) {
+    for (int i = len - prefix_len; i < len; i++) {
         fprintf(stderr, ":%02x", data[i]);
     }
     fprintf(stderr, "\n");
@@ -72,6 +73,7 @@ static int SendKemTlsClientKemCiphertext(WOLFSSL *ssl) {
     byte *input;  /* input points to the start of the handshake msg (i.e. the
                      fragment) */
     int sendSz, outputSz;
+    int hashOutput = 1; /* include client's KemCiphertext in transcript hash */
     enum HandShakeType hsType = client_key_exchange;
 
     if ((ssl->kemCiphertext == NULL) || (ssl->kemCiphertextSz == 0)) {
@@ -94,7 +96,7 @@ static int SendKemTlsClientKemCiphertext(WOLFSSL *ssl) {
             ssl->kemCiphertextSz);
     sendSz = BuildTls13Message(ssl, output, outputSz, input,
                                HANDSHAKE_HEADER_SZ + ssl->kemCiphertextSz,
-                               handshake, 1, 0, 0);
+                               handshake, hashOutput, 0, 0);
     if (sendSz < 0) {
         return BUILD_MSG_ERROR;
     }
