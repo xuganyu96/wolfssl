@@ -1083,7 +1083,7 @@ static const byte finishedLabel[FINISHED_LABEL_SZ+1] = "finished";
  * side    The side that we are deriving the secret for.
  * returns 0 on success, otherwise failure.
  */
-static int DeriveFinishedSecret(WOLFSSL* ssl, byte* key, byte* secret,
+int DeriveFinishedSecret(WOLFSSL* ssl, byte* key, byte* secret,
                                 int side)
 {
     WOLFSSL_MSG("Derive Finished Secret");
@@ -12468,7 +12468,8 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
         #endif
         #ifndef NO_WOLFSSL_SERVER
             /* Check state on server. */
-            if (ssl->options.side == WOLFSSL_SERVER_END) {
+            if (ssl->options.side == WOLFSSL_SERVER_END
+                && !(ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth)) {
                 if (ssl->options.serverState < SERVER_FINISHED_COMPLETE) {
                     WOLFSSL_MSG("Finished received out of order - serverState");
                     WOLFSSL_ERROR_VERBOSE(OUT_OF_ORDER_E);

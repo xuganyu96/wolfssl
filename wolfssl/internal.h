@@ -6587,6 +6587,8 @@ WOLFSSL_LOCAL int SendAsyncData(WOLFSSL* ssl);
 #ifdef WOLFSSL_TLS13
 WOLFSSL_LOCAL int SendTls13ServerHello(WOLFSSL* ssl, byte extMsgType);
 #endif
+WOLFSSL_LOCAL int DeriveFinishedSecret(WOLFSSL* ssl, byte* key, byte* secret,
+                                int side);
 WOLFSSL_LOCAL int SendCertificate(WOLFSSL* ssl);
 WOLFSSL_LOCAL int SendCertificateRequest(WOLFSSL* ssl);
 #if defined(HAVE_CERTIFICATE_STATUS_REQUEST) \
