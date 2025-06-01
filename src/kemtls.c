@@ -62,6 +62,8 @@ static void dump_hex(byte *data, word32 len) {
     fprintf(stderr, "\n");
 }
 
+static int SendKemTlsFinished(WOLFSSL *ssl) { return NOT_COMPILED_IN; }
+
 /* Construct and send client's KemCiphertext message, then derive all the
  * secrets that can be derived: dHS, AHS, dAHS, CAHTS, SAHTS, and MasterSecret.
  */
@@ -72,7 +74,7 @@ static int SendKemTlsClientKemCiphertext(WOLFSSL *ssl) {
     byte *output; /* output points to the start of the record */
     byte *input;  /* input points to the start of the handshake msg (i.e. the
                      fragment) */
-    int sendSz, outputSz;
+    int sendSz, outputSz, inputSz;
     int hashOutput = 1; /* include client's KemCiphertext in transcript hash */
     enum HandShakeType hsType = client_key_exchange;
 
@@ -94,12 +96,15 @@ static int SendKemTlsClientKemCiphertext(WOLFSSL *ssl) {
     AddTls13Headers(output, ssl->kemCiphertextSz, hsType, ssl);
     XMEMCPY(input + HANDSHAKE_HEADER_SZ, ssl->kemCiphertext,
             ssl->kemCiphertextSz);
-    sendSz = BuildTls13Message(ssl, output, outputSz, input,
-                               HANDSHAKE_HEADER_SZ + ssl->kemCiphertextSz,
-                               handshake, hashOutput, 0, 0);
+    inputSz = ssl->kemCiphertextSz + HANDSHAKE_HEADER_SZ;
+    sendSz = BuildTls13Message(ssl, output, outputSz, input, inputSz, handshake,
+                               hashOutput, 0, 0);
     if (sendSz < 0) {
         return BUILD_MSG_ERROR;
     }
+    WOLFSSL_MSG_EX("GYX: fragment=%d, record=%d", inputSz,
+                   inputSz + RECORD_HEADER_SZ);
+    WOLFSSL_MSG_EX("GYX: outputSz=%d, sendSz=%d", outputSz, sendSz);
 
     ssl->buffers.outputBuffer.length += sendSz;
     if (ssl->options.groupMessages) {
@@ -114,55 +119,59 @@ static int SendKemTlsClientKemCiphertext(WOLFSSL *ssl) {
         return ret;
     }
 
-    /* derive authenticated shared secret: implicit authentication */
-    WOLFSSL_MSG("GYX: deriving various secrets");
-    byte key_dHS[WC_MAX_DIGEST_SIZE]; /* derived handshake secret is the KEM
-                                       * shared secret from the key exchange */
-    static char derivedLabel[] = "derived";
-    word32 labelLen = 7 + 1; /* strlen(label) plus null terminator */
-    ret = DeriveKeyMsg(ssl, key_dHS, -1, ssl->arrays->preMasterSecret,
-                       (byte *)derivedLabel, labelLen, NULL, 0,
-                       ssl->specs.mac_algorithm);
-    if (ret != 0) {
-        WOLFSSL_MSG_EX("GYX: failed to obtain dHS (err=%d)", ret);
-        return ret;
-    }
-    WOLFSSL_MSG_EX("GYX: mac_algorithm is %d", ssl->specs.mac_algorithm);
-    WOLFSSL_MSG_EX("GYX: hash size is %d", ssl->specs.hash_size);
-    dump_hex(key_dHS, ssl->specs.hash_size);
+    if (0) { /* GYX: I don't yet understand the key schedule */
+        /* derive authenticated shared secret: implicit authentication */
+        WOLFSSL_MSG("GYX: deriving various secrets");
+        byte key_dHS[WC_MAX_DIGEST_SIZE]; /* derived handshake secret is the KEM
+                                           * shared secret from the key exchange
+                                           */
+        static char derivedLabel[] = "derived";
+        word32 labelLen = 7 + 1; /* strlen(label) plus null terminator */
+        ret = DeriveKeyMsg(ssl, key_dHS, -1, ssl->arrays->preMasterSecret,
+                           (byte *)derivedLabel, labelLen, NULL, 0,
+                           ssl->specs.mac_algorithm);
+        if (ret != 0) {
+            WOLFSSL_MSG_EX("GYX: failed to obtain dHS (err=%d)", ret);
+            return ret;
+        }
+        WOLFSSL_MSG_EX("GYX: mac_algorithm is %d", ssl->specs.mac_algorithm);
+        WOLFSSL_MSG_EX("GYX: hash size is %d", ssl->specs.hash_size);
+        dump_hex(key_dHS, ssl->specs.hash_size);
 
-    /* ssl->arrays->preMasterSecret is AHS */
-    ret = wc_Tls13_HKDF_Extract(ssl->arrays->preMasterSecret, key_dHS,
-                                ssl->specs.hash_size, ssl->kemSharedSecret,
-                                ssl->kemSharedSecretSz,
-                                mac2hash(ssl->specs.mac_algorithm));
-    if (ret != 0) {
-        WOLFSSL_MSG_EX("GYX: failed to extract preMasterSecret (AHS) (err=%d)",
-                       ret);
-        return ret;
-    }
-    WOLFSSL_MSG_EX("GYX: preMasterSecret dump:");
-    dump_hex(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
+        /* ssl->arrays->preMasterSecret is AHS */
+        ret = wc_Tls13_HKDF_Extract(ssl->arrays->preMasterSecret, key_dHS,
+                                    ssl->specs.hash_size, ssl->kemSharedSecret,
+                                    ssl->kemSharedSecretSz,
+                                    mac2hash(ssl->specs.mac_algorithm));
+        if (ret != 0) {
+            WOLFSSL_MSG_EX(
+                "GYX: failed to extract preMasterSecret (AHS) (err=%d)", ret);
+            return ret;
+        }
+        WOLFSSL_MSG_EX("GYX: preMasterSecret dump:");
+        dump_hex(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
 
-    ret = DeriveTls13Keys(ssl, update_traffic_key, ENCRYPT_AND_DECRYPT_SIDE, 1);
-    if (ret != 0) {
-        WOLFSSL_MSG_EX("GYX: failed to derive CAHTS, SAHTS (err=%d)", ret);
-        return ret;
-    }
+        ret = DeriveTls13Keys(ssl, update_traffic_key, ENCRYPT_AND_DECRYPT_SIDE,
+                              1);
+        if (ret != 0) {
+            WOLFSSL_MSG_EX("GYX: failed to derive CAHTS, SAHTS (err=%d)", ret);
+            return ret;
+        }
 
-    ret = SetKeysSide(ssl, ENCRYPT_AND_DECRYPT_SIDE);
-    if (ret != 0) {
-        WOLFSSL_MSG_EX("GYX: SetKeysSide returned %d", ret);
-        return ret;
-    }
+        ret = SetKeysSide(ssl, ENCRYPT_AND_DECRYPT_SIDE);
+        if (ret != 0) {
+            WOLFSSL_MSG_EX("GYX: SetKeysSide returned %d", ret);
+            return ret;
+        }
 
-    ret = DeriveMasterSecret(ssl);
-    if (ret != 0) {
-        WOLFSSL_MSG_EX("GYX: DeriveMasterSecret returned %d", ret);
-        return ret;
+        ret = DeriveMasterSecret(ssl);
+        if (ret != 0) {
+            WOLFSSL_MSG_EX("GYX: DeriveMasterSecret returned %d", ret);
+            return ret;
+        }
+        WOLFSSL_MSG("GYX: MasterSecret dump:");
+        dump_hex(ssl->arrays->masterSecret, sizeof(ssl->arrays->masterSecret));
     }
-    WOLFSSL_MSG("GYX: MasterSecret dump:");
-    dump_hex(ssl->arrays->masterSecret, sizeof(ssl->arrays->masterSecret));
 
     WOLFSSL_LEAVE("SendKemTlsClientKemCiphertext", ret);
     return ret;
@@ -207,7 +216,7 @@ int connect_KEMTLS(WOLFSSL *ssl) {
     ssl->options.connectState = CLIENT_KEM_CIPHERTEXT_SENT;
     WOLFSSL_MSG("connectState: CLIENT_KEM_CIPHERTEXT_SENT");
 
-    if ((ret = SendTls13Finished(ssl)) != 0) {
+    if ((ret = SendKemTlsFinished(ssl)) != 0) {
         return ret;
     }
     ssl->options.connectState = CLIENT_KEM_FINISHED_SENT;
@@ -340,6 +349,7 @@ int DoKemTlsClientKemCiphertext(WOLFSSL *ssl, byte *input, word32 *inOutIdx,
         dump_hex(ssl->kemSharedSecret, ssl->kemSharedSecretSz);
         ssl->options.clientState = CLIENT_KEM_CIPHERTEXT_DONE;
         *inOutIdx += totalSz;
+        *inOutIdx += ssl->keys.padSz;
     }
 
     FreeKey(ssl, (int)ssl->hsType, &ssl->hsKey);
