@@ -4277,7 +4277,11 @@ static void GetTls13SessionId(WOLFSSL* ssl, byte* output, word32* idx)
  */
 
 typedef struct Sch13Args {
+    /* points at the beginning of the record containing ClientHello */
     byte*  output;
+    /* index of the next byte to write to output; equivalently, the length of
+     * output
+     */
     word32 idx;
     int    sendSz;
     word32 length;

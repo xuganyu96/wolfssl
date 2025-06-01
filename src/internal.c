@@ -10539,6 +10539,9 @@ int HashOutput(WOLFSSL* ssl, const byte* output, int sz, int ivSz)
     adj = output + RECORD_HEADER_SZ + ivSz;
     sz -= RECORD_HEADER_SZ;
 
+    WOLFSSL_MSG_EX("GYX: Hashing <output %d bytes> "
+                   "+ <IV=%d bytes> to transcript", sz, ivSz);
+
 #ifdef HAVE_FUZZER
     if (ssl->fuzzerCb)
         ssl->fuzzerCb(ssl, output, sz, FUZZ_HASH, ssl->fuzzerCtx);
@@ -10583,6 +10586,7 @@ int HashInput(WOLFSSL* ssl, const byte* input, int sz)
 
     adj = input - HANDSHAKE_HEADER_SZ;
     sz += HANDSHAKE_HEADER_SZ;
+    WOLFSSL_MSG_EX("GYX: Hashing <input %d bytes> to transcript", sz);
 
 #ifdef WOLFSSL_DTLS
     if (ssl->options.dtls) {
