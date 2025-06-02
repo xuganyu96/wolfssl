@@ -12441,7 +12441,8 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
             /* Valid on both sides. */
         #ifndef NO_WOLFSSL_CLIENT
             /* Check state on client. */
-            if (ssl->options.side == WOLFSSL_CLIENT_END) {
+            if (ssl->options.side == WOLFSSL_CLIENT_END
+                && !(ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth)) {
                 /* After sending ClientHello */
                 if (ssl->options.clientState < CLIENT_HELLO_COMPLETE) {
                     WOLFSSL_MSG("Finished received out of order - clientState");
@@ -12528,7 +12529,8 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
                  * peer and got a peer certificate.
                  */
                 if ((ssl->options.mutualAuth || ssl->options.verifyPeer) &&
-                    ssl->options.havePeerCert && !ssl->options.havePeerVerify) {
+                    ssl->options.havePeerCert && !ssl->options.havePeerVerify
+                    && !(ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth)) {
                     WOLFSSL_MSG("Finished received out of order - "
                                 "Certificate message but no CertificateVerify");
                     WOLFSSL_ERROR_VERBOSE(OUT_OF_ORDER_E);
@@ -12821,7 +12823,11 @@ int DoTls13HandShakeMsgType(WOLFSSL* ssl, byte* input, word32* inOutIdx,
 #endif
     case finished:
         WOLFSSL_MSG("processing finished");
-        ret = DoTls13Finished(ssl, input, inOutIdx, size, totalSz, NO_SNIFF);
+        if (ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth) {
+            ret = DoKemTlsFinished(ssl, input, inOutIdx, size, totalSz);
+        } else {
+            ret = DoTls13Finished(ssl, input, inOutIdx, size, totalSz, NO_SNIFF);
+        }
         break;
 
     case key_update:
@@ -14622,8 +14628,8 @@ int wolfSSL_accept_TLSv13(WOLFSSL* ssl)
             }
 #endif
             if (ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth) {
-                ssl->options.acceptState = KEMTLS_CERT_SENT;
-                WOLFSSL_MSG("accept state KEMTLS_CERT_SENT");
+                ssl->options.acceptState = KEMTLS_ACCEPT_CERT_SENT;
+                WOLFSSL_MSG("accept state KEMTLS_ACCEPT_CERT_SENT");
                 /* GYX: hijacking the control flow is not optimal */
                 ssl->error = accept_KEMTLS(ssl);
                 if (ssl->error == 0) {

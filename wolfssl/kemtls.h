@@ -18,10 +18,7 @@ WOLFSSL_API int handle_PQCleanHqcKey_cert(WOLFSSL *ssl, DecodedCert *cert);
 
 WOLFSSL_LOCAL int DoKemTlsClientKemCiphertext(WOLFSSL *ssl, byte *input,
                                               word32 *inOutIdx, word32 totalSz);
+WOLFSSL_LOCAL int DoKemTlsFinished(WOLFSSL *ssl, const byte *input, word32 *inOutIdx,
+                                   word32 size, word32 totalSz);
 
-/* GYX: These functions are NOT supposed to be public API but I need them from
- * another source file
- */
-WOLFSSL_LOCAL void AddTls13Headers(byte *output, word32 length, byte type,
-                                   WOLFSSL *ssl);
 #endif /* WOLFSSL_KEMTLS_H */

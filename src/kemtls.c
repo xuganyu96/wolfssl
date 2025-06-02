@@ -65,7 +65,7 @@ static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
     }
     ssl->arrays->preMasterSz = ssl->specs.hash_size;
     // WOLFSSL_MSG("GYX: HS dump");
-    // WOLFSSL_BUFFER(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
+    // dump_hex(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
 
     /* dHS <- HKDF_expand(HS, "derived", NULL) */
     ret = DeriveKeyMsg(ssl, derived_key, -1, ssl->arrays->preMasterSecret,
@@ -76,7 +76,7 @@ static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
         return ret;
     }
     // WOLFSSL_MSG("GYX: dHS dump");
-    // WOLFSSL_BUFFER(derived_key, ssl->specs.hash_size);
+    // dump_hex(derived_key, ssl->specs.hash_size);
 
     /* AHS <- HKDF_extract(dHS, ss_s) */
     ret = wc_Tls13_HKDF_Extract(ssl->arrays->preMasterSecret, derived_key,
@@ -89,7 +89,7 @@ static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
     }
     ssl->arrays->preMasterSz = ssl->specs.hash_size;
     // WOLFSSL_MSG("GYX: AHS dump");
-    // WOLFSSL_BUFFER(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
+    // dump_hex(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
 
     /* dAHS <- HKDF_expand(HS, "derived", NULL) */
     ret = DeriveKeyMsg(ssl, derived_key, -1, ssl->arrays->preMasterSecret,
@@ -100,7 +100,7 @@ static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
         return ret;
     }
     // WOLFSSL_MSG_EX("GYX: dAHS dump (%d bytes)", ssl->specs.hash_size);
-    // WOLFSSL_BUFFER(derived_key, ssl->specs.hash_size);
+    // dump_hex(derived_key, ssl->specs.hash_size);
 
     /* MS <- HKDF_extract(dAHS, 0) */
     ret = wc_Tls13_HKDF_Extract(ssl->arrays->masterSecret, NULL, 0, derived_key,
@@ -111,7 +111,7 @@ static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
         return ret;
     }
     WOLFSSL_MSG("GYX: MS dump");
-    WOLFSSL_BUFFER(ssl->arrays->masterSecret, ssl->specs.hash_size);
+    dump_hex(ssl->arrays->masterSecret, ssl->specs.hash_size);
 
     /* client_finished_key <- HKDF_expand(MS, "c finished", NULL) */
     ret = DeriveKeyMsg(ssl, ssl->keys.client_write_MAC_secret, -1,
@@ -123,7 +123,7 @@ static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
         return ret;
     }
     WOLFSSL_MSG("GYX: clientFinishedKey dump");
-    WOLFSSL_BUFFER(ssl->keys.client_write_MAC_secret, ssl->specs.hash_size);
+    dump_hex(ssl->keys.client_write_MAC_secret, ssl->specs.hash_size);
 
     /* server_finished_key <- HKDF_expand(MS, "s finished", NULL) */
     ret = DeriveKeyMsg(ssl, ssl->keys.server_write_MAC_secret, -1,
@@ -135,7 +135,7 @@ static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
         return ret;
     }
     WOLFSSL_MSG("GYX: serverFinishedKey dump");
-    WOLFSSL_BUFFER(ssl->keys.server_write_MAC_secret, ssl->specs.hash_size);
+    dump_hex(ssl->keys.server_write_MAC_secret, ssl->specs.hash_size);
 
     WOLFSSL_LEAVE("deriveKemTlsFinishedSecrets", ret);
     return ret;
@@ -191,7 +191,15 @@ static int SendKemTlsFinished(WOLFSSL *ssl) {
         WOLFSSL_MSG_EX("SendBuffered returned %d", ret);
         return ret;
     }
-    /* GYX: connectState is updated outside this function */
+    /* GYX: when client calls SendFinished, handshake is not done, and
+     * connectState will be updated outside this function; when server sends
+     * Finished, server's done with handshake */
+    if (ssl->options.side == WOLFSSL_SERVER_END) {
+        ssl->options.handShakeState = HANDSHAKE_DONE;
+        ssl->options.handShakeDone = 1;
+    } else {
+        /* do nothing */
+    }
     WOLFSSL_LEAVE("SendKemTlsFinished", ret);
     return ret;
 }
@@ -264,28 +272,19 @@ int accept_KEMTLS(WOLFSSL *ssl) {
     WOLFSSL_ENTER("accept_KEMTLS");
     int ret;
 
-    while (ssl->options.clientState < CLIENT_KEM_CIPHERTEXT_DONE) {
+    while (ssl->options.clientState < CLIENT_KEM_FINISHED_DONE) {
         ret = ProcessReply(ssl);
         if (ret != 0) {
             return ret;
         }
     }
 
-    WOLFSSL_MSG_EX("GYX: ssl->clientSecret");
-    dump_hex(ssl->clientSecret, sizeof(ssl->clientSecret));
-    WOLFSSL_MSG_EX("GYX: ssl->serverSecret");
-    dump_hex(ssl->serverSecret, sizeof(ssl->serverSecret));
-
-    ret = ProcessReply(ssl);
+    ret = SendKemTlsFinished(ssl);
     if (ret != 0) {
-        WOLFSSL_MSG_EX("GYX: expect DoTls13Finished, returned %d", ret);
         return ret;
     }
-
-    WOLFSSL_MSG("GYX: ssl->keys.client_write_key");
-    dump_hex(ssl->keys.client_write_key, sizeof(ssl->keys.client_write_key));
-    WOLFSSL_MSG("GYX: ssl->keys.server_write_key");
-    dump_hex(ssl->keys.server_write_key, sizeof(ssl->keys.server_write_key));
+    ssl->options.acceptState = KEMTLS_ACCEPT_FINISHED_SENT;
+    WOLFSSL_MSG("acceptState: KEMTLS_ACCEPT_FINISHED_SENT");
 
     WOLFSSL_LEAVE("accept_KEMTLS", ret);
     return ret;
@@ -307,20 +306,20 @@ int connect_KEMTLS(WOLFSSL *ssl) {
     ssl->options.connectState = CLIENT_KEM_CIPHERTEXT_SENT;
     WOLFSSL_MSG("connectState: CLIENT_KEM_CIPHERTEXT_SENT");
 
-    /* GYX: ssl->arrays->preMasterSecret is AHS */
     if ((ret = SendKemTlsFinished(ssl)) != 0) {
         return ret;
     }
     ssl->options.connectState = CLIENT_KEM_FINISHED_SENT;
     WOLFSSL_MSG("connectState: CLIENT_KEM_FINISHED_SENT");
 
-    WOLFSSL_MSG("GYX: ssl->keys.client_write_key");
-    dump_hex(ssl->keys.client_write_key, sizeof(ssl->keys.client_write_key));
-    WOLFSSL_MSG("GYX: ssl->keys.server_write_key");
-    dump_hex(ssl->keys.server_write_key, sizeof(ssl->keys.server_write_key));
-
-    /* GYX: next we need to handle server's Finished */
-    ret = NOT_COMPILED_IN;
+    /* handle server's Finished */
+    while (ssl->options.serverState < SERVER_KEM_FINISHED_DONE) {
+        ret = ProcessReply(ssl);
+        if (ret != 0) {
+            WOLFSSL_MSG_EX("GYX: expect server's finish, got (err=%d)", ret);
+            return ret;
+        }
+    }
 
     WOLFSSL_LEAVE("connect_KEMTLS", ret);
     return ret;
@@ -548,4 +547,69 @@ int handle_PQCleanMlKemKey_cert(WOLFSSL *ssl, DecodedCert *cert) {
 
 int handle_PQCleanHqcKey_cert(WOLFSSL *ssl, DecodedCert *cert) {
     return NOT_COMPILED_IN;
+}
+
+/* Process Finished
+ *
+ * @input    (byte *)   start of the handshake message (i.e. record's fragment)
+ * @inOutIdx (word32 *) On entry, the index into the message buffer of Finished
+ *                      On exit, the index of the byte after the Finished
+ *                      message and padding
+ * @size     (word32)   length of the Finished message
+ *
+ * Return 0 on success
+ */
+int DoKemTlsFinished(WOLFSSL *ssl, const byte *input, word32 *inOutIdx,
+                     word32 size, word32 totalSz) {
+    WOLFSSL_ENTER("DoKemTlsFinished");
+    int ret;
+    byte *secret;
+    byte mac_cmp[WC_MAX_DIGEST_SIZE];
+    word32 mac_cmp_len = 0;
+
+    WOLFSSL_MSG_EX("GYX: inOutIdx=%d size=%d totalSz=%d", *inOutIdx, size,
+                   totalSz);
+
+    if (*inOutIdx + size > totalSz) { /* GYX: what is totalSz? */
+        return BUFFER_E;
+    }
+
+    /* verify with peer's Finished key */
+    if (ssl->options.side == WOLFSSL_CLIENT_END) {
+        secret = ssl->keys.server_write_MAC_secret;
+    } else {
+        secret = ssl->keys.client_write_MAC_secret;
+    }
+    ret = BuildTls13HandshakeHmac(ssl, secret, mac_cmp, &mac_cmp_len);
+    if (ret != 0) {
+        WOLFSSL_MSG_EX("BuildTls13HandshakeHmac returned %d", ret);
+        return ret;
+    }
+    if (mac_cmp_len != size) {
+        WOLFSSL_MSG_EX("peer MAC len=%d, verify MAC len=%d", size, mac_cmp_len);
+        return BUFFER_ERROR;
+    }
+    if (XMEMCMP(input + *inOutIdx, mac_cmp, size) != 0) {
+        WOLFSSL_MSG("Verify finished error on hashes");
+        SendAlert(ssl, alert_fatal, decrypt_error);
+        WOLFSSL_ERROR_VERBOSE(VERIFY_FINISHED_ERROR);
+        return VERIFY_FINISHED_ERROR;
+    }
+
+    *inOutIdx += size + ssl->keys.padSz;
+    if (ssl->options.side == WOLFSSL_SERVER_END) {
+        /* after server is done processing client's Finished, server is not done
+         * with handshake: it still needs to send its own Finished
+         */
+        ssl->options.clientState = CLIENT_KEM_FINISHED_DONE;
+    } else {
+        /* after client is done processing server's Finished, client is done
+         * with handsha */
+        ssl->options.serverState = SERVER_KEM_FINISHED_DONE;
+        ssl->options.handShakeState = HANDSHAKE_DONE;
+        ssl->options.handShakeDone = 1;
+    }
+    /* GYX: Set up application keys! */
+    WOLFSSL_LEAVE("DoKemTlsFinished", ret);
+    return ret;
 }

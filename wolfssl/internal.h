@@ -2138,12 +2138,14 @@ enum states {
     SERVER_KEYEXCHANGE_COMPLETE,
     SERVER_HELLODONE_COMPLETE,
     SERVER_CHANGECIPHERSPEC_COMPLETE,
+    SERVER_KEM_FINISHED_DONE,
     SERVER_FINISHED_COMPLETE,
 
     CLIENT_HELLO_RETRY,
     CLIENT_HELLO_COMPLETE,
     CLIENT_KEYEXCHANGE_COMPLETE,
     CLIENT_KEM_CIPHERTEXT_DONE,
+    CLIENT_KEM_FINISHED_DONE,
     CLIENT_CHANGECIPHERSPEC_COMPLETE,
     CLIENT_FINISHED_COMPLETE,
 
@@ -2337,6 +2339,8 @@ WOLFSSL_LOCAL int  DoTls13HandShakeMsg(WOLFSSL* ssl, byte* input,
 WOLFSSL_LOCAL int DoTls13ServerHello(WOLFSSL* ssl, const byte* input,
                                      word32* inOutIdx, word32 helloSz,
                                      byte* extMsgType);
+WOLFSSL_LOCAL void AddTls13Headers(byte *output, word32 length, byte type,
+                                   WOLFSSL *ssl);
 WOLFSSL_LOCAL int RestartHandshakeHash(WOLFSSL* ssl);
 WOLFSSL_LOCAL int DeriveKeyMsg(WOLFSSL* ssl, byte* output, int outputLen,
                                const byte* secret, const byte* label,
@@ -4822,9 +4826,11 @@ enum AcceptStateTls13 {
     TLS13_SERVER_EXTENSIONS_SENT,
     TLS13_CERT_REQ_SENT,
     /* server's sent KEM certificate, wait for KemCiphertext */
-    KEMTLS_CERT_SENT,
+    KEMTLS_ACCEPT_CERT_SENT,
     /* server's decapsulated client's KEM ciphertext */
     KEMTLS_CIPHERTEXT_PROCESSED,
+    /* server's sent Finished */
+    KEMTLS_ACCEPT_FINISHED_SENT,
     TLS13_CERT_SENT,
     TLS13_CERT_VERIFY_SENT,
     TLS13_ACCEPT_FINISHED_SENT,
