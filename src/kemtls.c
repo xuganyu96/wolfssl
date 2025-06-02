@@ -64,8 +64,8 @@ static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
         return ret;
     }
     ssl->arrays->preMasterSz = ssl->specs.hash_size;
-    //WOLFSSL_MSG("GYX: HS dump");
-    //WOLFSSL_BUFFER(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
+    // WOLFSSL_MSG("GYX: HS dump");
+    // WOLFSSL_BUFFER(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
 
     /* dHS <- HKDF_expand(HS, "derived", NULL) */
     ret = DeriveKeyMsg(ssl, derived_key, -1, ssl->arrays->preMasterSecret,
@@ -75,8 +75,8 @@ static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
         WOLFSSL_MSG_EX("DeriveKeyMsg returned %d", ret);
         return ret;
     }
-    //WOLFSSL_MSG("GYX: dHS dump");
-    //WOLFSSL_BUFFER(derived_key, ssl->specs.hash_size);
+    // WOLFSSL_MSG("GYX: dHS dump");
+    // WOLFSSL_BUFFER(derived_key, ssl->specs.hash_size);
 
     /* AHS <- HKDF_extract(dHS, ss_s) */
     ret = wc_Tls13_HKDF_Extract(ssl->arrays->preMasterSecret, derived_key,
@@ -88,8 +88,8 @@ static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
         return ret;
     }
     ssl->arrays->preMasterSz = ssl->specs.hash_size;
-    //WOLFSSL_MSG("GYX: AHS dump");
-    //WOLFSSL_BUFFER(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
+    // WOLFSSL_MSG("GYX: AHS dump");
+    // WOLFSSL_BUFFER(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
 
     /* dAHS <- HKDF_expand(HS, "derived", NULL) */
     ret = DeriveKeyMsg(ssl, derived_key, -1, ssl->arrays->preMasterSecret,
@@ -99,12 +99,12 @@ static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
         WOLFSSL_MSG_EX("DeriveKeyMsg returned %d", ret);
         return ret;
     }
-    //WOLFSSL_MSG_EX("GYX: dAHS dump (%d bytes)", ssl->specs.hash_size);
-    //WOLFSSL_BUFFER(derived_key, ssl->specs.hash_size);
+    // WOLFSSL_MSG_EX("GYX: dAHS dump (%d bytes)", ssl->specs.hash_size);
+    // WOLFSSL_BUFFER(derived_key, ssl->specs.hash_size);
 
     /* MS <- HKDF_extract(dAHS, 0) */
-    ret = wc_Tls13_HKDF_Extract(ssl->arrays->masterSecret, NULL,
-                                0, derived_key, ssl->specs.hash_size,
+    ret = wc_Tls13_HKDF_Extract(ssl->arrays->masterSecret, NULL, 0, derived_key,
+                                ssl->specs.hash_size,
                                 mac2hash(ssl->specs.mac_algorithm));
     if (ret != 0) {
         WOLFSSL_MSG_EX("wc_Tls13_HKDF_Extract returned %d", ret);
@@ -393,6 +393,11 @@ int DoKemTlsClientKemCiphertext(WOLFSSL *ssl, byte *input, word32 *inOutIdx,
                            ssl->buffers.keyType);
             ret = BAD_FUNC_ARG;
         }
+    }
+
+    if (ret == 0) {
+        ret = deriveKemTlsFinishedSecrets(ssl, ssl->kemSharedSecret,
+                                          ssl->kemSharedSecretSz);
     }
 
     if (ret == 0) {
