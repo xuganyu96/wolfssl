@@ -1,11 +1,16 @@
 #include "wolfssl/internal.h"
 #include <wolfssl/kemtls.h>
+#include <wolfssl/wolfcrypt/kdf.h>
 #include <wolfssl/wolfcrypt/logging.h>
 
 #define YOLO 1
 
 static byte derivedLabel[] = "derived";
 static int derivedLabelLen = 8;
+static byte clientFinishedKeyLabel[] = "c finished";
+static int clientFinishedKeyLabelLen = 11;
+static byte serverFinishedKeyLabel[] = "s finished";
+static int serverFinishedKeyLabelLen = 11;
 
 static void dump_hex(byte *data, word32 len) {
     if (len == 0 || data == NULL)
@@ -34,51 +39,117 @@ static void dump_hex(byte *data, word32 len) {
     fprintf(stderr, "\n");
 }
 
+/* Derive HS, dHS, AHS, dAHS, MS, client finished key, and server finished key.
+ *
+ * This function should be called after client/server obtains KEM shared secret
+ * for authentication but before sending Finished. Client calls this function
+ * right after processing server's KEM public key in DoTls13Certificate. Server
+ * calls this function after processing client's KEM ciphertext in
+ * DoKemTlsClientKemCiphertext.
+ *
+ * Return 0 on success
+ */
+static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
+                                       word32 kemShareddSecretSz) {
+    WOLFSSL_ENTER("deriveKemTlsFinishedSecrets");
+    int ret;
+    byte derived_key[WC_MAX_DIGEST_SIZE];
+
+    /* HS <- HKDF_extract(dES, ss_e), but I don't care about dES */
+    ret = wc_Tls13_HKDF_Extract(
+        ssl->arrays->preMasterSecret, NULL, 0, ssl->arrays->preMasterSecret,
+        ssl->arrays->preMasterSz, mac2hash(ssl->specs.mac_algorithm));
+    if (ret != 0) {
+        WOLFSSL_MSG_EX("wc_Tls13_HKDF_Extract returned %d", ret);
+        return ret;
+    }
+    ssl->arrays->preMasterSz = ssl->specs.hash_size;
+    //WOLFSSL_MSG("GYX: HS dump");
+    //WOLFSSL_BUFFER(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
+
+    /* dHS <- HKDF_expand(HS, "derived", NULL) */
+    ret = DeriveKeyMsg(ssl, derived_key, -1, ssl->arrays->preMasterSecret,
+                       derivedLabel, derivedLabelLen, NULL, 0,
+                       ssl->specs.mac_algorithm);
+    if (ret != 0) {
+        WOLFSSL_MSG_EX("DeriveKeyMsg returned %d", ret);
+        return ret;
+    }
+    //WOLFSSL_MSG("GYX: dHS dump");
+    //WOLFSSL_BUFFER(derived_key, ssl->specs.hash_size);
+
+    /* AHS <- HKDF_extract(dHS, ss_s) */
+    ret = wc_Tls13_HKDF_Extract(ssl->arrays->preMasterSecret, derived_key,
+                                ssl->specs.hash_size, kemSharedSecret,
+                                kemShareddSecretSz,
+                                mac2hash(ssl->specs.mac_algorithm));
+    if (ret != 0) {
+        WOLFSSL_MSG_EX("wc_Tls13_HKDF_Extract returned %d", ret);
+        return ret;
+    }
+    ssl->arrays->preMasterSz = ssl->specs.hash_size;
+    //WOLFSSL_MSG("GYX: AHS dump");
+    //WOLFSSL_BUFFER(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
+
+    /* dAHS <- HKDF_expand(HS, "derived", NULL) */
+    ret = DeriveKeyMsg(ssl, derived_key, -1, ssl->arrays->preMasterSecret,
+                       derivedLabel, derivedLabelLen, NULL, 0,
+                       ssl->specs.mac_algorithm);
+    if (ret != 0) {
+        WOLFSSL_MSG_EX("DeriveKeyMsg returned %d", ret);
+        return ret;
+    }
+    //WOLFSSL_MSG_EX("GYX: dAHS dump (%d bytes)", ssl->specs.hash_size);
+    //WOLFSSL_BUFFER(derived_key, ssl->specs.hash_size);
+
+    /* MS <- HKDF_extract(dAHS, 0) */
+    ret = wc_Tls13_HKDF_Extract(ssl->arrays->masterSecret, NULL,
+                                0, derived_key, ssl->specs.hash_size,
+                                mac2hash(ssl->specs.mac_algorithm));
+    if (ret != 0) {
+        WOLFSSL_MSG_EX("wc_Tls13_HKDF_Extract returned %d", ret);
+        return ret;
+    }
+    WOLFSSL_MSG("GYX: MS dump");
+    WOLFSSL_BUFFER(ssl->arrays->masterSecret, ssl->specs.hash_size);
+
+    /* client_finished_key <- HKDF_expand(MS, "c finished", NULL) */
+    ret = DeriveKeyMsg(ssl, ssl->keys.client_write_MAC_secret, -1,
+                       ssl->arrays->masterSecret, clientFinishedKeyLabel,
+                       clientFinishedKeyLabelLen, NULL, 0,
+                       ssl->specs.mac_algorithm);
+    if (ret != 0) {
+        WOLFSSL_MSG_EX("DeriveKeyMsg (clientFinishedKey) returned %d", ret);
+        return ret;
+    }
+    WOLFSSL_MSG("GYX: clientFinishedKey dump");
+    WOLFSSL_BUFFER(ssl->keys.client_write_MAC_secret, ssl->specs.hash_size);
+
+    /* server_finished_key <- HKDF_expand(MS, "s finished", NULL) */
+    ret = DeriveKeyMsg(ssl, ssl->keys.server_write_MAC_secret, -1,
+                       ssl->arrays->masterSecret, serverFinishedKeyLabel,
+                       serverFinishedKeyLabelLen, NULL, 0,
+                       ssl->specs.mac_algorithm);
+    if (ret != 0) {
+        WOLFSSL_MSG_EX("DeriveKeyMsg (serverFinishedKey) returned %d", ret);
+        return ret;
+    }
+    WOLFSSL_MSG("GYX: serverFinishedKey dump");
+    WOLFSSL_BUFFER(ssl->keys.server_write_MAC_secret, ssl->specs.hash_size);
+
+    WOLFSSL_LEAVE("deriveKemTlsFinishedSecrets", ret);
+    return ret;
+}
+
 /* Send the Finished message, which contains a single HMAC tag.
  */
 static int SendKemTlsFinished(WOLFSSL *ssl) {
     WOLFSSL_ENTER("SendKemTlsFinished");
-#ifdef YOLO
-    return SendTls13Finished(ssl);
-#else
-    int ret = 0;
-    byte *output; /* start of record */
-    byte *input;  /* start of fragment */
-    word32 outputSz, inputSz;
-
-    /* get pointer to record and fragment */
-    outputSz = WC_MAX_DIGEST_SIZE + HANDSHAKE_HEADER_SZ + MAX_MSG_EXTRA;
-    if ((ret = CheckAvailableSize(ssl, outputSz)) != 0) {
-        WOLFSSL_MSG_EX("GYX: CheckAvailableSize returned %d", ret);
-        return ret;
-    }
-    output = GetOutputBuffer(ssl);
-    input = output + RECORD_HEADER_SZ;
-    inputSz = ssl->specs.hash_size + HANDSHAKE_HEADER_SZ;
-    /* GYX: later BuildTls13Message will also add record header, I hope this
-     * will not be an issue
-     */
-    AddTls13Headers(output, ssl->specs.hash_size, finished, ssl);
-
-    /* derive Finished keys */
-    if (ssl->options.side == WOLFSSL_CLIENT_END) {
-        ret = DeriveFinishedSecret(ssl, ssl->clientSecret,
-                                   ssl->keys.client_write_MAC_secret,
-                                   WOLFSSL_SERVER_END);
-    } else {
-        ret = DeriveFinishedSecret(ssl, ssl->serverSecret,
-                                   ssl->keys.server_write_MAC_secret,
-                                   WOLFSSL_CLIENT_END);
-    }
-    if (ret != 0) {
-        WOLFSSL_MSG_EX("DeriveFinishedSecret returned %d", ret);
-        return ret;
-    }
+    int ret;
 
     ret = NOT_COMPILED_IN;
     WOLFSSL_LEAVE("SendKemTlsFinished", ret);
     return ret;
-#endif
 }
 
 /* Construct and send client's KemCiphertext message, then derive all the
@@ -136,50 +207,6 @@ static int SendKemTlsClientKemCiphertext(WOLFSSL *ssl) {
         return ret;
     }
 
-    WOLFSSL_MSG_EX("GYX: revising key schedule");
-    WOLFSSL_MSG_EX("GYX: handshake secret dump:");
-    dump_hex(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
-    byte dHS[WC_MAX_DIGEST_SIZE];
-    ret = DeriveKeyMsg(ssl, dHS, -1, ssl->arrays->preMasterSecret, derivedLabel,
-                       derivedLabelLen, NULL, 0, ssl->specs.mac_algorithm);
-    if (ret != 0) {
-        WOLFSSL_MSG_EX("DeriveKeyMsg returned %d", ret);
-        return ret;
-    }
-    WOLFSSL_MSG_EX("GYX: dHS dump:");
-    dump_hex(dHS, ssl->specs.hash_size);
-    /* compute AHS */
-    ret = wc_Tls13_HKDF_Extract(ssl->arrays->preMasterSecret, dHS,
-                                ssl->specs.hash_size, ssl->kemSharedSecret,
-                                ssl->kemSharedSecretSz,
-                                mac2hash(ssl->specs.mac_algorithm));
-    if (ret != 0) {
-        WOLFSSL_MSG_EX("HKDF_Extract returned %d", ret);
-        return ret;
-    }
-    ssl->arrays->preMasterSz = ssl->specs.hash_size;
-    WOLFSSL_MSG_EX("GYX: AHS dump:");
-    dump_hex(ssl->arrays->preMasterSecret, ssl->arrays->preMasterSz);
-    /* compute dAHS, reusing dHS buffer */
-    ret = DeriveKeyMsg(ssl, dHS, -1, ssl->arrays->preMasterSecret, derivedLabel,
-                       derivedLabelLen, NULL, 0, ssl->specs.mac_algorithm);
-    if (ret != 0) {
-        WOLFSSL_MSG_EX("DeriveKeyMsg returned %d", ret);
-        return ret;
-    }
-    WOLFSSL_MSG_EX("GYX: dAHS dump:");
-    dump_hex(dHS, ssl->specs.hash_size);
-    /* compute MS */
-    ret = wc_Tls13_HKDF_Extract(ssl->arrays->masterSecret, dHS,
-                                ssl->specs.hash_size, ssl->arrays->masterSecret,
-                                0, mac2hash(ssl->specs.mac_algorithm));
-    if (ret != 0) {
-        WOLFSSL_MSG_EX("wc_Tls13_HKDF_Extract returned %d", ret);
-        return ret;
-    }
-    WOLFSSL_MSG_EX("GYX: MS dump");
-    dump_hex(ssl->arrays->masterSecret, ssl->specs.hash_size);
-
     WOLFSSL_LEAVE("SendKemTlsClientKemCiphertext", ret);
     return ret;
 }
@@ -215,7 +242,6 @@ int accept_KEMTLS(WOLFSSL *ssl) {
     dump_hex(ssl->keys.client_write_key, sizeof(ssl->keys.client_write_key));
     WOLFSSL_MSG("GYX: ssl->keys.server_write_key");
     dump_hex(ssl->keys.server_write_key, sizeof(ssl->keys.server_write_key));
-
 
     WOLFSSL_LEAVE("accept_KEMTLS", ret);
     return ret;
@@ -452,6 +478,11 @@ int handle_PQCleanMlKemKey_cert(WOLFSSL *ssl, DecodedCert *cert) {
         ret = wc_PQCleanMlKemKey_Encapsulate(ssl->peerMlKemKey,
                                              ssl->kemCiphertext,
                                              ssl->kemSharedSecret, ssl->rng);
+    }
+
+    if (ret == 0) {
+        ret = deriveKemTlsFinishedSecrets(ssl, ssl->kemSharedSecret,
+                                          ssl->kemSharedSecretSz);
     }
 
     if (ret == 0) {
