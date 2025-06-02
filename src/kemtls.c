@@ -146,8 +146,52 @@ static int deriveKemTlsFinishedSecrets(WOLFSSL *ssl, byte *kemSharedSecret,
 static int SendKemTlsFinished(WOLFSSL *ssl) {
     WOLFSSL_ENTER("SendKemTlsFinished");
     int ret;
+    int finishedSz = ssl->specs.hash_size;
+    byte *output; /* beginning of record */
+    byte *input;  /* beginning of fragment/handshake msg */
+    byte *secret; /* client or server finished key */
+    int headerSz = HANDSHAKE_HEADER_SZ;
+    int outputSz, sendSz;
 
-    ret = NOT_COMPILED_IN;
+    outputSz = finishedSz + HANDSHAKE_HEADER_SZ + MAX_MSG_EXTRA;
+    if ((ret = CheckAvailableSize(ssl, outputSz)) != 0) {
+        WOLFSSL_MSG_EX("CheckAvailableSize(output=%d) returned %d", outputSz,
+                       ret);
+        return ret;
+    }
+    output = GetOutputBuffer(ssl);
+    input = output + RECORD_HEADER_SZ;
+    AddTls13Headers(output, finishedSz, finished, ssl);
+
+    if (ssl->options.side == WOLFSSL_CLIENT_END) {
+        secret = ssl->keys.client_write_MAC_secret;
+    } else {
+        secret = ssl->keys.server_write_MAC_secret;
+    }
+
+    ret = BuildTls13HandshakeHmac(ssl, secret, input + headerSz, NULL);
+    if (ret != 0) {
+        WOLFSSL_MSG_EX("BuildTls13HandshakeHmac returned %d", ret);
+        return ret;
+    }
+
+    sendSz = BuildTls13Message(ssl, output, outputSz, input,
+                               headerSz + finishedSz, handshake, 1, 0, 0);
+    if (sendSz < 0) {
+        WOLFSSL_ERROR_VERBOSE(BUILD_MSG_ERROR);
+        return BUILD_MSG_ERROR;
+    }
+    ssl->buffers.outputBuffer.length += (word32)sendSz;
+
+    /* GYX: unlike TLS 1.3, KEMTLS cannot start sending app data until after
+     * DoKemTlsFinished because peer is not explicitly authenticated until after
+     * peer's Finished is processed
+     */
+    if ((ret = SendBuffered(ssl)) != 0) {
+        WOLFSSL_MSG_EX("SendBuffered returned %d", ret);
+        return ret;
+    }
+    /* GYX: connectState is updated outside this function */
     WOLFSSL_LEAVE("SendKemTlsFinished", ret);
     return ret;
 }

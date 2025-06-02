@@ -1341,9 +1341,11 @@ int DeriveResumptionPSK(WOLFSSL* ssl, byte* nonce, byte nonceLen, byte* secret)
  * ssl   The SSL/TLS object.
  * key   The HMAC key.
  * hash  The hash result - verify data.
- * returns length of verify data generated.
+ * pHashSz length of verify data generated.
+ *
+ * return 0 on success
  */
-static int BuildTls13HandshakeHmac(WOLFSSL* ssl, byte* key, byte* hash,
+int BuildTls13HandshakeHmac(WOLFSSL* ssl, byte* key, byte* hash,
     word32* pHashSz)
 {
 #ifdef WOLFSSL_SMALL_STACK
