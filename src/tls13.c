@@ -510,7 +510,7 @@ int Tls13DeriveKey(WOLFSSL* ssl, byte* output, int outputLen,
  * mac Mac ID to convert
  * returns hash ID on success, or the NONE type.
  */
-static WC_INLINE int mac2hash(int mac)
+int mac2hash(int mac)
 {
     int hash;
     switch (mac) {

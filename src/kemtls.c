@@ -7,39 +7,6 @@
 static byte derivedLabel[] = "derived";
 static int derivedLabelLen = 8;
 
-/* Convert TLS mac ID to a hash algorithm ID
- *
- * mac Mac ID to convert
- * returns hash ID on success, or the NONE type.
- *
- * Shamelessly copied from Gonzalez et al.
- */
-static WC_INLINE int mac2hash(int mac) {
-    int hash;
-    switch (mac) {
-#ifndef NO_SHA256
-    case sha256_mac:
-        hash = WC_SHA256;
-        break;
-#endif
-
-#ifdef WOLFSSL_SHA384
-    case sha384_mac:
-        hash = WC_SHA384;
-        break;
-#endif
-
-#ifdef WOLFSSL_TLS13_SHA512
-    case sha512_mac:
-        hash = WC_SHA512;
-        break;
-#endif
-    default:
-        hash = WC_HASH_TYPE_NONE;
-    }
-    return hash;
-}
-
 static void dump_hex(byte *data, word32 len) {
     if (len == 0 || data == NULL)
         return;
