@@ -12930,7 +12930,8 @@ int DoTls13HandShakeMsgType(WOLFSSL* ssl, byte* input, word32* inOutIdx,
 #endif /* WOLFSSL_DTLS13 */
             }
 
-            if (type == finished) {
+            if (type == finished
+                && !(ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth)) {
                 if ((ret = DeriveMasterSecret(ssl)) != 0)
                     return ret;
                 /* Last use of preMasterSecret - zeroize as soon as possible. */

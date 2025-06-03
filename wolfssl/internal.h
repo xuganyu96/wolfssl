@@ -4783,6 +4783,8 @@ enum ConnectState {
     CLIENT_KEM_CIPHERTEXT_SENT,
     CLIENT_KEM_FINISHED_SENT,
     FINISHED_DONE,
+    /* client has processed server's Finished */
+    KEM_FINISHED_DONE,
     SECOND_REPLY_DONE,
 
 #ifdef WOLFSSL_DTLS13
@@ -4829,14 +4831,14 @@ enum AcceptStateTls13 {
     KEMTLS_ACCEPT_CERT_SENT,
     /* server's decapsulated client's KEM ciphertext */
     KEMTLS_CIPHERTEXT_PROCESSED,
-    /* server's sent Finished */
-    KEMTLS_ACCEPT_FINISHED_SENT,
     TLS13_CERT_SENT,
     TLS13_CERT_VERIFY_SENT,
     TLS13_ACCEPT_FINISHED_SENT,
     TLS13_PRE_TICKET_SENT,
     TLS13_ACCEPT_FINISHED_DONE,
-    TLS13_TICKET_SENT
+    TLS13_TICKET_SENT,
+    /* server's sent Finished */
+    KEMTLS_ACCEPT_FINISHED_SENT,
 };
 
 #ifdef WOLFSSL_THREADED_CRYPT

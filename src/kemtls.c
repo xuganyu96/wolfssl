@@ -606,6 +606,7 @@ int DoKemTlsFinished(WOLFSSL *ssl, const byte *input, word32 *inOutIdx,
         /* after client is done processing server's Finished, client is done
          * with handsha */
         ssl->options.serverState = SERVER_KEM_FINISHED_DONE;
+        ssl->options.connectState = KEM_FINISHED_DONE;
         ssl->options.handShakeState = HANDSHAKE_DONE;
         ssl->options.handShakeDone = 1;
     }
