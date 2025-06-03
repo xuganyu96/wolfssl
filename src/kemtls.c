@@ -286,6 +286,15 @@ int accept_KEMTLS(WOLFSSL *ssl) {
     ssl->options.acceptState = KEMTLS_ACCEPT_FINISHED_SENT;
     WOLFSSL_MSG("acceptState: KEMTLS_ACCEPT_FINISHED_SENT");
 
+    /* derive application traffic keys, no need to derive Master Secret: it's
+     * already done at DoClientKemCiphertext */
+    if ((ret = DeriveTls13Keys(ssl, traffic_key, ENCRYPT_AND_DECRYPT_SIDE, 1)) < 0) {
+        return ret;
+    }
+    if ((ret = SetKeysSide(ssl, ENCRYPT_AND_DECRYPT_SIDE)) < 0) {
+        return ret;
+    }
+
     WOLFSSL_LEAVE("accept_KEMTLS", ret);
     return ret;
 }
@@ -319,6 +328,15 @@ int connect_KEMTLS(WOLFSSL *ssl) {
             WOLFSSL_MSG_EX("GYX: expect server's finish, got (err=%d)", ret);
             return ret;
         }
+    }
+
+    /* derive application traffic keys, no need to derive Master Secret: it's
+     * already done at DoClientKemCiphertext */
+    if ((ret = DeriveTls13Keys(ssl, traffic_key, ENCRYPT_AND_DECRYPT_SIDE, 1)) < 0) {
+        return ret;
+    }
+    if ((ret = SetKeysSide(ssl, ENCRYPT_AND_DECRYPT_SIDE)) < 0) {
+        return ret;
     }
 
     WOLFSSL_LEAVE("connect_KEMTLS", ret);
