@@ -35,9 +35,10 @@
 #ifndef WOLF_CRYPT_SPHINCS_H
 #define WOLF_CRYPT_SPHINCS_H
 
+#include <wolfssl/wolfcrypt/random.h>
 #include <wolfssl/wolfcrypt/types.h>
 
-#if defined(HAVE_PQC) && defined(HAVE_SPHINCS)
+#if defined(HAVE_SPHINCS)
 
 #ifdef HAVE_LIBOQS
 #include <oqs/oqs.h>
@@ -45,122 +46,183 @@
 #endif
 
 #ifdef __cplusplus
-    extern "C" {
+extern "C" {
 #endif
 
 /* Macros Definitions */
 
-#ifdef HAVE_LIBOQS
+#if defined(HAVE_LIBOQS)
 
-#define SPHINCS_FAST_LEVEL1_SIG_SIZE     OQS_SIG_sphincs_shake_128f_simple_length_signature
-#define SPHINCS_FAST_LEVEL3_SIG_SIZE     OQS_SIG_sphincs_shake_192f_simple_length_signature
-#define SPHINCS_FAST_LEVEL5_SIG_SIZE     OQS_SIG_sphincs_shake_256f_simple_length_signature
-#define SPHINCS_SMALL_LEVEL1_SIG_SIZE    OQS_SIG_sphincs_shake_128s_simple_length_signature
-#define SPHINCS_SMALL_LEVEL3_SIG_SIZE    OQS_SIG_sphincs_shake_192s_simple_length_signature
-#define SPHINCS_SMALL_LEVEL5_SIG_SIZE    OQS_SIG_sphincs_shake_256s_simple_length_signature
+#define SPHINCS_FAST_LEVEL1_SIG_SIZE                                           \
+  OQS_SIG_sphincs_shake_128f_simple_length_signature
+#define SPHINCS_FAST_LEVEL3_SIG_SIZE                                           \
+  OQS_SIG_sphincs_shake_192f_simple_length_signature
+#define SPHINCS_FAST_LEVEL5_SIG_SIZE                                           \
+  OQS_SIG_sphincs_shake_256f_simple_length_signature
+#define SPHINCS_SMALL_LEVEL1_SIG_SIZE                                          \
+  OQS_SIG_sphincs_shake_128s_simple_length_signature
+#define SPHINCS_SMALL_LEVEL3_SIG_SIZE                                          \
+  OQS_SIG_sphincs_shake_192s_simple_length_signature
+#define SPHINCS_SMALL_LEVEL5_SIG_SIZE                                          \
+  OQS_SIG_sphincs_shake_256s_simple_length_signature
 
-#define SPHINCS_LEVEL1_KEY_SIZE     OQS_SIG_sphincs_shake_128f_simple_length_secret_key
-#define SPHINCS_LEVEL1_PUB_KEY_SIZE OQS_SIG_sphincs_shake_128f_simple_length_public_key
-#define SPHINCS_LEVEL1_PRV_KEY_SIZE (SPHINCS_LEVEL1_PUB_KEY_SIZE+SPHINCS_LEVEL1_KEY_SIZE)
+#define SPHINCS_LEVEL1_KEY_SIZE                                                \
+  OQS_SIG_sphincs_shake_128f_simple_length_secret_key
+#define SPHINCS_LEVEL1_PUB_KEY_SIZE                                            \
+  OQS_SIG_sphincs_shake_128f_simple_length_public_key
+#define SPHINCS_LEVEL1_PRV_KEY_SIZE                                            \
+  (SPHINCS_LEVEL1_PUB_KEY_SIZE + SPHINCS_LEVEL1_KEY_SIZE)
 
-#define SPHINCS_LEVEL3_KEY_SIZE     OQS_SIG_sphincs_shake_192f_simple_length_secret_key
-#define SPHINCS_LEVEL3_PUB_KEY_SIZE OQS_SIG_sphincs_shake_192f_simple_length_public_key
-#define SPHINCS_LEVEL3_PRV_KEY_SIZE (SPHINCS_LEVEL3_PUB_KEY_SIZE+SPHINCS_LEVEL3_KEY_SIZE)
+#define SPHINCS_LEVEL3_KEY_SIZE                                                \
+  OQS_SIG_sphincs_shake_192f_simple_length_secret_key
+#define SPHINCS_LEVEL3_PUB_KEY_SIZE                                            \
+  OQS_SIG_sphincs_shake_192f_simple_length_public_key
+#define SPHINCS_LEVEL3_PRV_KEY_SIZE                                            \
+  (SPHINCS_LEVEL3_PUB_KEY_SIZE + SPHINCS_LEVEL3_KEY_SIZE)
 
-#define SPHINCS_LEVEL5_KEY_SIZE     OQS_SIG_sphincs_shake_256f_simple_length_secret_key
-#define SPHINCS_LEVEL5_PUB_KEY_SIZE OQS_SIG_sphincs_shake_256f_simple_length_public_key
-#define SPHINCS_LEVEL5_PRV_KEY_SIZE (SPHINCS_LEVEL5_PUB_KEY_SIZE+SPHINCS_LEVEL5_KEY_SIZE)
+#define SPHINCS_LEVEL5_KEY_SIZE                                                \
+  OQS_SIG_sphincs_shake_256f_simple_length_secret_key
+#define SPHINCS_LEVEL5_PUB_KEY_SIZE                                            \
+  OQS_SIG_sphincs_shake_256f_simple_length_public_key
+#define SPHINCS_LEVEL5_PRV_KEY_SIZE                                            \
+  (SPHINCS_LEVEL5_PUB_KEY_SIZE + SPHINCS_LEVEL5_KEY_SIZE)
+#elif defined(PQCLEAN_SPHINCS)
+#include <crypto_sign/sphincs-shake-128f-simple/clean/api.h>
+#include <crypto_sign/sphincs-shake-128s-simple/clean/api.h>
+#include <crypto_sign/sphincs-shake-192f-simple/clean/api.h>
+#include <crypto_sign/sphincs-shake-192s-simple/clean/api.h>
+#include <crypto_sign/sphincs-shake-256f-simple/clean/api.h>
+#include <crypto_sign/sphincs-shake-256s-simple/clean/api.h>
+
+#define SPHINCS_FAST_LEVEL1_SIG_SIZE                                           \
+  PQCLEAN_SPHINCSSHAKE128FSIMPLE_CLEAN_CRYPTO_BYTES
+#define SPHINCS_FAST_LEVEL3_SIG_SIZE                                           \
+  PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_CRYPTO_BYTES
+#define SPHINCS_FAST_LEVEL5_SIG_SIZE                                           \
+  PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_CRYPTO_BYTES
+#define SPHINCS_SMALL_LEVEL1_SIG_SIZE                                          \
+  PQCLEAN_SPHINCSSHAKE128SSIMPLE_CLEAN_CRYPTO_BYTES
+#define SPHINCS_SMALL_LEVEL3_SIG_SIZE                                          \
+  PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_CRYPTO_BYTES
+#define SPHINCS_SMALL_LEVEL5_SIG_SIZE                                          \
+  PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_CRYPTO_BYTES
+
+#define SPHINCS_LEVEL1_KEY_SIZE                                                \
+  PQCLEAN_SPHINCSSHAKE128FSIMPLE_CLEAN_CRYPTO_SECRETKEYBYTES
+#define SPHINCS_LEVEL1_PUB_KEY_SIZE                                            \
+  PQCLEAN_SPHINCSSHAKE128FSIMPLE_CLEAN_CRYPTO_PUBLICKEYBYTES
+#define SPHINCS_LEVEL1_PRV_KEY_SIZE                                            \
+  (SPHINCS_LEVEL1_PUB_KEY_SIZE + SPHINCS_LEVEL1_KEY_SIZE)
+
+#define SPHINCS_LEVEL3_KEY_SIZE                                                \
+  PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_CRYPTO_SECRETKEYBYTES
+#define SPHINCS_LEVEL3_PUB_KEY_SIZE                                            \
+  PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_CRYPTO_PUBLICKEYBYTES
+#define SPHINCS_LEVEL3_PRV_KEY_SIZE                                            \
+  (SPHINCS_LEVEL3_PUB_KEY_SIZE + SPHINCS_LEVEL3_KEY_SIZE)
+
+#define SPHINCS_LEVEL5_KEY_SIZE                                                \
+  PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_CRYPTO_SECRETKEYBYTES
+#define SPHINCS_LEVEL5_PUB_KEY_SIZE                                            \
+  PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_CRYPTO_PUBLICKEYBYTES
+#define SPHINCS_LEVEL5_PRV_KEY_SIZE                                            \
+  (SPHINCS_LEVEL5_PUB_KEY_SIZE + SPHINCS_LEVEL5_KEY_SIZE)
 #endif
 
-#define SPHINCS_MAX_SIG_SIZE     SPHINCS_FAST_LEVEL5_SIG_SIZE
-#define SPHINCS_MAX_KEY_SIZE     SPHINCS_LEVEL5_PRV_KEY_SIZE
+#define SPHINCS_MAX_SIG_SIZE SPHINCS_FAST_LEVEL5_SIG_SIZE
+#define SPHINCS_MAX_KEY_SIZE SPHINCS_LEVEL5_PRV_KEY_SIZE
 #define SPHINCS_MAX_PUB_KEY_SIZE SPHINCS_LEVEL5_PUB_KEY_SIZE
 #define SPHINCS_MAX_PRV_KEY_SIZE SPHINCS_LEVEL5_PRV_KEY_SIZE
+#define SPHINCS_MAX_SEED_SIZE                                                  \
+  PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_CRYPTO_SEEDBYTES
 
-#define FAST_VARIANT    1
-#define SMALL_VARIANT   2
+enum SphincsVariant {
+  FAST_VARIANT = 1,
+  SMALL_VARIANT = 2,
+};
 
 /* Structs */
 
 struct sphincs_key {
-    bool pubKeySet;
-    bool prvKeySet;
-    byte level; /* 1,3 or 5 */
-    byte optim; /* FAST_VARIANT or SMALL_VARIANT */
-    byte p[SPHINCS_MAX_PUB_KEY_SIZE];
-    byte k[SPHINCS_MAX_PRV_KEY_SIZE];
+  bool pubKeySet;
+  bool prvKeySet;
+  byte level; /* 1,3 or 5 */
+  byte optim; /* FAST_VARIANT or SMALL_VARIANT */
+  byte p[SPHINCS_MAX_PUB_KEY_SIZE];
+  byte k[SPHINCS_MAX_PRV_KEY_SIZE];
 };
 
 #ifndef WC_SPHINCSKEY_TYPE_DEFINED
-    typedef struct sphincs_key sphincs_key;
-    #define WC_SPHINCSKEY_TYPE_DEFINED
+typedef struct sphincs_key sphincs_key;
+#define WC_SPHINCSKEY_TYPE_DEFINED
 #endif
 
 /* Functions */
+WOLFSSL_API int wc_sphincs_make_key(sphincs_key *key, WC_RNG *rng);
+WOLFSSL_API int wc_sphincs_make_key_from_seed(sphincs_key *key,
+                                              const byte *seed);
 
 WOLFSSL_API
-int wc_sphincs_sign_msg(const byte* in, word32 inLen, byte* out, word32 *outLen,
-                        sphincs_key* key, WC_RNG* rng);
+int wc_sphincs_sign_msg(const byte *in, word32 inLen, byte *out, word32 *outLen,
+                        sphincs_key *key, WC_RNG *rng);
 WOLFSSL_API
-int wc_sphincs_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
-                          word32 msgLen, int* res, sphincs_key* key);
+int wc_sphincs_verify_msg(const byte *sig, word32 sigLen, const byte *msg,
+                          word32 msgLen, int *res, sphincs_key *key);
 
 WOLFSSL_API
-int wc_sphincs_init(sphincs_key* key);
+int wc_sphincs_init(sphincs_key *key);
 WOLFSSL_API
-int wc_sphincs_set_level_and_optim(sphincs_key* key, byte level, byte optim);
+int wc_sphincs_set_level_and_optim(sphincs_key *key, byte level, byte optim);
 WOLFSSL_API
-int wc_sphincs_get_level_and_optim(sphincs_key* key, byte* level, byte *optim);
+int wc_sphincs_get_level_and_optim(sphincs_key *key, byte *level, byte *optim);
 WOLFSSL_API
-void wc_sphincs_free(sphincs_key* key);
+void wc_sphincs_free(sphincs_key *key);
 
 WOLFSSL_API
-int wc_sphincs_import_public(const byte* in, word32 inLen, sphincs_key* key);
+int wc_sphincs_import_public(const byte *in, word32 inLen, sphincs_key *key);
 WOLFSSL_API
-int wc_sphincs_import_private_only(const byte* priv, word32 privSz,
-                                   sphincs_key* key);
+int wc_sphincs_import_private_only(const byte *priv, word32 privSz,
+                                   sphincs_key *key);
 WOLFSSL_API
-int wc_sphincs_import_private_key(const byte* priv, word32 privSz,
-                                  const byte* pub, word32 pubSz,
-                                  sphincs_key* key);
+int wc_sphincs_import_private_key(const byte *priv, word32 privSz,
+                                  const byte *pub, word32 pubSz,
+                                  sphincs_key *key);
 
 WOLFSSL_API
-int wc_sphincs_export_public(sphincs_key* key, byte* out, word32* outLen);
+int wc_sphincs_export_public(sphincs_key *key, byte *out, word32 *outLen);
 WOLFSSL_API
-int wc_sphincs_export_private_only(sphincs_key* key, byte* out, word32* outLen);
+int wc_sphincs_export_private_only(sphincs_key *key, byte *out, word32 *outLen);
 WOLFSSL_API
-int wc_sphincs_export_private(sphincs_key* key, byte* out, word32* outLen);
+int wc_sphincs_export_private(sphincs_key *key, byte *out, word32 *outLen);
 WOLFSSL_API
-int wc_sphincs_export_key(sphincs_key* key, byte* priv, word32 *privSz,
-                          byte* pub, word32 *pubSz);
+int wc_sphincs_export_key(sphincs_key *key, byte *priv, word32 *privSz,
+                          byte *pub, word32 *pubSz);
 
 WOLFSSL_API
-int wc_sphincs_check_key(sphincs_key* key);
+int wc_sphincs_check_key(sphincs_key *key);
 
 WOLFSSL_API
-int wc_sphincs_size(sphincs_key* key);
+int wc_sphincs_size(sphincs_key *key);
 WOLFSSL_API
-int wc_sphincs_priv_size(sphincs_key* key);
+int wc_sphincs_priv_size(sphincs_key *key);
 WOLFSSL_API
-int wc_sphincs_pub_size(sphincs_key* key);
+int wc_sphincs_pub_size(sphincs_key *key);
 WOLFSSL_API
-int wc_sphincs_sig_size(sphincs_key* key);
+int wc_sphincs_sig_size(sphincs_key *key);
 
-WOLFSSL_API int wc_Sphincs_PrivateKeyDecode(const byte* input,
-                                            word32* inOutIdx,
-                                            sphincs_key* key, word32 inSz);
-WOLFSSL_API int wc_Sphincs_PublicKeyDecode(const byte* input,
-                                           word32* inOutIdx,
-                                           sphincs_key* key, word32 inSz);
-WOLFSSL_API int wc_Sphincs_KeyToDer(sphincs_key* key, byte* output,
+WOLFSSL_API int wc_Sphincs_PrivateKeyDecode(const byte *input, word32 *inOutIdx,
+                                            sphincs_key *key, word32 inSz);
+WOLFSSL_API int wc_Sphincs_PublicKeyDecode(const byte *input, word32 *inOutIdx,
+                                           sphincs_key *key, word32 inSz);
+WOLFSSL_API int wc_Sphincs_KeyToDer(sphincs_key *key, byte *output,
                                     word32 inLen);
-WOLFSSL_API int wc_Sphincs_PrivateKeyToDer(sphincs_key* key, byte* output,
+WOLFSSL_API int wc_Sphincs_PrivateKeyToDer(sphincs_key *key, byte *output,
                                            word32 inLen);
-WOLFSSL_API int wc_Sphincs_PublicKeyToDer(sphincs_key* key, byte* output,
+WOLFSSL_API int wc_Sphincs_PublicKeyToDer(sphincs_key *key, byte *output,
                                           word32 inLen, int withAlg);
 
 #ifdef __cplusplus
-    }    /* extern "C" */
+} /* extern "C" */
 #endif
 
 #endif /* HAVE_PQC && HAVE_SPHINCS */
