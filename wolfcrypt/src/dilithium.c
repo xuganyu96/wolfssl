@@ -131,6 +131,7 @@
  */
 
 #include <wolfssl/wolfcrypt/libwolfssl_sources.h>
+#include <wolfssl/wolfcrypt/logging.h>
 
 #ifndef WOLFSSL_DILITHIUM_NO_ASN1
 #include <wolfssl/wolfcrypt/asn.h>
@@ -140,6 +141,11 @@
 
 #ifdef HAVE_LIBOQS
 #include <oqs/oqs.h>
+#elif defined(PQCLEAN_DILITHIUM)
+#include <common/randombytes.h>
+#include <crypto_sign/ml-dsa-44/clean/api.h>
+#include <crypto_sign/ml-dsa-65/clean/api.h>
+#include <crypto_sign/ml-dsa-87/clean/api.h>
 #endif
 
 #include <wolfssl/wolfcrypt/dilithium.h>
@@ -7921,6 +7927,7 @@ static int oqs_dilithium_verify_msg(const byte* sig, word32 sigLen,
 }
 #endif /* WOLFSSL_DILITHIUM_NO_VERIFY */
 
+#elif defined(PQCLEAN_DILITHIUM)
 #else
     #error "No dilithium implementation chosen."
 #endif
@@ -7964,6 +7971,35 @@ int wc_dilithium_make_key(dilithium_key* key, WC_RNG* rng)
 #elif defined(HAVE_LIBOQS)
         /* Make the key. */
         ret = oqs_dilithium_make_key(key, rng);
+#elif defined(PQCLEAN_DILITHIUM)
+        PQCLEAN_set_wc_rng(rng);
+        if ((key->level != 2) && (key->level != 3) && (key->level != 5)) {
+            WOLFSSL_MSG_EX("invalid key->level %d", key->level);
+            return BAD_FUNC_ARG;
+        }
+        if ((key->pubKeySet) || (key->prvKeySet)) {
+            WOLFSSL_MSG("pub or priv key already set");
+            return BAD_FUNC_ARG;
+        }
+        switch (key->level) {
+        case 2:
+            ret = PQCLEAN_MLDSA44_CLEAN_crypto_sign_keypair(key->p, key->k);
+            break;
+        case 3:
+            ret = PQCLEAN_MLDSA65_CLEAN_crypto_sign_keypair(key->p, key->k);
+            break;
+        case 5:
+            ret = PQCLEAN_MLDSA87_CLEAN_crypto_sign_keypair(key->p, key->k);
+            break;
+        default:
+            return BAD_FUNC_ARG;
+        }
+        if (ret == 0) {
+            key->prvKeySet = 1;
+            key->pubKeySet = 1;
+        } else {
+            ret = BAD_FUNC_ARG;
+        }
 #endif
     }
 
@@ -7992,6 +8028,8 @@ int wc_dilithium_make_key_from_seed(dilithium_key* key, const byte* seed)
 #elif defined(HAVE_LIBOQS)
         /* Make the key. */
         ret = NOT_COMPILED_IN;
+#elif defined(PQCLEAN_DILITHIUM)
+        return NOT_COMPILED_IN;
 #endif
     }
 
@@ -8051,6 +8089,38 @@ int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg,
             sigLen);
     #elif defined(HAVE_LIBOQS)
         ret = oqs_dilithium_sign_msg(msg, msgLen, sig, sigLen, key, rng);
+    #elif defined(PQCLEAN_DILITHIUM)
+        PQCLEAN_set_wc_rng(rng);
+        if ((key->level != 2) && (key->level != 3) && (key->level != 5)) {
+            WOLFSSL_MSG_EX("Invalid key->level %d", key->level);
+            return BAD_FUNC_ARG;
+        }
+        if (!key->prvKeySet) {
+            WOLFSSL_MSG("private key not set");
+            return BAD_FUNC_ARG;
+        }
+        size_t sigLenWide = 0;
+        switch (key->level) {
+            case 2:
+                ret = PQCLEAN_MLDSA44_CLEAN_crypto_sign_signature_ctx(
+                        sig, &sigLenWide, msg, msgLen, ctx, ctxLen, key->k);
+                break;
+            case 3:
+                ret = PQCLEAN_MLDSA65_CLEAN_crypto_sign_signature_ctx(
+                        sig, &sigLenWide, msg, msgLen, ctx, ctxLen, key->k);
+                break;
+            case 5:
+                ret = PQCLEAN_MLDSA87_CLEAN_crypto_sign_signature_ctx(
+                        sig, &sigLenWide, msg, msgLen, ctx, ctxLen, key->k);
+                break;
+            default:
+                return NOT_COMPILED_IN;
+        }
+        if (ret == 0) {
+            *sigLen = (word32)sigLenWide;
+        } else {
+            ret = BAD_FUNC_ARG;
+        }
     #endif
     }
 
@@ -8101,6 +8171,38 @@ int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig,
         ret = dilithium_sign_msg(key, rng, msg, msgLen, sig, sigLen);
     #elif defined(HAVE_LIBOQS)
         ret = oqs_dilithium_sign_msg(msg, msgLen, sig, sigLen, key, rng);
+    #elif defined(PQCLEAN_DILITHIUM)
+        PQCLEAN_set_wc_rng(rng);
+        if ((key->level != 2) && (key->level != 3) && (key->level != 5)) {
+            WOLFSSL_MSG_EX("Invalid key->level %d", key->level);
+            return BAD_FUNC_ARG;
+        }
+        if (!key->prvKeySet) {
+            WOLFSSL_MSG("private key not set");
+            return BAD_FUNC_ARG;
+        }
+        size_t sigLenWide = 0;
+        switch (key->level) {
+            case 2:
+                ret = PQCLEAN_MLDSA44_CLEAN_crypto_sign_signature(
+                        sig, &sigLenWide, msg, msgLen, key->k);
+                break;
+            case 3:
+                ret = PQCLEAN_MLDSA65_CLEAN_crypto_sign_signature(
+                        sig, &sigLenWide, msg, msgLen, key->k);
+                break;
+            case 5:
+                ret = PQCLEAN_MLDSA87_CLEAN_crypto_sign_signature(
+                        sig, &sigLenWide, msg, msgLen, key->k);
+                break;
+            default:
+                return NOT_COMPILED_IN;
+        }
+        if (ret == 0) {
+            *sigLen = (word32)sigLenWide;
+        } else {
+            ret = BAD_FUNC_ARG;
+        }
     #endif
     }
 
@@ -8164,6 +8266,12 @@ int wc_dilithium_sign_ctx_hash(const byte* ctx, byte ctxLen, int hashAlg,
         (void)hash;
         (void)hashLen;
         (void)rng;
+    #elif defined(PQCLEAN_DILITHIUM)
+        (void)hashAlg;
+        (void)hash;
+        (void)hashLen;
+        (void)rng;
+        return NOT_COMPILED_IN;
     #endif
     }
 
@@ -8208,6 +8316,10 @@ int wc_dilithium_sign_ctx_msg_with_seed(const byte* ctx, byte ctxLen,
         ret = NOT_COMPILED_IN;
         (void)msgLen;
         (void)seed;
+    #elif defined(PQCLEAN_DILITHIUM)
+        (void)msgLen;
+        (void)seed;
+        return NOT_COMPILED_IN;
     #endif
     }
 
@@ -8244,6 +8356,10 @@ int wc_dilithium_sign_msg_with_seed(const byte* msg, word32 msgLen, byte* sig,
         ret = NOT_COMPILED_IN;
         (void)msgLen;
         (void)seed;
+    #elif defined(PQCLEAN_DILITHIUM)
+        (void)msgLen;
+        (void)seed;
+        return NOT_COMPILED_IN;
     #endif
     }
 
@@ -8291,6 +8407,11 @@ int wc_dilithium_sign_ctx_hash_with_seed(const byte* ctx, byte ctxLen,
         (void)hash;
         (void)hashLen;
         (void)seed;
+    #elif defined(PQCLEAN_DILITHIUM)
+        (void)hashLen;
+        (void)hashAlg;
+        (void)seed;
+        return NOT_COMPILED_IN;
     #endif
     }
 
@@ -8353,6 +8474,36 @@ int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx,
         (void)sigLen;
         (void)msgLen;
         (void)res;
+    #elif defined(PQCLEAN_DILITHIUM)
+        if ((key->level != 2) && (key->level != 3) && (key->level != 5)) {
+            return BAD_FUNC_ARG;
+        }
+        if (!key->pubKeySet) {
+            WOLFSSL_MSG("Missing public key");
+            return BAD_FUNC_ARG;
+        }
+        switch (key->level) {
+        case 2:
+            ret = PQCLEAN_MLDSA44_CLEAN_crypto_sign_verify_ctx(
+                sig, sigLen, msg, msgLen, ctx, ctxLen, key->p);
+            break;
+        case 3:
+            ret = PQCLEAN_MLDSA65_CLEAN_crypto_sign_verify_ctx(
+                sig, sigLen, msg, msgLen, ctx, ctxLen, key->p);
+            break;
+        case 5:
+            ret = PQCLEAN_MLDSA87_CLEAN_crypto_sign_verify_ctx(
+                sig, sigLen, msg, msgLen, ctx, ctxLen, key->p);
+            break;
+        default:
+            return BAD_FUNC_ARG;
+        }
+        if (ret == 0) {
+            *res = 1;
+        } else {
+            *res = 0;
+        }
+        ret = 0;
     #endif
     }
 
@@ -8403,6 +8554,36 @@ int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
         ret = dilithium_verify_msg(key, msg, msgLen, sig, sigLen, res);
     #elif defined(HAVE_LIBOQS)
         ret = oqs_dilithium_verify_msg(sig, sigLen, msg, msgLen, res, key);
+    #elif defined(PQCLEAN_DILITHIUM)
+        if ((key->level != 2) && (key->level != 3) && (key->level != 5)) {
+            return BAD_FUNC_ARG;
+        }
+        if (!key->pubKeySet) {
+            WOLFSSL_MSG("Missing public key");
+            return BAD_FUNC_ARG;
+        }
+        switch (key->level) {
+        case 2:
+            ret = PQCLEAN_MLDSA44_CLEAN_crypto_sign_verify(
+                sig, sigLen, msg, msgLen, key->p);
+            break;
+        case 3:
+            ret = PQCLEAN_MLDSA44_CLEAN_crypto_sign_verify(
+                sig, sigLen, msg, msgLen, key->p);
+            break;
+        case 5:
+            ret = PQCLEAN_MLDSA44_CLEAN_crypto_sign_verify(
+                sig, sigLen, msg, msgLen, key->p);
+            break;
+        default:
+            return BAD_FUNC_ARG;
+        }
+        if (ret == 0) {
+            *res = 1;
+        } else {
+            *res = 0;
+        }
+        ret = 0;
     #endif
     }
 
@@ -8466,6 +8647,11 @@ int wc_dilithium_verify_ctx_hash(const byte* sig, word32 sigLen,
         (void)hashAlg;
         (void)hash;
         (void)hashLen;
+    #elif defined(PQCLEAN_DILITHIUM)
+        (void)sigLen;
+        (void)hashLen;
+        (void)hashAlg;
+        return NOT_COMPILED_IN;
     #endif
     }
 
