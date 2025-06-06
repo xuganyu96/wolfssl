@@ -35325,6 +35325,11 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
             case WOLFSSL_KYBER_LEVEL3:
             case WOLFSSL_KYBER_LEVEL5:
         #endif
+        #ifdef HAVE_HQC
+            case HQC_128:
+            case HQC_192:
+            case HQC_256:
+        #endif
                 return 1;
             default:
                 return 0;

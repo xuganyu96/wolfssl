@@ -4623,6 +4623,13 @@ enum {
     WOLFSSL_X25519_ML_KEM_512     = 12214,
     WOLFSSL_X448_ML_KEM_768       = 12215,
 #endif /* WOLFSSL_NO_ML_KEM */
+#ifdef HAVE_HQC
+    /* taken from
+     * https://github.com/open-quantum-safe/oqs-provider/blob/main/oqs-template/oqs-kem-info.md */
+    HQC_128 = 0x022C,
+    HQC_192 = 0x022D,
+    HQC_256 = 0x022E,
+#endif /* HAVE_HQC */
 #endif /* HAVE_PQC */
     WOLF_ENUM_DUMMY_LAST_ELEMENT(SSL_H)
 };

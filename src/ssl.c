@@ -3731,6 +3731,11 @@ static int isValidCurveGroup(word16 name)
         case WOLFSSL_P256_KYBER_LEVEL3:
     #endif
 #endif /* WOLFSSL_MLKEM_KYBER */
+#endif /* WOLFSSL_HAVE_MLKEM */
+#ifdef HAVE_HQC
+        case HQC_128:
+        case HQC_192:
+        case HQC_256:
 #endif
             return 1;
 
