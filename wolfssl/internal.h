@@ -1846,6 +1846,8 @@ enum Misc {
 
     FALCON_SA_MAJOR     = 0xFE,/* Most significant byte used with falcon sig algs */
     DILITHIUM_SA_MAJOR  = 0x09,/* Most significant byte used with dilithium sig algs */
+    ML_KEM_SA_MAJOR     = 0x69,
+    HQC_SA_MAJOR        = 0x42,
 
     /* These values for falcon match what OQS has defined. */
     FALCON_LEVEL1_SA_MAJOR = 0xFE,
@@ -1861,6 +1863,20 @@ enum Misc {
     DILITHIUM_LEVEL3_SA_MINOR = 0x05,
     DILITHIUM_LEVEL5_SA_MAJOR = 0x09,
     DILITHIUM_LEVEL5_SA_MINOR = 0x06,
+
+    /* GYX: made-up values for ml-kem and hqc as authentication algorithm */
+    ML_KEM_LEVEL1_SA_MAJOR = 0x69,
+    ML_KEM_LEVEL1_SA_MINOR = 0x04,
+    ML_KEM_LEVEL3_SA_MAJOR = 0x69,
+    ML_KEM_LEVEL3_SA_MINOR = 0x05,
+    ML_KEM_LEVEL5_SA_MAJOR = 0x69,
+    ML_KEM_LEVEL5_SA_MINOR = 0x06,
+    HQC_LEVEL1_SA_MAJOR = 0x42,
+    HQC_LEVEL1_SA_MINOR = 0x04,
+    HQC_LEVEL3_SA_MAJOR = 0x42,
+    HQC_LEVEL3_SA_MINOR = 0x05,
+    HQC_LEVEL5_SA_MAJOR = 0x42,
+    HQC_LEVEL5_SA_MINOR = 0x06,
 
     MIN_RSA_SHA512_PSS_BITS = 512 * 2 + 8 * 8, /* Min key size */
     MIN_RSA_SHA384_PSS_BITS = 384 * 2 + 8 * 8, /* Min key size */
