@@ -1192,6 +1192,14 @@ enum {
     DYNAMIC_TYPE_X509_ACERT   = 103,
     DYNAMIC_TYPE_OS_BUF       = 104,
     DYNAMIC_TYPE_ASCON        = 105,
+    /* PQCleanMlKemKey */
+    DYNAMIC_TYPE_MLKEM        = 106,
+    /* PQCleanHqcKey */
+    DYNAMIC_TYPE_HQC          = 107,
+    /* KEM ciphertext */
+    DYNAMIC_TYPE_KEMCT        = 108,
+    /* KEM shared secret */
+    DYNAMIC_TYPE_KEMSS        = 109,
     DYNAMIC_TYPE_SNIFFER_SERVER       = 1000,
     DYNAMIC_TYPE_SNIFFER_SESSION      = 1001,
     DYNAMIC_TYPE_SNIFFER_PB           = 1002,

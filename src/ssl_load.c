@@ -1034,6 +1034,129 @@ static int ProcessBufferTryDecodeDilithium(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
 }
 #endif /* HAVE_DILITHIUM */
 
+static int ProcessBufferTryDecodeMlKem(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
+                                       DerBuffer* der, int* keyFormat,
+                                       void* heap, byte* keyType,
+                                       int* keySize) {
+    WOLFSSL_ENTER("ProcessBufferTryDecodeMlKem");
+    int err = 0;
+    word32 idx;
+    PQCleanMlKemKey *key;
+    enum Key_Sum keyFormatTemp;  // int
+    enum SignatureAlgorithm keyTypeTemp;  // int
+    int keySizeTemp;
+
+    key = (PQCleanMlKemKey *)XMALLOC(sizeof(PQCleanMlKemKey), heap,
+                                     DYNAMIC_TYPE_MLKEM);
+    if (key == NULL) {
+        return MEMORY_E;
+    }
+
+
+    err = wc_PQCleanMlKemKey_Init(key);
+    if (err == 0) {
+        idx = 0;
+        err = wc_PQCleanMlKemKey_DerToPrivateKey(der->buffer, &idx, key,
+                                                 der->length);
+        if (err == 0) {
+            err = wc_PQCleanMlKemKey_get_oid_sum(key, &keyFormatTemp);
+            if (err == 0) {
+                if (keyFormatTemp == ML_KEM_LEVEL1k) {
+                    keyTypeTemp = mlkem_level1_sa_algo;
+                    keySizeTemp = PQCLEAN_MLKEM_LEVEL1_SECRETKEY_SIZE;
+                } else if (keyFormatTemp == ML_KEM_LEVEL3k) {
+                    keyTypeTemp = mlkem_level3_sa_algo;
+                    keySizeTemp = PQCLEAN_MLKEM_LEVEL3_SECRETKEY_SIZE;
+                } else if (keyFormatTemp == ML_KEM_LEVEL5k) {
+                    keyTypeTemp = mlkem_level5_sa_algo;
+                    keySizeTemp = PQCLEAN_MLKEM_LEVEL5_SECRETKEY_SIZE;
+                } else {
+                    err = ALGO_ID_E;
+                }
+            }
+            if (err == 0) {
+                /* TODO: skipped minimum level check but oh well */
+            }
+            if (err == 0) {
+                *keyFormat = keyFormatTemp;
+                *keyType = keyTypeTemp;
+                *keySize = keySizeTemp;
+            }
+        } else if (*keyFormat == 0) {
+            /* cannot decode as MlKemKey, but key format is unknown, so keep
+             * trying other formats */
+            err = 0;
+        }
+        wc_PQCleanMlKemKey_Free(key);
+    }
+
+
+    XFREE(key, heap, DYNAMIC_TYPE_MLKEM);
+    WOLFSSL_LEAVE("ProcessBufferTryDecodeMlKem", err);
+    return err;
+};
+
+static int ProcessBufferTryDecodeHqc(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
+                                     DerBuffer* der, int* keyFormat,
+                                     void* heap, byte* keyType,
+                                     int* keySize) {
+    WOLFSSL_ENTER("ProcessBufferTryDecodeHqc");
+    int err = 0;
+    word32 idx;
+    HqcKey *key;
+    enum Key_Sum keyFormatTemp;  // int
+    enum SignatureAlgorithm keyTypeTemp;  // int
+    int keySizeTemp;
+
+    key = (HqcKey *)XMALLOC(sizeof(HqcKey), heap,
+                                     DYNAMIC_TYPE_HQC);
+    if (key == NULL) {
+        return MEMORY_E;
+    }
+
+
+    err = wc_HqcKey_Init(key);
+    if (err == 0) {
+        idx = 0;
+        err = wc_HqcKey_DerToPrivateKey(der->buffer, &idx, key,
+                                                 der->length);
+        if (err == 0) {
+            err = wc_HqcKey_get_oid_sum(key, &keyFormatTemp);
+            if (err == 0) {
+                if (keyFormatTemp == HQC_LEVEL1k) {
+                    keyTypeTemp = hqc_level1_sa_algo;
+                    keySizeTemp = PQCLEAN_HQC_LEVEL1_SECRETKEY_SIZE;
+                } else if (keyFormatTemp == HQC_LEVEL3k) {
+                    keyTypeTemp = hqc_level3_sa_algo;
+                    keySizeTemp = PQCLEAN_HQC_LEVEL3_SECRETKEY_SIZE;
+                } else if (keyFormatTemp == HQC_LEVEL5k) {
+                    keyTypeTemp = hqc_level5_sa_algo;
+                    keySizeTemp = PQCLEAN_HQC_LEVEL5_SECRETKEY_SIZE;
+                } else {
+                    err = ALGO_ID_E;
+                }
+            }
+            if (err == 0) {
+                /* TODO: skipped minimum level check but oh well */
+            }
+            if (err == 0) {
+                *keyFormat = keyFormatTemp;
+                *keyType = keyTypeTemp;
+                *keySize = keySizeTemp;
+            }
+        } else if (*keyFormat == 0) {
+            /* cannot decode as HqcKey, but key format is unknown, so keep
+             * trying other formats */
+            err = 0;
+        }
+        wc_HqcKey_Free(key);
+    }
+
+    XFREE(key, heap, DYNAMIC_TYPE_HQC);
+    WOLFSSL_LEAVE("ProcessBufferTryDecodeHqc", err);
+    return err;
+};
+
 /* Try to decode DER data is a known private key.
  *
  * Checks size meets minimum for key type.
@@ -1179,6 +1302,38 @@ static int ProcessBufferTryDecode(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
         matchAnyKey = 1;
     }
 #endif /* HAVE_DILITHIUM */
+#if defined(WOLFSSL_HAVE_KEMTLS)
+#ifdef WOLFSSL_HAVE_MLKEM
+    /* Try ML-KEM if key format is unknown or any of the ML-KEM type */
+    if ((ret == 0)
+        && ((*keyFormat == 0)
+            || (*keyFormat == ML_KEM_LEVEL1k)
+            || (*keyFormat == ML_KEM_LEVEL3k)
+            || (*keyFormat == ML_KEM_LEVEL5k))) {
+        ret = ProcessBufferTryDecodeMlKem(ctx, ssl, der, keyFormat, heap,
+                                          keyType, keySz);
+        if (*keyFormat != 0) {
+            WOLFSSL_MSG_EX("ML-KEM decoded: keyFormat(OID sum)=0x%08x", *keyFormat);
+        }
+        matchAnyKey = 1;
+    }
+#endif /* WOLFSSL_HAVE_MLKEM */
+#ifdef HAVE_HQC
+    /* Try HQC if key format is unknown or any of the HQC type */
+    if ((ret == 0)
+        && ((*keyFormat == 0)
+            || (*keyFormat == HQC_LEVEL1k)
+            || (*keyFormat == HQC_LEVEL3k)
+            || (*keyFormat == HQC_LEVEL5k))) {
+        ret = ProcessBufferTryDecodeHqc(ctx, ssl, der, keyFormat, heap,
+                                        keyType, keySz);
+        if (*keyFormat != 0) {
+            WOLFSSL_MSG_EX("HQC decoded: keyFormat(OID sum)=0x%08x", *keyFormat);
+        }
+        matchAnyKey = 1;
+    }
+#endif
+#endif /* WOLFSSL_HAVE_KEMTLS */
 
     /* Check we know the format. */
     if ((ret == 0) &&

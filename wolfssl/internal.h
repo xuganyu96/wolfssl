@@ -128,6 +128,12 @@
 #ifdef HAVE_DILITHIUM
     #include <wolfssl/wolfcrypt/dilithium.h>
 #endif
+#if defined(WOLFSSL_HAVE_MLKEM) && defined(PQCLEAN_MLKEM)
+    #include <wolfssl/wolfcrypt/pqclean_mlkem.h>
+#endif
+#ifdef HAVE_HQC
+    #include <wolfssl/wolfcrypt/hqc.h>
+#endif
 #ifdef HAVE_HKDF
     #include <wolfssl/wolfcrypt/kdf.h>
 #endif
@@ -4331,6 +4337,12 @@ enum SignatureAlgorithm {
     dilithium_level3_sa_algo     = 15,
     dilithium_level5_sa_algo     = 16,
     sm2_sa_algo                  = 17,
+    mlkem_level1_sa_algo         = 18,
+    mlkem_level3_sa_algo         = 19,
+    mlkem_level5_sa_algo         = 20,
+    hqc_level1_sa_algo           = 21,
+    hqc_level3_sa_algo           = 22,
+    hqc_level5_sa_algo           = 23,
     invalid_sa_algo              = 255
 };
 
