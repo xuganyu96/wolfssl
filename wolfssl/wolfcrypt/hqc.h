@@ -75,4 +75,17 @@ WOLFSSL_API int wc_HqcKey_Decapsulate(HqcKey *key, byte *ss, const byte *ct,
                                       word32 ctLen);
 WOLFSSL_API int wc_HqcKey_Free(HqcKey *key);
 
+#ifdef WOLFSSL_HAVE_KEMTLS
+WOLFSSL_API int wc_HqcKey_PublicKeyToDer(HqcKey *key, byte *output,
+                                         word32 inLen, int withAlg);
+
+WOLFSSL_API int wc_HqcKey_PrivateKeyToDer(HqcKey *key, byte *output,
+                                          word32 len);
+
+WOLFSSL_API int wc_HqcKey_DerToPrivateKey(const byte *input, word32 *inOutIdx,
+                                          HqcKey *key, word32 inSz);
+
+WOLFSSL_API int wc_HqcKey_get_oid_sum(HqcKey *key, enum Key_Sum *oid);
+#endif /* WOLFSSL_HAVE_KEMTLS */
+
 #endif /* WOLFCRYPT_HQC_H */

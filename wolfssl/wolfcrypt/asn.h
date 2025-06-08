@@ -2398,7 +2398,13 @@ enum cert_enums {
     SPHINCS_FAST_LEVEL5_KEY  = 26,
     SPHINCS_SMALL_LEVEL1_KEY = 27,
     SPHINCS_SMALL_LEVEL3_KEY = 28,
-    SPHINCS_SMALL_LEVEL5_KEY = 29
+    SPHINCS_SMALL_LEVEL5_KEY = 29,
+    ML_KEM_LEVEL1_KEY        = 30,
+    ML_KEM_LEVEL3_KEY        = 31,
+    ML_KEM_LEVEL5_KEY        = 32,
+    HQC_LEVEL1_KEY           = 33,
+    HQC_LEVEL3_KEY           = 34,
+    HQC_LEVEL5_KEY           = 35,
 };
 
 #endif /* WOLFSSL_CERT_GEN */

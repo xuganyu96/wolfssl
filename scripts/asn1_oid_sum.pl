@@ -304,6 +304,12 @@ my @sphincs_fast_5 = ( 1, 3, 9999, 6, 9, 3 );
 my @sphincs_small_1 = ( 1, 3, 9999, 6, 7, 10 );
 my @sphincs_small_3 = ( 1, 3, 9999, 6, 8, 7 );
 my @sphincs_small_5 = ( 1, 3, 9999, 6, 9, 7 );
+my @mlkem_1 = ( 2, 16, 840, 1, 101, 3, 4, 4, 1 );
+my @mlkem_3 = ( 2, 16, 840, 1, 101, 3, 4, 4, 2 );
+my @mlkem_5 = ( 2, 16, 840, 1, 101, 3, 4, 4, 3 );
+my @hqc_1 = ( 2, 16, 840, 1, 101, 3, 4, 4, 4 );
+my @hqc_3 = ( 2, 16, 840, 1, 101, 3, 4, 4, 5 );
+my @hqc_5 = ( 2, 16, 840, 1, 101, 3, 4, 4, 6 );
 
 my @keys = (
     { name => "ANON",                 oid => \@anon            },
@@ -333,6 +339,12 @@ my @keys = (
     { name => "SPHINCS_SMALL_LEVEL1", oid => \@sphincs_small_1 },
     { name => "SPHINCS_SMALL_LEVEL3", oid => \@sphincs_small_3 },
     { name => "SPHINCS_SMALL_LEVEL5", oid => \@sphincs_small_5 },
+    { name => "ML_KEM_LEVEL1",        oid => \@mlkem_1         },
+    { name => "ML_KEM_LEVEL3",        oid => \@mlkem_3         },
+    { name => "ML_KEM_LEVEL5",        oid => \@mlkem_5         },
+    { name => "HQC_LEVEL1",           oid => \@hqc_1           },
+    { name => "HQC_LEVEL3",           oid => \@hqc_3           },
+    { name => "HQC_LEVEL5",           oid => \@hqc_5           },
 );
 
 print_sum_enum("Key", "k", \@keys);
@@ -747,14 +759,14 @@ my @cert_policies = (
     { name => "CP_CIS_MEDIUMHW_256_OID",  oid => \@cp_cis_medhw_256           },
     { name => "CP_CIS_MEDDEVHW_256_OID",  oid => \@cp_cis_meddevhw_256        },
     { name => "CP_CIS_ICECAP_HW_OID",     oid => \@cp_cis_icecap_hw           },
-    { name => "CP_CIS_ICECAP_CONTENT_OID", 
+    { name => "CP_CIS_ICECAP_CONTENT_OID",
                                           oid => \@cp_cis_icecap_cont_hw      },
 
     # CertiPath Bridge
     { name => "CP_CERTIPATH_MEDIUMHW_OID",
                                           oid => \@cp_certipath_medium,
                                           add_sum => 100000                   },
-    { name => "CP_CERTIPATH_HIGHHW_OID",  
+    { name => "CP_CERTIPATH_HIGHHW_OID",
                                           oid => \@cp_certipath_highhw,
                                           add_sum => 101000                   },
     { name => "CP_CERTIPATH_ICECAP_HW_OID",

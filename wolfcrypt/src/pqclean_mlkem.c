@@ -1,6 +1,7 @@
 #include <wolfssl/wolfcrypt/settings.h>
 #ifdef PQCLEAN_MLKEM
 
+#include <common/randombytes.h>
 #include <wolfssl/wolfcrypt/asn.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/logging.h>
@@ -8,7 +9,6 @@
 #include <wolfssl/wolfcrypt/pqclean_mlkem.h>
 #include <wolfssl/wolfcrypt/random.h>
 #include <wolfssl/wolfcrypt/types.h>
-#include <common/randombytes.h>
 
 static int is_valid_level(int level) {
     return ((level == 1) || (level == 3) || (level == 5));
@@ -129,14 +129,14 @@ int wc_PQCleanMlKemKey_Encapsulate(PQCleanMlKemKey *key, byte *ct, byte *ss,
     int wc_err, pqclean_err;
     PQCLEAN_set_wc_rng(rng);
     if (key->level == 1) {
-        pqclean_err = PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc(
-            ct, ss, key->pubKey);
+        pqclean_err =
+            PQCLEAN_MLKEM512_CLEAN_crypto_kem_enc(ct, ss, key->pubKey);
     } else if (key->level == 3) {
-        pqclean_err = PQCLEAN_MLKEM768_CLEAN_crypto_kem_enc(
-            ct, ss, key->pubKey);
+        pqclean_err =
+            PQCLEAN_MLKEM768_CLEAN_crypto_kem_enc(ct, ss, key->pubKey);
     } else { /* key->level == 5 */
-        pqclean_err = PQCLEAN_MLKEM1024_CLEAN_crypto_kem_enc(
-            ct, ss, key->pubKey);
+        pqclean_err =
+            PQCLEAN_MLKEM1024_CLEAN_crypto_kem_enc(ct, ss, key->pubKey);
     }
     wc_err = (pqclean_err == 0) ? 0 : WC_FAILURE;
     return wc_err;

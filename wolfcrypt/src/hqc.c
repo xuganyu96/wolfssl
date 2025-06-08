@@ -1,5 +1,6 @@
 #include <wolfssl/wolfcrypt/settings.h>
 
+#include <wolfssl/wolfcrypt/asn.h>
 #include <wolfssl/wolfcrypt/error-crypt.h>
 #include <wolfssl/wolfcrypt/hqc.h>
 #include <wolfssl/wolfcrypt/logging.h>
@@ -348,24 +349,137 @@ int wc_HqcKey_export_public_key(HqcKey *key, byte *out, word32 len) {
     return 0;
 }
 
+#ifdef WOLFSSL_HAVE_KEMTLS
+/* write the OID sum to `oid`.
+ *
+ * Return 0 on success
+ */
+int wc_HqcKey_get_oid_sum(HqcKey *key, enum Key_Sum *oid) {
+    if ((key == NULL) || (oid == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    switch (key->level) {
+    case 1:
+        *oid = HQC_LEVEL1k;
+        break;
+    case 3:
+        *oid = HQC_LEVEL3k;
+        break;
+    case 5:
+        *oid = HQC_LEVEL5k;
+        break;
+    default:
+        return BAD_FUNC_ARG;
+    }
+    return 0;
+}
+
+/* Encode HQC public key according to DER.
+ *
+ * Pass NULL for output to get the size of the encoding
+ *
+ * Return 0 upon success
+ */
 int wc_HqcKey_PublicKeyToDer(HqcKey *key, byte *out, word32 len, int withAlg) {
-    (void)key;
-    (void)out;
-    (void)len;
-    (void)withAlg;
-    return NOT_COMPILED_IN;
+    int ret;
+    word32 pubKeyLen;
+    enum Key_Sum oid;
+
+    if (key == NULL)
+        return BAD_FUNC_ARG;
+    if (!key->pubKeySet)
+        return BAD_FUNC_ARG;
+    if ((ret = wc_HqcKey_get_oid_sum(key, &oid)) < 0)
+        return ret;
+    if ((ret = wc_HqcKey_PublicKeySize(key, &pubKeyLen)) < 0)
+        return ret;
+    ret = SetAsymKeyDerPublic(key->pubKey, pubKeyLen, out, len, oid, withAlg);
+
+    return ret;
 }
 
+/* Encode HQC private key according to DER
+ *
+ * Return 0 upon success
+ */
 int wc_HqcKey_PrivateKeyToDer(HqcKey *key, byte *out, word32 len) {
-    (void)key;
-    (void)out;
-    (void)len;
-    return NOT_COMPILED_IN;
+    int ret = 0;
+    if (key == NULL)
+        return BAD_FUNC_ARG;
+    if (!key->privKeySet)
+        return MISSING_KEY;
+    word32 privKeyLen;
+    enum Key_Sum oid;
+    if ((ret = wc_HqcKey_PrivateKeySize(key, &privKeyLen)) < 0)
+        return ret;
+    if ((ret = wc_HqcKey_get_oid_sum(key, &oid)) < 0)
+        return ret;
+    ret = SetAsymKeyDer(key->privKey, privKeyLen, NULL, 0, out, len, oid);
+
+    return ret;
 }
 
-int wc_HqcKey_DerToPrivateKey(HqcKey *key, byte *in, word32 len) {
-    (void)key;
-    (void)in;
-    (void)len;
-    return NOT_COMPILED_IN;
+static int mapOidToSecLevel(int keyType) {
+    switch (keyType) {
+    case HQC_LEVEL1k:
+        return 1;
+    case HQC_LEVEL3k:
+        return 3;
+    case HQC_LEVEL5k:
+        return 5;
+    default:
+        return BAD_FUNC_ARG;
+    }
 }
+
+/* Decode private key according to DER
+ */
+int wc_HqcKey_DerToPrivateKey(const byte *input, word32 *inOutIdx, HqcKey *key,
+                              word32 inSz) {
+    WOLFSSL_ENTER("wc_HqcKey_DerToPrivateKey");
+    int ret = 0;
+    int keytype; /* enum Key_Sum */
+    const byte *privKey = NULL;
+    const byte *pubKey = NULL;
+    word32 privKeyLen = 0, pubKeyLen = 0;
+
+    if ((input == NULL) || (inOutIdx == NULL) || (key == NULL) || (inSz == 0)) {
+        return BAD_FUNC_ARG;
+    }
+
+    if (ret == 0) {
+        if (key->level == 0) {
+            /* level not set by caller, decode from DER */
+            keytype = ANONk;
+            WOLFSSL_MSG_EX("keytype is ANONk");
+        } else {
+            /* TODO: need to cover the case where key level is set by caller
+             * and the DER buffer needs to be parsed with expectation
+             */
+            ret = BAD_FUNC_ARG;
+        }
+    }
+
+    if (ret == 0) {
+        ret = DecodeAsymKey_Assign(input, inOutIdx, inSz, &privKey, &privKeyLen,
+                                   &pubKey, &pubKeyLen, &keytype);
+        WOLFSSL_LEAVE("DecodeAsymKey_Assign", ret);
+        if (ret == 0) {
+            ret = mapOidToSecLevel(keytype);
+            if (ret > 0) {
+                ret = wc_HqcKey_SetLevel(key, ret);
+            }
+        }
+    }
+
+    if (ret == 0) {
+        /* copy private key to the key object */
+        ret = wc_HqcKey_import_private(key, privKey, privKeyLen);
+        WOLFSSL_MSG_EX("HqcKey->level is %d, privKeyLen %d", key->level,
+                       privKeyLen);
+    }
+
+    WOLFSSL_LEAVE("wc_HqcKey_DerToPrivateKey", ret);
+    return ret;
+}
+#endif /* WOLFSSL_HAVE_KEMTLS */
