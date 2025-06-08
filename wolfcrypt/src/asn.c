@@ -13935,6 +13935,36 @@ static int GetCertKey(DecodedCert* cert, const byte* source, word32* inOutIdx,
             ret = StoreKey(cert, source, &srcIdx, maxIdx);
             break;
     #endif /* HAVE_SPHINCS */
+    #ifdef WOLFSSL_HAVE_KEMTLS
+    #ifdef WOLFSSL_HAVE_MLKEM
+        case ML_KEM_LEVEL1k:
+            cert->pkCurveOID = ML_KEM_LEVEL1k;
+            ret = StoreKey(cert, source, &srcIdx, maxIdx);
+            break;
+        case ML_KEM_LEVEL3k:
+            cert->pkCurveOID = ML_KEM_LEVEL3k;
+            ret = StoreKey(cert, source, &srcIdx, maxIdx);
+            break;
+        case ML_KEM_LEVEL5k:
+            cert->pkCurveOID = ML_KEM_LEVEL5k;
+            ret = StoreKey(cert, source, &srcIdx, maxIdx);
+            break;
+    #endif /* WOLFSSL_HAVE_MLKEM */
+    #ifdef HAVE_HQC
+        case HQC_LEVEL1k:
+            cert->pkCurveOID = HQC_LEVEL1k;
+            ret = StoreKey(cert, source, &srcIdx, maxIdx);
+            break;
+        case HQC_LEVEL3k:
+            cert->pkCurveOID = HQC_LEVEL3k;
+            ret = StoreKey(cert, source, &srcIdx, maxIdx);
+            break;
+        case HQC_LEVEL5k:
+            cert->pkCurveOID = HQC_LEVEL5k;
+            ret = StoreKey(cert, source, &srcIdx, maxIdx);
+            break;
+    #endif /* HAVE_HQC */
+    #endif /* WOLFSSL_HAVE_KEMTLS */
     #ifndef NO_DSA
         case DSAk:
             cert->publicKey = source + pubIdx;

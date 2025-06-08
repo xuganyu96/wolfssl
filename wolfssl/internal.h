@@ -3879,6 +3879,10 @@ struct WOLFSSL_CTX {
     byte        haveECDSAsig:1;   /* server cert signed w/ ECDSA */
     byte        haveFalconSig:1;  /* server cert signed w/ Falcon */
     byte        haveDilithiumSig:1;/* server cert signed w/ Dilithium */
+#ifdef WOLFSSL_HAVE_KEMTLS
+    byte        haveMlKemAuth:1;  /* certificate authentication with ML-KEM */
+    byte        haveHqcAuth:1;  /* certificate authentication with ML-KEM */
+#endif
     byte        haveStaticECC:1;  /* static server ECC private key */
     byte        partialWrite:1;   /* only one msg per write call */
     byte        autoRetry:1;      /* retry read/write on a WANT_{READ|WRITE} */
@@ -5002,6 +5006,10 @@ struct Options {
     word16            haveStaticECC:1;    /* static server ECC private key */
     word16            haveFalconSig:1;    /* server Falcon signed cert */
     word16            haveDilithiumSig:1; /* server Dilithium signed cert */
+#ifdef WOLFSSL_HAVE_KEMTLS
+    word16            haveMlKemAuth:1;  /* certificate authentication with ML-KEM */
+    word16            haveHqcAuth:1;  /* certificate authentication with ML-KEM */
+#endif
     word16            havePeerCert:1;     /* do we have peer's cert */
     word16            havePeerVerify:1;   /* and peer's cert verify */
     word16            usingPSK_cipher:1;  /* are using psk as cipher */
