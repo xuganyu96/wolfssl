@@ -110,6 +110,9 @@
 #include <wolfssl/wolfcrypt/dh.h>
 #include <wolfssl/wolfcrypt/kdf.h>
 #include <wolfssl/wolfcrypt/signature.h>
+#ifdef WOLFSSL_HAVE_KEMTLS
+#include <wolfssl/kemtls.h>
+#endif
 #ifdef NO_INLINE
     #include <wolfssl/wolfcrypt/misc.h>
 #else
@@ -293,7 +296,7 @@ static int Tls13HKDFExpandKeyLabel(WOLFSSL* ssl, byte* okm, word32 okmLen,
  * hashAlgo   The hash algorithm to use in the HMAC.
  * returns 0 on success, otherwise failure.
  */
-static int DeriveKeyMsg(WOLFSSL* ssl, byte* output, int outputLen,
+int DeriveKeyMsg(WOLFSSL* ssl, byte* output, int outputLen,
                         const byte* secret, const byte* label, word32 labelLen,
                         byte* msg, int msgLen, int hashAlgo)
 {
@@ -508,7 +511,7 @@ int Tls13DeriveKey(WOLFSSL* ssl, byte* output, int outputLen,
  * mac Mac ID to convert
  * returns hash ID on success, or the NONE type.
  */
-static WC_INLINE int mac2hash(int mac)
+int mac2hash(int mac)
 {
     int hash;
     switch (mac) {
@@ -1341,7 +1344,7 @@ int DeriveResumptionPSK(WOLFSSL* ssl, byte* nonce, byte nonceLen, byte* secret)
  * hash  The hash result - verify data.
  * returns length of verify data generated.
  */
-static int BuildTls13HandshakeHmac(WOLFSSL* ssl, byte* key, byte* hash,
+int BuildTls13HandshakeHmac(WOLFSSL* ssl, byte* key, byte* hash,
     word32* pHashSz)
 {
 #ifdef WOLFSSL_SMALL_STACK
@@ -2300,7 +2303,7 @@ static void AddTls13HandShakeHeader(byte* output, word32 length,
  * type        The type of record layer message.
  * ssl         The SSL/TLS object. (DTLS)
  */
-static void AddTls13Headers(byte* output, word32 length, byte type,
+void AddTls13Headers(byte* output, word32 length, byte type,
                             WOLFSSL* ssl)
 {
     word32 lengthAdj = HANDSHAKE_HEADER_SZ;
@@ -12279,6 +12282,10 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
 
             break;
 
+        case client_key_exchange:
+            /* GYX: do sanity check later */
+            break;
+
 #ifndef NO_WOLFSSL_CLIENT
         case certificate_request:
         #ifndef NO_WOLFSSL_SERVER
@@ -12399,7 +12406,8 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
             /* Valid on both sides. */
         #ifndef NO_WOLFSSL_CLIENT
             /* Check state on client. */
-            if (ssl->options.side == WOLFSSL_CLIENT_END) {
+            if (ssl->options.side == WOLFSSL_CLIENT_END
+                && !(ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth)) {
                 /* After sending ClientHello */
                 if (ssl->options.clientState < CLIENT_HELLO_COMPLETE) {
                     WOLFSSL_MSG("Finished received out of order - clientState");
@@ -12428,7 +12436,8 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
         #endif
         #ifndef NO_WOLFSSL_SERVER
             /* Check state on server. */
-            if (ssl->options.side == WOLFSSL_SERVER_END) {
+            if (ssl->options.side == WOLFSSL_SERVER_END
+                && !(ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth)) {
                 if (ssl->options.serverState < SERVER_FINISHED_COMPLETE) {
                     WOLFSSL_MSG("Finished received out of order - serverState");
                     WOLFSSL_ERROR_VERBOSE(OUT_OF_ORDER_E);
@@ -12485,7 +12494,8 @@ static int SanityCheckTls13MsgReceived(WOLFSSL* ssl, byte type)
                  * peer and got a peer certificate.
                  */
                 if ((ssl->options.mutualAuth || ssl->options.verifyPeer) &&
-                    ssl->options.havePeerCert && !ssl->options.havePeerVerify) {
+                    ssl->options.havePeerCert && !ssl->options.havePeerVerify
+                    && !(ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth)) {
                     WOLFSSL_MSG("Finished received out of order - "
                                 "Certificate message but no CertificateVerify");
                     WOLFSSL_ERROR_VERBOSE(OUT_OF_ORDER_E);
@@ -12761,6 +12771,14 @@ int DoTls13HandShakeMsgType(WOLFSSL* ssl, byte* input, word32* inOutIdx,
         break;
 #endif
 
+    case client_key_exchange:
+        /* there is no client_key_exchange in TLS 1.3 so it can be safely interpreted
+         * as client KemCiphertext
+         */
+        WOLFSSL_MSG("GYX: processing client KemCiphertext");
+        ret = DoKemTlsClientKemCiphertext(ssl, input, inOutIdx, size);
+        break;
+
 #if !defined(NO_RSA) || defined(HAVE_ECC) || defined(HAVE_ED25519) || \
     defined(HAVE_ED448) || defined(HAVE_FALCON) || defined(HAVE_DILITHIUM)
     case certificate_verify:
@@ -12770,7 +12788,11 @@ int DoTls13HandShakeMsgType(WOLFSSL* ssl, byte* input, word32* inOutIdx,
 #endif
     case finished:
         WOLFSSL_MSG("processing finished");
-        ret = DoTls13Finished(ssl, input, inOutIdx, size, totalSz, NO_SNIFF);
+        if (ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth) {
+            ret = DoKemTlsFinished(ssl, input, inOutIdx, size, totalSz);
+        } else {
+            ret = DoTls13Finished(ssl, input, inOutIdx, size, totalSz, NO_SNIFF);
+        }
         break;
 
     case key_update:
@@ -12873,7 +12895,8 @@ int DoTls13HandShakeMsgType(WOLFSSL* ssl, byte* input, word32* inOutIdx,
 #endif /* WOLFSSL_DTLS13 */
             }
 
-            if (type == finished) {
+            if (type == finished
+                && !(ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth)) {
                 if ((ret = DeriveMasterSecret(ssl)) != 0)
                     return ret;
                 /* Last use of preMasterSecret - zeroize as soon as possible. */
@@ -13326,7 +13349,7 @@ int wolfSSL_connect_TLSv13(WOLFSSL* ssl)
 
         case HELLO_AGAIN_REPLY:
             /* Get the response/s from the server. */
-            while (ssl->options.serverState < SERVER_FINISHED_COMPLETE) {
+            while (ssl->options.serverState < SERVER_CERT_COMPLETE) {
 #ifdef WOLFSSL_DTLS13
                 if (!IsAtLeastTLSv1_3(ssl->version)) {
         #ifndef WOLFSSL_NO_TLS12
@@ -13348,6 +13371,25 @@ int wolfSSL_connect_TLSv13(WOLFSSL* ssl)
                     }
                 }
 #endif /* WOLFSSL_DTLS13 */
+            }
+            /* GYX: DoTls13Certificate happened before this line so we can check
+             * some flag and let connect_KEMTLS() hijack the control flow */
+            WOLFSSL_MSG("serverState is at SERVER_CERT_COMPLETE");
+            if (ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth) {
+                ssl->error = connect_KEMTLS(ssl);
+                if (ssl->error != 0) {
+                    WOLFSSL_ERROR(ssl->error);
+                    return WOLFSSL_FATAL_ERROR;
+                } else {
+                    return WOLFSSL_SUCCESS;
+                }
+            }
+
+            while (ssl->options.serverState < SERVER_FINISHED_COMPLETE) {
+                if ((ssl->error = ProcessReply(ssl)) < 0) {
+                    WOLFSSL_ERROR(ssl->error);
+                    return WOLFSSL_FATAL_ERROR;
+                }
             }
 
             ssl->options.connectState = FIRST_REPLY_DONE;
@@ -14551,8 +14593,21 @@ int wolfSSL_accept_TLSv13(WOLFSSL* ssl)
                 }
             }
 #endif
-            ssl->options.acceptState = TLS13_CERT_SENT;
-            WOLFSSL_MSG("accept state CERT_SENT");
+            if (ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth) {
+                ssl->options.acceptState = KEMTLS_ACCEPT_CERT_SENT;
+                WOLFSSL_MSG("accept state KEMTLS_ACCEPT_CERT_SENT");
+                /* GYX: hijacking the control flow is not optimal */
+                ssl->error = accept_KEMTLS(ssl);
+                if (ssl->error == 0) {
+                    return WOLFSSL_SUCCESS;
+                } else {
+                    WOLFSSL_ERROR(ssl->error);
+                    return WOLFSSL_FATAL_ERROR;
+                }
+            } else {
+                ssl->options.acceptState = TLS13_CERT_SENT;
+                WOLFSSL_MSG("accept state TLS13_CERT_SENT");
+            }
             FALL_THROUGH;
 
         case TLS13_CERT_SENT :

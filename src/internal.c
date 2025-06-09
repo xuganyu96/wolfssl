@@ -93,6 +93,9 @@
 #ifndef WOLFCRYPT_ONLY
 
 #include <wolfssl/internal.h>
+#ifdef WOLFSSL_HAVE_KEMTLS
+    #include <wolfssl/kemtls.h>
+#endif
 #include <wolfssl/error-ssl.h>
 #include <wolfssl/wolfcrypt/asn.h>
 #include <wolfssl/wolfcrypt/dh.h>
@@ -8235,6 +8238,14 @@ int AllocKey(WOLFSSL* ssl, int type, void** pKey)
             sz = sizeof(dilithium_key);
             break;
     #endif /* HAVE_DILITHIUM */
+        case DYNAMIC_TYPE_MLKEM:
+            sz = sizeof(PQCleanMlKemKey);
+            WOLFSSL_MSG_EX("GYX: Allocating %d bytes for PQCleanMlKemKey", sz);
+            break;
+        case DYNAMIC_TYPE_HQC:
+            sz = sizeof(HqcKey);
+            WOLFSSL_MSG_EX("GYX: Allocating %d bytes for HqcKey", sz);
+            break;
     #ifndef NO_DH
         case DYNAMIC_TYPE_DH:
             sz = sizeof(DhKey);
@@ -8310,6 +8321,12 @@ int AllocKey(WOLFSSL* ssl, int type, void** pKey)
             ret = 0;
             break;
     #endif /* HAVE_DILITHIUM */
+        case DYNAMIC_TYPE_MLKEM:
+            ret = wc_PQCleanMlKemKey_InitEx((PQCleanMlKemKey *)*pKey, ssl->heap, ssl->devId);
+            break;
+        case DYNAMIC_TYPE_HQC:
+            ret = wc_HqcKey_InitEx((HqcKey *)*pKey, ssl->heap, ssl->devId);
+            break;
     #ifdef HAVE_CURVE448
         case DYNAMIC_TYPE_CURVE448:
             wc_curve448_init((curve448_key*)*pKey);
@@ -16846,6 +16863,26 @@ int ProcessPeerCerts(WOLFSSL* ssl, byte* input, word32* inOutIdx,
                         break;
                     }
                 #endif /* HAVE_DILITHIUM */
+                    /* GYX: this logic means any ml-kem/hqc key will trigger
+                     * haveMlKemAuth/haveHqcAuth, which does not account for illegal cases such as
+                     * when ML-KEM/HQC certificate is not the leaf certificate, but for now I
+                     * control certificate generation, so I don't have to deal with this */
+                    case ML_KEM_LEVEL1k:
+                    case ML_KEM_LEVEL3k:
+                    case ML_KEM_LEVEL5k:
+                    {
+                        WOLFSSL_MSG("Found ML-KEM key in certificate");
+                        ret = handle_PQCleanMlKemKey_cert(ssl, args->dCert);
+                        break;
+                    }
+                    case HQC_LEVEL1k:
+                    case HQC_LEVEL3k:
+                    case HQC_LEVEL5k:
+                    {
+                        WOLFSSL_MSG("GYX: Found HQC key in certificate");
+                        ret = handle_HqcKey_cert(ssl, args->dCert);
+                        break;
+                    }
                     default:
                         break;
                 }

@@ -2142,11 +2142,14 @@ enum states {
     SERVER_KEYEXCHANGE_COMPLETE,
     SERVER_HELLODONE_COMPLETE,
     SERVER_CHANGECIPHERSPEC_COMPLETE,
+    SERVER_KEM_FINISHED_DONE,
     SERVER_FINISHED_COMPLETE,
 
     CLIENT_HELLO_RETRY,
     CLIENT_HELLO_COMPLETE,
     CLIENT_KEYEXCHANGE_COMPLETE,
+    CLIENT_KEM_CIPHERTEXT_DONE,
+    CLIENT_KEM_FINISHED_DONE,
     CLIENT_CHANGECIPHERSPEC_COMPLETE,
     CLIENT_FINISHED_COMPLETE,
 
@@ -2245,6 +2248,9 @@ WOLFSSL_LOCAL int DoFinished(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
 WOLFSSL_LOCAL int DoTls13Finished(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
                            word32 size, word32 totalSz, int sniff);
 #endif
+WOLFSSL_LOCAL int BuildTls13HandshakeHmac(WOLFSSL* ssl, byte* key, byte* hash,
+    word32* pHashSz);
+WOLFSSL_LOCAL int mac2hash(int mac);
 WOLFSSL_TEST_VIS int DoApplicationData(WOLFSSL* ssl, byte* input, word32* inOutIdx,
                                     int sniff);
 /* TLS v1.3 needs these */
@@ -3759,6 +3765,12 @@ enum DeriveKeyType {
 
 WOLFSSL_LOCAL int DeriveEarlySecret(WOLFSSL* ssl);
 WOLFSSL_LOCAL int DeriveHandshakeSecret(WOLFSSL* ssl);
+WOLFSSL_LOCAL int DeriveKeyMsg(WOLFSSL* ssl, byte* output, int outputLen,
+                               const byte* secret, const byte* label,
+                               word32 labelLen, byte* msg, int msgLen,
+                               int hashAlgo);
+WOLFSSL_LOCAL void AddTls13Headers(byte *output, word32 length, byte type,
+                                   WOLFSSL *ssl);
 WOLFSSL_LOCAL int DeriveTls13Keys(WOLFSSL* ssl, int secret, int side, int store);
 WOLFSSL_LOCAL int DeriveMasterSecret(WOLFSSL* ssl);
 WOLFSSL_LOCAL int DeriveResumptionPSK(WOLFSSL* ssl, byte* nonce, byte nonceLen, byte* secret);
@@ -4774,7 +4786,11 @@ enum ConnectState {
     FIRST_REPLY_SECOND,
     FIRST_REPLY_THIRD,
     FIRST_REPLY_FOURTH,
+    CLIENT_KEM_CIPHERTEXT_SENT,
+    CLIENT_KEM_FINISHED_SENT,
     FINISHED_DONE,
+    /* client has processed server's Finished */
+    KEM_FINISHED_DONE,
     SECOND_REPLY_DONE,
 
 #ifdef WOLFSSL_DTLS13
@@ -4817,12 +4833,18 @@ enum AcceptStateTls13 {
     TLS13_ACCEPT_THIRD_REPLY_DONE,
     TLS13_SERVER_EXTENSIONS_SENT,
     TLS13_CERT_REQ_SENT,
+    /* server's sent KEM certificate, wait for KemCiphertext */
+    KEMTLS_ACCEPT_CERT_SENT,
+    /* server's decapsulated client's KEM ciphertext */
+    KEMTLS_CIPHERTEXT_PROCESSED,
     TLS13_CERT_SENT,
     TLS13_CERT_VERIFY_SENT,
     TLS13_ACCEPT_FINISHED_SENT,
     TLS13_PRE_TICKET_SENT,
     TLS13_ACCEPT_FINISHED_DONE,
-    TLS13_TICKET_SENT
+    TLS13_TICKET_SENT,
+    /* server's sent Finished */
+    KEMTLS_ACCEPT_FINISHED_SENT,
 };
 
 #ifdef WOLFSSL_THREADED_CRYPT
@@ -6040,6 +6062,17 @@ struct WOLFSSL {
     dilithium_key*  peerDilithiumKey;
     byte            peerDilithiumKeyPresent;
 #endif
+    PQCleanMlKemKey *peerMlKemKey;
+    byte peerMlKemKeyPresent;
+    HqcKey *peerHqcKey;
+    byte peerHqcKeyPresent;
+    /* GYX: for now we only do unilateral authentication, so there is exactly
+     * one KemCiphertext. Later when we expand to mutual authentication, we
+     * need to distinguish between self ciphertext or peer ciphertext*/
+    byte *kemCiphertext;
+    word32 kemCiphertextSz;
+    byte *kemSharedSecret;
+    word32 kemSharedSecretSz;
 #ifdef HAVE_LIBZ
     z_stream        c_stream;           /* compression   stream */
     z_stream        d_stream;           /* decompression stream */
