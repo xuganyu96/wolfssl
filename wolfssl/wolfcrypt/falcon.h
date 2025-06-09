@@ -93,8 +93,8 @@ extern "C" {
 /* Structs */
 
 struct falcon_key {
-    bool pubKeySet;
-    bool prvKeySet;
+    byte pubKeySet;
+    byte prvKeySet;
     byte level;
 
 #ifdef WOLF_CRYPTO_CB
