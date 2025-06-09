@@ -8748,6 +8748,14 @@ void wolfSSL_ResourceFree(WOLFSSL* ssl)
     FreeKey(ssl, DYNAMIC_TYPE_FALCON, (void**)&ssl->peerFalconKey);
     ssl->peerFalconKeyPresent = 0;
 #endif
+#ifdef WOLFSSL_HAVE_KEMTLS
+    FreeKey(ssl, DYNAMIC_TYPE_MLKEM, (void**)&ssl->peerMlKemKey);
+    ssl->peerMlKemKeyPresent = 0;
+    FreeKey(ssl, DYNAMIC_TYPE_HQC, (void**)&ssl->peerHqcKey);
+    ssl->peerHqcKeyPresent = 0;
+    XFREE(ssl->kemCiphertext, ssl->heap, DYNAMIC_TYPE_KEMCT);
+    XFREE(ssl->kemSharedSecret, ssl->heap, DYNAMIC_TYPE_KEMSS);
+#endif
 #ifdef HAVE_PK_CALLBACKS
     #ifdef HAVE_ECC
         XFREE(ssl->buffers.peerEccDsaKey.buffer, ssl->heap, DYNAMIC_TYPE_ECC);
@@ -9015,7 +9023,22 @@ void FreeHandshakeResources(WOLFSSL* ssl)
         FreeKey(ssl, DYNAMIC_TYPE_DILITHIUM, (void**)&ssl->peerDilithiumKey);
         ssl->peerDilithiumKeyPresent = 0;
 #endif /* HAVE_DILITHIUM */
+#ifdef WOLFSSL_HAVE_KEMTLS
+#if defined(WOLFSSL_HAVE_MLKEM) && defined(PQCLEAN_MLKEM)
+        FreeKey(ssl, DYNAMIC_TYPE_MLKEM, (void**)&ssl->peerMlKemKey);
+        ssl->peerMlKemKeyPresent = 0;
+#endif /* PQCLEAN_MLKEM */
+#if defined(HAVE_HQC) && defined(PQCLEAN_HQC)
+        FreeKey(ssl, DYNAMIC_TYPE_HQC, (void**)&ssl->peerHqcKey);
+        ssl->peerHqcKeyPresent = 0;
+#endif
+#endif /* WOLFSSL_HAVE_KEMTLS */
     }
+
+#ifdef WOLFSSL_HAVE_KEMTLS
+    XFREE(ssl->kemCiphertext, ssl->heap, DYNAMIC_TYPE_KEMCT);
+    XFREE(ssl->kemSharedSecret, ssl->heap, DYNAMIC_TYPE_KEMSS);
+#endif
 
 #ifdef HAVE_ECC
     FreeKey(ssl, DYNAMIC_TYPE_ECC, (void**)&ssl->peerEccKey);

@@ -3,8 +3,6 @@
 #include <wolfssl/wolfcrypt/kdf.h>
 #include <wolfssl/wolfcrypt/logging.h>
 
-#define YOLO 1
-
 static byte derivedLabel[] = "derived";
 static int derivedLabelLen = 8;
 static byte clientFinishedKeyLabel[] = "c finished";
@@ -13,6 +11,7 @@ static byte serverFinishedKeyLabel[] = "s finished";
 static int serverFinishedKeyLabelLen = 11;
 
 static void dump_hex(byte *data, word32 len) {
+#ifdef DEBUG_WOLFSSL
     if (len == 0 || data == NULL)
         return;
     fprintf(stderr, "GYX: Dump (%5d bytes): ", len);
@@ -37,6 +36,10 @@ static void dump_hex(byte *data, word32 len) {
         fprintf(stderr, ":%02x", data[i]);
     }
     fprintf(stderr, "\n");
+#else
+    (void)data;
+    (void)len;
+#endif
 }
 
 /* Derive HS, dHS, AHS, dAHS, MS, client finished key, and server finished key.
