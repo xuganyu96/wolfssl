@@ -229,6 +229,9 @@ typedef struct WOLFSSL_STACK WOLFSSL_LHASH;
 #define WOLFSSL_TYPE_DEFINED
 typedef struct WOLFSSL          WOLFSSL;
 #endif
+#ifdef WOLFSSL_HAVE_TELEMETRY
+typedef struct Telemetry Telemetry;
+#endif
 typedef struct WOLFSSL_SESSION  WOLFSSL_SESSION;
 typedef struct WOLFSSL_METHOD   WOLFSSL_METHOD;
 #ifndef WOLFSSL_CTX_TYPE_DEFINED

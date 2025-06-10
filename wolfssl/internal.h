@@ -4868,6 +4868,39 @@ typedef struct ThreadCrypt {
 
 #endif
 
+#ifdef WOLFSSL_HAVE_TELEMETRY
+/* GYX: a collection of client-side telemetries
+ * For now I only care about "time of key exchange" and "time of auth"
+ * but we can definitely do better
+ *
+ * All timestamps are in microseconds
+ */
+struct Telemetry {
+    /* Start of SendTls13ClientHello */
+    word64 ch_start_ts;
+    byte ch_start_set;
+    /* End of SendTls13ClientHello */
+    word64 ch_sent_ts;
+    byte ch_sent_set;
+    /* Start of DoTls13ServerHello */
+    word64 sh_start_ts;
+    byte sh_start_set;
+    /* End of DoTls13ServerHello */
+    word64 sh_done_ts;
+    byte sh_done_set;
+    /* Start of DoTls13Certificate */
+    word64 cert_start_ts;
+    byte cert_start_set;
+    /* Handshake is finished */
+    word64 hs_done_ts;
+    byte hs_done_set;
+};
+
+WOLFSSL_API void wolfSSL_reset_telemetry(WOLFSSL *ssl);
+WOLFSSL_API int wolfSSL_set_time_cb(WOLFSSL *ssl, uint64_t (*time_cb)(void));
+WOLFSSL_API int wolfSSL_export_telemetry(WOLFSSL *ssl, Telemetry *tel);
+#endif
+
 /* buffers for struct WOLFSSL */
 typedef struct Buffers {
     bufferStatic    inputBuffer;
@@ -6393,6 +6426,10 @@ struct WOLFSSL {
 #if defined(WOLFSSL_SYS_CRYPTO_POLICY)
     int secLevel; /* The security level of system-wide crypto policy. */
 #endif /* WOLFSSL_SYS_CRYPTO_POLICY */
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    Telemetry tel;
+    uint64_t (*tel_time_us)(void);
+#endif
 };
 
 #if defined(WOLFSSL_SYS_CRYPTO_POLICY)

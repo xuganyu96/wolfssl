@@ -4275,6 +4275,12 @@ int SendTls13ClientHello(WOLFSSL* ssl)
 
     WOLFSSL_START(WC_FUNC_CLIENT_HELLO_SEND);
     WOLFSSL_ENTER("SendTls13ClientHello");
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        ssl->tel.ch_start_ts = ssl->tel_time_us();
+        ssl->tel.ch_start_set = 1;
+    }
+#endif
 
     if (ssl == NULL) {
         return BAD_FUNC_ARG;
@@ -4731,6 +4737,12 @@ int SendTls13ClientHello(WOLFSSL* ssl)
         FreeAsyncCtx(ssl, 0);
 #endif
 
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        ssl->tel.ch_sent_ts = ssl->tel_time_us();
+        ssl->tel.ch_sent_set = 1;
+    }
+#endif
     WOLFSSL_LEAVE("SendTls13ClientHello", ret);
     WOLFSSL_END(WC_FUNC_CLIENT_HELLO_SEND);
 
@@ -5037,6 +5049,12 @@ int DoTls13ServerHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
 
     WOLFSSL_START(WC_FUNC_SERVER_HELLO_DO);
     WOLFSSL_ENTER("DoTls13ServerHello");
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        ssl->tel.sh_start_ts = ssl->tel_time_us();
+        ssl->tel.sh_start_set = 1;
+    }
+#endif
 
     if (ssl == NULL || ssl->arrays == NULL)
         return BAD_FUNC_ARG;
@@ -5412,6 +5430,12 @@ int DoTls13ServerHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
         ret = VERSION_ERROR;
 #endif
 
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        ssl->tel.sh_done_ts = ssl->tel_time_us();
+        ssl->tel.sh_done_set = 1;
+    }
+#endif
         WOLFSSL_LEAVE("DoTls13ServerHello", ret);
 
         return ret;
@@ -5592,6 +5616,12 @@ int DoTls13ServerHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
         FreeAsyncCtx(ssl, 0);
 #endif
 
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        ssl->tel.sh_done_ts = ssl->tel_time_us();
+        ssl->tel.sh_done_set = 1;
+    }
+#endif
     WOLFSSL_LEAVE("DoTls13ServerHello", ret);
     WOLFSSL_END(WC_FUNC_SERVER_HELLO_DO);
 
@@ -9817,6 +9847,12 @@ static int DoTls13Certificate(WOLFSSL* ssl, byte* input, word32* inOutIdx,
 
     WOLFSSL_START(WC_FUNC_CERTIFICATE_DO);
     WOLFSSL_ENTER("DoTls13Certificate");
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        ssl->tel.cert_start_ts = ssl->tel_time_us();
+        ssl->tel.cert_start_set = 1;
+    }
+#endif
 
 #ifdef WOLFSSL_DTLS13
     if (ssl->options.dtls && ssl->options.handShakeDone) {
@@ -12663,6 +12699,13 @@ int DoTls13HandShakeMsgType(WOLFSSL* ssl, byte* input, word32* inOutIdx,
     case server_hello:
         WOLFSSL_MSG("processing server hello");
         ret = DoTls13ServerHello(ssl, input, inOutIdx, size, &type);
+#ifdef WOLFSSL_HAVE_TELEMETRY
+        if (ret == 0 && ssl->tel_time_us != NULL) {
+            ssl->tel.sh_done_ts = ssl->tel_time_us();
+            ssl->tel.sh_done_set = 1;
+        }
+#endif
+
     #if !defined(WOLFSSL_NO_CLIENT_AUTH) && \
                ((defined(HAVE_ED25519) && !defined(NO_ED25519_CLIENT_AUTH)) || \
                 (defined(HAVE_ED448) && !defined(NO_ED448_CLIENT_AUTH)))
@@ -13381,6 +13424,12 @@ int wolfSSL_connect_TLSv13(WOLFSSL* ssl)
                     WOLFSSL_ERROR(ssl->error);
                     return WOLFSSL_FATAL_ERROR;
                 } else {
+#ifdef WOLFSSL_HAVE_TELEMETRY
+                    if (ssl->tel_time_us != NULL) {
+                        ssl->tel.hs_done_ts = ssl->tel_time_us();
+                        ssl->tel.hs_done_set = 1;
+                    }
+#endif
                     return WOLFSSL_SUCCESS;
                 }
             }
@@ -13535,6 +13584,12 @@ int wolfSSL_connect_TLSv13(WOLFSSL* ssl)
             ssl->error = 0; /* clear the error */
 
             WOLFSSL_LEAVE("wolfSSL_connect_TLSv13", WOLFSSL_SUCCESS);
+#ifdef WOLFSSL_HAVE_TELEMETRY
+            if (ssl->tel_time_us != NULL) {
+                ssl->tel.hs_done_ts = ssl->tel_time_us();
+                ssl->tel.hs_done_set = 1;
+            }
+#endif
             return WOLFSSL_SUCCESS;
 
         default:

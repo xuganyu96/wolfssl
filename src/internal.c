@@ -19,6 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
+#include "wolfssl/wolfcrypt/types.h"
 #include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 /*
@@ -15257,6 +15258,31 @@ static int AdjustCMForParams(WOLFSSL* ssl)
         return WOLFSSL_SUCCESS;
     }
     return wolfSSL_X509_STORE_set_flags(SSL_STORE(ssl), flags);
+}
+#endif
+
+#ifdef WOLFSSL_HAVE_TELEMETRY
+/* set all telemetry flags to false */
+void wolfSSL_reset_telemetry(WOLFSSL *ssl) {
+    if (ssl) {
+        XMEMSET(&ssl->tel, 0, sizeof(Telemetry));
+    }
+}
+
+int wolfSSL_export_telemetry(WOLFSSL *ssl, Telemetry *tel) {
+    if (ssl != NULL && tel != NULL) {
+        XMEMCPY(tel, &ssl->tel, sizeof(Telemetry));
+        return 0;
+    }
+    return BAD_FUNC_ARG;
+}
+
+int wolfSSL_set_time_cb(WOLFSSL *ssl, uint64_t (*time_cb)(void)) {
+    if (ssl != NULL && time_cb != NULL) {
+        ssl->tel_time_us = time_cb;
+        return 0;
+    }
+    return BAD_FUNC_ARG;
 }
 #endif
 
