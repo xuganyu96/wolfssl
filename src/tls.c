@@ -56,6 +56,9 @@
 #ifdef HAVE_HQC
     #include <wolfssl/wolfcrypt/hqc.h>
 #endif
+#ifdef HAVE_OTMLKEM
+    #include <wolfssl/wolfcrypt/otmlkem.h>
+#endif
 
 #if defined(WOLFSSL_RENESAS_TSIP_TLS)
     #include <wolfssl/wolfcrypt/port/Renesas/renesas-tsip-crypt.h>
@@ -4721,6 +4724,12 @@ static int TLSX_IsGroupSupported(int namedGroup)
         case HQC_256:
             break;
 #endif
+#ifdef HAVE_OTMLKEM
+        case OT_ML_KEM_512:
+        case OT_ML_KEM_768:
+        case OT_ML_KEM_1024:
+            break;
+#endif
         default:
             return 0;
     }
@@ -8784,7 +8793,89 @@ static int TLSX_KeyShare_GenHqcKeyClient(WOLFSSL *ssl,
     WOLFSSL_LEAVE("TLSX_KeyShare_GenHqcKeyClient", ret);
     return ret;
 }
-#endif
+#endif /* HAVE_HQC */
+
+#ifdef HAVE_OTMLKEM
+static int TLSX_KeyShare_GenOtMlKemKeyClient(WOLFSSL *ssl,
+                                             KeyShareEntry *kse) {
+    WOLFSSL_ENTER("TLSX_KeyShare_GenOtMlKemKeyClient");
+    int ret = 0;
+
+    /* allocate key object on the stack, allocate pk and sk bytes on heap */
+    OtMlKemKey kem;
+    /* private keys are here; pub keys are at kse-pubKey */
+    byte *privKey = NULL;
+    word32 privKeyLen = 0;
+
+    int level = 0;
+    switch (kse->group) {
+        case OT_ML_KEM_512:
+            level = 1;
+            break;
+        case OT_ML_KEM_768:
+            level = 3;
+            break;
+        case OT_ML_KEM_1024:
+            level = 5;
+            break;
+        default:
+            ret = BAD_FUNC_ARG;
+    }
+
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_InitEx(&kem, ssl->heap, ssl->devId);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_SetLevel(&kem, level);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_PrivateKeySize(&kem, &privKeyLen);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_PublicKeySize(&kem, &kse->pubKeyLen);
+    }
+    if (ret == 0) {
+        privKey = XMALLOC(privKeyLen, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+        if (privKey == NULL) {
+            ret = MEMORY_ERROR;
+        }
+    }
+    if (ret == 0) {
+        kse->pubKey = XMALLOC(kse->pubKeyLen, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+        if (kse->pubKey == NULL) {
+            ret = MEMORY_ERROR;
+        }
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_MakeKey(&kem, ssl->rng);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_export_public_key(&kem, kse->pubKey, kse->pubKeyLen);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_export_private_key(&kem, privKey, privKeyLen);
+    }
+
+
+    if (ret != 0) {
+        wc_OtMlKemKey_Free(&kem);
+        if (privKey) {
+            XFREE(privKey, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+        }
+        if (kse->pubKey) {
+            XFREE(kse->pubKey, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+            kse->pubKey = NULL;
+        }
+    } else {
+        wc_OtMlKemKey_Free(&kem);
+        kse->privKey = privKey;
+        kse->privKeyLen = privKeyLen;
+    }
+
+    WOLFSSL_LEAVE("TLSX_KeyShare_GenOtMlKemKeyClient", ret);
+    return ret;
+}
+#endif /* HAVE_OTMLKEM */
 
 #ifndef WOLFSSL_MLKEM_NO_MAKE_KEY
 /* Create a key share entry using pqc parameters group on the client side.
@@ -8823,6 +8914,13 @@ static int TLSX_KeyShare_GenPqcKeyClient(WOLFSSL *ssl, KeyShareEntry* kse)
         case HQC_192:
         case HQC_256:
             ret = TLSX_KeyShare_GenHqcKeyClient(ssl, kse);
+            break;
+        #endif
+        #ifdef HAVE_OTMLKEM
+        case OT_ML_KEM_512:
+        case OT_ML_KEM_768:
+        case OT_ML_KEM_1024:
+            ret = TLSX_KeyShare_GenOtMlKemKeyClient(ssl, kse);
             break;
         #endif
         default:
@@ -9844,6 +9942,83 @@ static int TLSX_KeyShare_ProcessHqcClient(WOLFSSL* ssl,
 }
 #endif /* HAVE_HQC */
 
+#ifdef HAVE_OTMLKEM
+/* Process a OT-ML-KEM key share on the client side
+ */
+static int TLSX_KeyShare_ProcessOtMlKemClient(WOLFSSL* ssl,
+                                              KeyShareEntry* keyShareEntry,
+                                              unsigned char* ssOutput,
+                                              word32* ssOutSz) {
+    WOLFSSL_ENTER("TLSX_KeyShare_ProcessOtMlKemClient");
+    int ret = 0;
+
+    /* we will not worry about storing the entire key object yet */
+    OtMlKemKey kem;
+    int level = 0;
+    word32 privKeyLen = 0;
+    word32 ctLen = 0;
+    word32 ssLen = 0;
+
+    switch (keyShareEntry->group) {
+        case OT_ML_KEM_512:
+            level = 1;
+            break;
+        case OT_ML_KEM_768:
+            level = 3;
+            break;
+        case OT_ML_KEM_1024:
+            level = 5;
+            break;
+        default:
+            ret = BAD_FUNC_ARG;
+            break;
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_InitEx(&kem, ssl->heap, ssl->devId);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_SetLevel(&kem, level);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_SharedSecretSize(&kem, &ssLen);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_CipherTextSize(&kem, &ctLen);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_PrivateKeySize(&kem, &privKeyLen);
+    }
+    if (ret == 0 && privKeyLen != keyShareEntry->privKeyLen) {
+        ret = BUFFER_E;
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_import_private(&kem, keyShareEntry->privKey,
+                                                  privKeyLen);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_Decapsulate(&kem, ssOutput, keyShareEntry->ke,
+                                             ctLen);
+    }
+    if (ret == 0) {
+        WOLFSSL_MSG("OT-ML-KEM Ciphertext");
+        WOLFSSL_BUFFER(keyShareEntry->ke, ctLen);
+        WOLFSSL_MSG("OT-ML-KEM SharedSecret");
+        WOLFSSL_BUFFER(ssOutput, ssLen);
+        *ssOutSz = ssLen;
+    }
+
+    wc_OtMlKemKey_Free(&kem);
+    /* this kem is stack-allocated; I should consider heap-allocating it */
+    // XFREE(&kem, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+    keyShareEntry->key = NULL;
+    XFREE(keyShareEntry->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+    keyShareEntry->ke = NULL;
+
+    WOLFSSL_LEAVE("TLSX_KeyShare_ProcessOtMlKemClient", ret);
+    return ret;
+}
+#endif /* HAVE_OTMLKEM */
+
 #ifdef PQCLEAN_MLKEM
 /* Process a PQCleanMlKem key share on the client side
  */
@@ -9948,12 +10123,22 @@ static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
 #endif
             break;
 #endif
+#ifdef HAVE_HQC
         case HQC_128:
         case HQC_192:
         case HQC_256:
             ret = TLSX_KeyShare_ProcessHqcClient(ssl, keyShareEntry,
                                                         ssOutput, ssOutSz);
             break;
+#endif /* HAVE_HQC */
+#ifdef HAVE_OTMLKEM
+        case OT_ML_KEM_512:
+        case OT_ML_KEM_768:
+        case OT_ML_KEM_1024:
+            ret = TLSX_KeyShare_ProcessOtMlKemClient(ssl, keyShareEntry,
+                                                     ssOutput, ssOutSz);
+            break;
+#endif /* HAVE_HQC */
         default:
             ret = BAD_FUNC_ARG;
     }
@@ -10555,6 +10740,7 @@ static int TLSX_KeyShare_New(KeyShareEntry** list, int group, void *heap,
     return 0;
 }
 
+#ifdef HAVE_HQC
 static int TLSX_KeyShare_HandleHqcKeyServer(WOLFSSL *ssl, KeyShareEntry *kse,
                                             byte *clientData, word16 clientLen,
                                             unsigned char *ssOutput,
@@ -10634,6 +10820,93 @@ static int TLSX_KeyShare_HandleHqcKeyServer(WOLFSSL *ssl, KeyShareEntry *kse,
     WOLFSSL_LEAVE("TLSX_KeyShare_HandleHqcKeyServer", ret);
     return ret;
 }
+#endif /* HAVE_HQC */
+
+#ifdef HAVE_OTMLKEM
+static int TLSX_KeyShare_HandleOtMlKemKeyServer(WOLFSSL *ssl, KeyShareEntry *kse,
+                                                byte *clientData, word16 clientLen,
+                                                unsigned char *ssOutput,
+                                                word32 *ssOutSz) {
+    WOLFSSL_ENTER("TLSX_KeyShare_HandleOtMlKemKeyServer");
+
+    int ret = 0;
+    OtMlKemKey kem;
+    byte *ciphertext = NULL;
+    word32 pubKeyLen = 0;
+    word32 ctLen = 0;
+    word32 ssLen = 0;
+    int level = 0;
+
+    if (clientData == NULL)
+        return BAD_FUNC_ARG;
+    switch (kse->group) {
+    case OT_ML_KEM_512:
+        level = 1;
+        break;
+    case OT_ML_KEM_768:
+        level = 3;
+        break;
+    case OT_ML_KEM_1024:
+        level = 5;
+        break;
+    default:
+        ret = BAD_FUNC_ARG;
+        break;
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_InitEx(&kem, ssl->heap, ssl->devId);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_SetLevel(&kem, level);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_PublicKeySize(&kem, &pubKeyLen);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_CipherTextSize(&kem, &ctLen);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_SharedSecretSize(&kem, &ssLen);
+    }
+    if (ret == 0 && clientLen != pubKeyLen) {
+        ret = BAD_FUNC_ARG;
+        WOLFSSL_MSG_EX("Client data (%d) did not match pubKeyLen (%d)",
+                       clientLen, pubKeyLen);
+    }
+    if (ret == 0) {
+        ciphertext = XMALLOC(ctLen, ssl->heap, DYNAMIC_TYPE_TLSX);
+        if (ciphertext == NULL) {
+            ret = MEMORY_E;
+        }
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_import_public(&kem, clientData, pubKeyLen);
+    }
+    if (ret == 0) {
+        ret = wc_OtMlKemKey_Encapsulate(&kem, ciphertext, ssOutput, ssl->rng);
+        WOLFSSL_MSG("OT-ML-KEM Ciphertext");
+        WOLFSSL_BUFFER(ciphertext, ctLen);
+        WOLFSSL_MSG("OT-ML-KEM SharedSecret");
+        WOLFSSL_BUFFER(ssOutput, ssLen);
+    }
+    if (ret == 0) {
+        XFREE(kse->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+        *ssOutSz = ssLen;
+        kse->ke = NULL;
+        kse->keLen = 0;
+        kse->pubKey = ciphertext;
+        kse->pubKeyLen = ctLen;
+        ciphertext = NULL;
+        ssl->namedGroup = kse->group;
+    }
+    XFREE(ciphertext, ssl->heap, DYNAMIC_TYPE_TLSX);
+    wc_OtMlKemKey_Free(&kem);
+    kse->key = NULL;
+
+    WOLFSSL_LEAVE("TLSX_KeyShare_HandleOtMlKemKeyServer", ret);
+    return ret;
+}
+#endif /* HAVE_OTMLKEM */
 
 #if defined(WOLFSSL_WC_MLKEM) && !defined(PQCLEAN_MLKEM)
 /* Process ML-KEM key share using wolfcrypt's ML-KEM
@@ -10848,12 +11121,22 @@ static int TLSX_KeyShare_HandlePqcKeyServer(WOLFSSL *ssl,
     int ret = 0;
 
     switch (keyShareEntry->group) {
+#ifdef HAVE_HQC
     case HQC_128:
     case HQC_192:
     case HQC_256:
         ret = TLSX_KeyShare_HandleHqcKeyServer(ssl, keyShareEntry, clientData,
                                                clientLen, ssOutput, ssOutSz);
         break;
+#endif /* HAVE_HQC */
+#ifdef HAVE_OTMLKEM
+    case OT_ML_KEM_512:
+    case OT_ML_KEM_768:
+    case OT_ML_KEM_1024:
+        ret = TLSX_KeyShare_HandleOtMlKemKeyServer(ssl, keyShareEntry, clientData,
+                                                   clientLen, ssOutput, ssOutSz);
+        break;
+#endif /* HAVE_OTMLKEM */
     case WOLFSSL_ML_KEM_512:
     case WOLFSSL_ML_KEM_768:
     case WOLFSSL_ML_KEM_1024:
@@ -11349,6 +11632,11 @@ static const word16 preferredGroup[] = {
     HQC_128,
     HQC_192,
     HQC_256,
+#endif
+#ifdef HAVE_OTMLKEM
+    OT_ML_KEM_512,
+    OT_ML_KEM_768,
+    OT_ML_KEM_1024,
 #endif
     WOLFSSL_NAMED_GROUP_INVALID
 };

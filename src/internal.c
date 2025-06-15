@@ -35495,6 +35495,11 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
             case HQC_192:
             case HQC_256:
         #endif
+        #ifdef HAVE_OTMLKEM
+            case OT_ML_KEM_512:
+            case OT_ML_KEM_768:
+            case OT_ML_KEM_1024:
+        #endif
                 return 1;
             default:
                 return 0;

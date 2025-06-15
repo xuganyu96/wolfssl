@@ -4633,6 +4633,11 @@ enum {
     HQC_192 = 0x022D,
     HQC_256 = 0x022E,
 #endif /* HAVE_HQC */
+#ifdef HAVE_OTMLKEM
+    OT_ML_KEM_512 = 1512,
+    OT_ML_KEM_768 = 1513,
+    OT_ML_KEM_1024 = 1514,
+#endif
 #endif /* HAVE_PQC */
     WOLF_ENUM_DUMMY_LAST_ELEMENT(SSL_H)
 };

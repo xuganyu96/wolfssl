@@ -3737,6 +3737,11 @@ static int isValidCurveGroup(word16 name)
         case HQC_192:
         case HQC_256:
 #endif
+#ifdef HAVE_OTMLKEM
+        case OT_ML_KEM_512:
+        case OT_ML_KEM_768:
+        case OT_ML_KEM_1024:
+#endif
             return 1;
 
         default:
