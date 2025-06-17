@@ -530,7 +530,6 @@ static int parse_private_key(const byte *priv, word32 privSz, byte **out,
         (void)ret;
     }
 
-    /* Now it is a octet_string(concat(priv,pub)) */
     if ((ret = GetOctetString(priv, &idx, &length, privSz)) < 0) {
         return ret;
     }
@@ -538,13 +537,9 @@ static int parse_private_key(const byte *priv, word32 privSz, byte **out,
     *out = (byte *)priv + idx;
     *outSz = privSz - idx;
 
-    /* And finally it is concat(priv,pub). Key size check. */
-    if ((key->level == 1) &&
-        (*outSz != FALCON_LEVEL1_KEY_SIZE + FALCON_LEVEL1_PUB_KEY_SIZE)) {
+    if ((key->level == 1) && (*outSz != FALCON_LEVEL1_KEY_SIZE)) {
         return BAD_FUNC_ARG;
-    } else if ((key->level == 5) &&
-               (*outSz !=
-                FALCON_LEVEL5_KEY_SIZE + FALCON_LEVEL5_PUB_KEY_SIZE)) {
+    } else if ((key->level == 5) && (*outSz != FALCON_LEVEL5_KEY_SIZE)) {
         return BAD_FUNC_ARG;
     }
 
