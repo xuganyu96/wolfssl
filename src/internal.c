@@ -4703,6 +4703,35 @@ void DecodeSigAlg(const byte* input, byte* hashAlgo, byte* hsType)
             }
             break;
     #endif /* HAVE_FALCON */
+    #ifdef HAVE_SPHINCS
+        case SPHINCS_SA_MAJOR:
+            WOLFSSL_MSG("detected SPHINCS_SA_MAJOR");
+            if (input[1] == SPHINCS_FAST_LEVEL1_SA_MINOR) {
+                *hsType = sphincs_fast_level1_sa_algo;
+                *hashAlgo = sha256_mac;
+            }
+            else if (input[1] == SPHINCS_FAST_LEVEL3_SA_MINOR) {
+                *hsType = sphincs_fast_level3_sa_algo;
+                *hashAlgo = sha384_mac;
+            }
+            else if (input[1] == SPHINCS_FAST_LEVEL5_SA_MINOR) {
+                *hsType = sphincs_fast_level5_sa_algo;
+                *hashAlgo = sha512_mac;
+            }
+            else if (input[1] == SPHINCS_SMALL_LEVEL1_SA_MINOR) {
+                *hsType = sphincs_small_level1_sa_algo;
+                *hashAlgo = sha256_mac;
+            }
+            else if (input[1] == SPHINCS_SMALL_LEVEL3_SA_MINOR) {
+                *hsType = sphincs_small_level3_sa_algo;
+                *hashAlgo = sha384_mac;
+            }
+            else if (input[1] == SPHINCS_SMALL_LEVEL5_SA_MINOR) {
+                *hsType = sphincs_small_level5_sa_algo;
+                *hashAlgo = sha512_mac;
+            }
+            break;
+    #endif /* HAVE_SPHINCS */
     #ifdef HAVE_DILITHIUM
         case DILITHIUM_SA_MAJOR:
             if (input[1] == DILITHIUM_LEVEL2_SA_MINOR) {
@@ -29107,7 +29136,9 @@ static int MatchSigAlgo(WOLFSSL* ssl, int sigAlgo)
     }
 #endif
     /* Signature algorithm matches certificate. */
-    return sigAlgo == ssl->options.sigAlgo;
+    int is_match = sigAlgo == ssl->options.sigAlgo;
+    WOLFSSL_LEAVE("MatchSigAlgo", is_match);
+    return is_match;
 }
 
 #if defined(HAVE_ECC) && defined(WOLFSSL_TLS13) || \
@@ -37802,8 +37833,10 @@ static int DoSessionTicket(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
                 NULL
 #endif
                 );
-        if (ret != 0)
+        WOLFSSL_MSG_EX("MatchSuite_ex returned %d", ret);
+        if (ret != 0) {
             return ret;
+        }
 
         ssl->options.cipherSuite0 = cs.cipherSuite0;
         ssl->options.cipherSuite  = cs.cipherSuite;
