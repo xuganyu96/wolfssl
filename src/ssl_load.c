@@ -2007,6 +2007,32 @@ static int ProcessBufferCertPublicKey(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
             }
             break;
     #endif /* HAVE_FALCON */
+    #if defined(HAVE_SPHINCS)
+        case SPHINCS_FAST_LEVEL1k:
+            keyType = sphincs_fast_level1_sa_algo;
+            keySz = SPHINCS_LEVEL1_KEY_SIZE;
+            break;
+        case SPHINCS_FAST_LEVEL3k:
+            keyType = sphincs_fast_level3_sa_algo;
+            keySz = SPHINCS_LEVEL3_KEY_SIZE;
+            break;
+        case SPHINCS_FAST_LEVEL5k:
+            keyType = sphincs_fast_level5_sa_algo;
+            keySz = SPHINCS_LEVEL5_KEY_SIZE;
+            break;
+        case SPHINCS_SMALL_LEVEL1k:
+            keyType = sphincs_small_level1_sa_algo;
+            keySz = SPHINCS_LEVEL1_KEY_SIZE;
+            break;
+        case SPHINCS_SMALL_LEVEL3k:
+            keyType = sphincs_small_level3_sa_algo;
+            keySz = SPHINCS_LEVEL3_KEY_SIZE;
+            break;
+        case SPHINCS_SMALL_LEVEL5k:
+            keyType = sphincs_small_level5_sa_algo;
+            keySz = SPHINCS_LEVEL5_KEY_SIZE;
+            break;
+    #endif /* HAVE_SPHINCS */
     #if defined(HAVE_DILITHIUM)
         #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
         case DILITHIUM_LEVEL2k:
@@ -2108,6 +2134,7 @@ static int ProcessBufferCertPublicKey(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
     }
 
     /* Store the type and key size as there may not be a private key set. */
+    WOLFSSL_MSG_EX("GYX: keyType=%d, keySz=%d", keyType, keySz);
     if (ssl != NULL) {
         ssl->buffers.keyType = keyType;
         ssl->buffers.keySz = keySz;
@@ -2258,6 +2285,9 @@ static int ProcessBufferCertAltPublicKey(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
             }
             break;
     #endif /* HAVE_FALCON */
+    #ifdef HAVE_SPHINCS
+        /* GYX: don't have time for CertAltPublicKey */
+    #endif /* HAVE_SPHINCS */
     #if defined(HAVE_DILITHIUM)
         #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
         case DILITHIUM_LEVEL2k:
