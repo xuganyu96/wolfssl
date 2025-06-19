@@ -3286,6 +3286,44 @@ static WC_INLINE void AddSuiteHashSigAlgo(byte* hashSigAlgo, byte macAlgo,
         }
         else
     #endif /* HAVE_FALCON */
+    #ifdef HAVE_SPHINCS
+        if (sigAlgo == sphincs_fast_level1_sa_algo) {
+            ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
+                              SPHINCS_FAST_LEVEL1_SA_MAJOR,
+                              SPHINCS_FAST_LEVEL1_SA_MINOR);
+        }
+        else
+        if (sigAlgo == sphincs_fast_level3_sa_algo) {
+            ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
+                              SPHINCS_FAST_LEVEL3_SA_MAJOR,
+                              SPHINCS_FAST_LEVEL3_SA_MINOR);
+        }
+        else
+        if (sigAlgo == sphincs_fast_level5_sa_algo) {
+            ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
+                              SPHINCS_FAST_LEVEL5_SA_MAJOR,
+                              SPHINCS_FAST_LEVEL5_SA_MINOR);
+        }
+        else
+        if (sigAlgo == sphincs_small_level1_sa_algo) {
+            ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
+                              SPHINCS_SMALL_LEVEL1_SA_MAJOR,
+                              SPHINCS_SMALL_LEVEL1_SA_MINOR);
+        }
+        else
+        if (sigAlgo == sphincs_small_level3_sa_algo) {
+            ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
+                              SPHINCS_SMALL_LEVEL3_SA_MAJOR,
+                              SPHINCS_SMALL_LEVEL3_SA_MINOR);
+        }
+        else
+        if (sigAlgo == sphincs_small_level5_sa_algo) {
+            ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
+                              SPHINCS_SMALL_LEVEL5_SA_MAJOR,
+                              SPHINCS_SMALL_LEVEL5_SA_MINOR);
+        }
+        else
+    #endif /* HAVE_SPHINCS */
     #ifdef HAVE_DILITHIUM
         if (sigAlgo == dilithium_level2_sa_algo) {
             ADD_HASH_SIG_ALGO(hashSigAlgo, inOutIdx,
@@ -3399,6 +3437,22 @@ void InitSuitesHashSigAlgo(byte* hashSigAlgo, int haveSig, int tls1_2,
             &idx);
     }
 #endif /* HAVE_FALCON */
+#ifdef HAVE_SPHINCS
+    if (haveSig & SIG_SPHINCS) {
+        AddSuiteHashSigAlgo(hashSigAlgo, no_mac, sphincs_fast_level1_sa_algo,
+                            keySz, &idx);
+        AddSuiteHashSigAlgo(hashSigAlgo, no_mac, sphincs_fast_level3_sa_algo,
+                            keySz, &idx);
+        AddSuiteHashSigAlgo(hashSigAlgo, no_mac, sphincs_fast_level5_sa_algo,
+                            keySz, &idx);
+        AddSuiteHashSigAlgo(hashSigAlgo, no_mac, sphincs_small_level1_sa_algo,
+                            keySz, &idx);
+        AddSuiteHashSigAlgo(hashSigAlgo, no_mac, sphincs_small_level3_sa_algo,
+                            keySz, &idx);
+        AddSuiteHashSigAlgo(hashSigAlgo, no_mac, sphincs_small_level5_sa_algo,
+                            keySz, &idx);
+    }
+#endif /* HAVE_SPHICNS */
 #ifdef HAVE_DILITHIUM
     if (haveSig & SIG_DILITHIUM) {
         AddSuiteHashSigAlgo(hashSigAlgo, no_mac, dilithium_level2_sa_algo,

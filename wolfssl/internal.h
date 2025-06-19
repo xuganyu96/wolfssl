@@ -1845,6 +1845,7 @@ enum Misc {
     SM2_SA_MINOR        = 8,   /* Least significant byte for SM2 with SM3 */
 
     FALCON_SA_MAJOR     = 0xFE,/* Most significant byte used with falcon sig algs */
+    SPHINCS_SA_MAJOR    = 0xFD,
     DILITHIUM_SA_MAJOR  = 0x09,/* Most significant byte used with dilithium sig algs */
     ML_KEM_SA_MAJOR     = 0x69,
     HQC_SA_MAJOR        = 0x42,
@@ -1854,6 +1855,22 @@ enum Misc {
     FALCON_LEVEL1_SA_MINOR = 0xAE,
     FALCON_LEVEL5_SA_MAJOR = 0xFE,
     FALCON_LEVEL5_SA_MINOR = 0xB1,
+
+    /* OQS defined SPHINCS+'s major to be 0xFE, but that makes distinguishing SPHINCS
+     * from Falcon difficult; instead use custom points
+     */
+    SPHINCS_FAST_LEVEL1_SA_MAJOR = 0xFD,
+    SPHINCS_FAST_LEVEL1_SA_MINOR = 0x00,
+    SPHINCS_FAST_LEVEL3_SA_MAJOR = 0xFD,
+    SPHINCS_FAST_LEVEL3_SA_MINOR = 0x01,
+    SPHINCS_FAST_LEVEL5_SA_MAJOR = 0xFD,
+    SPHINCS_FAST_LEVEL5_SA_MINOR = 0x02,
+    SPHINCS_SMALL_LEVEL1_SA_MAJOR = 0xFD,
+    SPHINCS_SMALL_LEVEL1_SA_MINOR = 0x03,
+    SPHINCS_SMALL_LEVEL3_SA_MAJOR = 0xFD,
+    SPHINCS_SMALL_LEVEL3_SA_MINOR = 0x04,
+    SPHINCS_SMALL_LEVEL5_SA_MAJOR = 0xFD,
+    SPHINCS_SMALL_LEVEL5_SA_MINOR = 0x05,
 
     /* these values for MLDSA (Dilithium) correspond to what is proposed in the
      * IETF. */
@@ -4349,9 +4366,10 @@ enum KeyExchangeAlgorithm {
 #define SIG_FALCON      0x08
 #define SIG_DILITHIUM   0x10
 #define SIG_ANON        0x20
+#define SIG_SPHINCS     0x40
 /* SIG_ANON is omitted by default */
 #define SIG_ALL         (SIG_ECDSA | SIG_RSA | SIG_SM2 | SIG_FALCON | \
-                         SIG_DILITHIUM)
+                         SIG_DILITHIUM | SIG_SPHINCS)
 
 /* Supported Authentication Schemes */
 enum SignatureAlgorithm {
