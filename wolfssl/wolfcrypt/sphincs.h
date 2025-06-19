@@ -177,7 +177,8 @@ WOLFSSL_API
 int wc_sphincs_get_level_and_optim(sphincs_key *key, byte *level, byte *optim);
 WOLFSSL_API
 void wc_sphincs_free(sphincs_key *key);
-
+WOLFSSL_API
+int wc_sphincs_get_oid_sum(sphincs_key *key, int *oidsum);
 WOLFSSL_API
 int wc_sphincs_import_public(const byte *in, word32 inLen, sphincs_key *key);
 WOLFSSL_API
@@ -220,6 +221,8 @@ WOLFSSL_API int wc_Sphincs_PrivateKeyToDer(sphincs_key *key, byte *output,
                                            word32 inLen);
 WOLFSSL_API int wc_Sphincs_PublicKeyToDer(sphincs_key *key, byte *output,
                                           word32 inLen, int withAlg);
+WOLFSSL_API int wc_Sphincs_DerToPrivateKey(const byte *input, word32 *inOutIdx,
+                                           sphincs_key *key, word32 inSz);
 
 #ifdef __cplusplus
 } /* extern "C" */

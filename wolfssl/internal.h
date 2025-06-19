@@ -4375,6 +4375,12 @@ enum SignatureAlgorithm {
     hqc_level1_sa_algo           = 21,
     hqc_level3_sa_algo           = 22,
     hqc_level5_sa_algo           = 23,
+    sphincs_fast_level1_sa_algo  = 24,
+    sphincs_fast_level3_sa_algo  = 25,
+    sphincs_fast_level5_sa_algo  = 26,
+    sphincs_small_level1_sa_algo  = 27,
+    sphincs_small_level3_sa_algo  = 28,
+    sphincs_small_level5_sa_algo  = 29,
     invalid_sa_algo              = 255
 };
 

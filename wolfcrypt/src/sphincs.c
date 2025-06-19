@@ -1122,4 +1122,173 @@ int wc_Sphincs_PrivateKeyToDer(sphincs_key *key, byte *output, word32 inLen) {
 
     return BAD_FUNC_ARG;
 }
+
+/* Given a key object, assign the oid sum to the input integer
+ *
+ * Return 0 on success
+ */
+int wc_sphincs_get_oid_sum(sphincs_key *key, int *oidsum) {
+    if ((key == NULL) || (oidsum == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_sphincs_level(key->level)
+        || !is_valid_sphincs_optim(key->optim)) {
+        return BAD_FUNC_ARG;
+    }
+    if ((key->level == 1) && (key->optim = FAST_VARIANT)) {
+        *oidsum = SPHINCS_FAST_LEVEL1k;
+    } else if ((key->level == 3) && (key->optim = FAST_VARIANT)) {
+        *oidsum = SPHINCS_FAST_LEVEL3k;
+    } else if ((key->level == 5) && (key->optim = FAST_VARIANT)) {
+        *oidsum = SPHINCS_FAST_LEVEL5k;
+    } else if ((key->level == 1) && (key->optim = SMALL_VARIANT)) {
+        *oidsum = SPHINCS_SMALL_LEVEL1k;
+    } else if ((key->level == 3) && (key->optim = SMALL_VARIANT)) {
+        *oidsum = SPHINCS_SMALL_LEVEL3k;
+    } else if ((key->level == 5) && (key->optim = SMALL_VARIANT)) {
+        *oidsum = SPHINCS_SMALL_LEVEL5k;
+    } else {
+        /* unreachable */
+    }
+    return 0;
+}
 #endif /* HAVE_PQC && HAVE_SPHINCS */
+
+/* Given OID sum, set SPHINCS level and optim
+ *
+ * Return 0 on success
+ */
+static int oid_to_level_optim(int oidsum, int *level, int *optim) {
+    if ((level == NULL) || (optim == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    switch (oidsum) {
+        case SPHINCS_FAST_LEVEL1k:
+            *level = 1;
+            *optim = FAST_VARIANT;
+            break;
+        case SPHINCS_FAST_LEVEL3k:
+            *level = 3;
+            *optim = FAST_VARIANT;
+            break;
+        case SPHINCS_FAST_LEVEL5k:
+            *level = 5;
+            *optim = FAST_VARIANT;
+            break;
+        case SPHINCS_SMALL_LEVEL1k:
+            *level = 1;
+            *optim = SMALL_VARIANT;
+            break;
+        case SPHINCS_SMALL_LEVEL3k:
+            *level = 3;
+            *optim = SMALL_VARIANT;
+            break;
+        case SPHINCS_SMALL_LEVEL5k:
+            *level = 5;
+            *optim = SMALL_VARIANT;
+            break;
+        default:
+            return BAD_FUNC_ARG;
+    }
+    return 0;
+}
+
+static int wc_Sphincs_PrivateKeyOnlySize(sphincs_key *key, word32 *len) {
+    if ((key == NULL) || (len == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_sphincs_level(key->level)
+        || !is_valid_sphincs_optim(key->optim)) {
+        return BAD_FUNC_ARG;
+    }
+    switch (key->level) {
+        case 1:
+            *len = SPHINCS_LEVEL1_KEY_SIZE;
+            break;
+        case 3:
+            *len = SPHINCS_LEVEL3_KEY_SIZE;
+            break;
+        case 5:
+            *len = SPHINCS_LEVEL5_KEY_SIZE;
+            break;
+        default:
+            return BAD_FUNC_ARG;
+    }
+
+    return 0;
+}
+
+static int import_private_raw(const byte *in, word32 len, sphincs_key *key) {
+    int ret = 0;
+    word32 privKeyLen = 0;
+    if ((key == NULL) || (in == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    if (!(is_valid_sphincs_level(key->level) && is_valid_sphincs_optim(key->optim))) {
+        return BAD_FUNC_ARG;
+    }
+    if (key->prvKeySet) {
+        WOLFSSL_MSG("SPHINCS privKey already set");
+        return BAD_FUNC_ARG;
+    }
+    if ((ret = wc_Sphincs_PrivateKeyOnlySize(key, &privKeyLen)) < 0) {
+        WOLFSSL_MSG("Failed to get SPHINCS private key size");
+        return BAD_FUNC_ARG;
+    }
+    if (privKeyLen != len) {
+        WOLFSSL_MSG_EX("Expect %d bytes, given %d bytes", privKeyLen, len);
+        return BUFFER_E;
+    }
+    XMEMCPY(key->k, in, len);
+    key->prvKeySet = 1;
+    return ret;
+}
+
+int wc_Sphincs_DerToPrivateKey(const byte *input, word32 *inOutIdx,
+                               sphincs_key *key, word32 inSz) {
+    WOLFSSL_ENTER("wc_Sphincs_DerToPrivateKey");
+    int ret = 0;
+    int keyType; /* enum Key_Sum */
+    const byte *privKey = NULL;
+    const byte *pubKey = NULL;
+    word32 privKeyLen = 0, pubKeyLen = 0;
+    int level, optim;
+
+    if ((input == NULL) || (inOutIdx == NULL) || (key == NULL) || (inSz == 0)) {
+        return BAD_FUNC_ARG;
+    }
+
+    if (ret == 0) {
+        if (key->level == 0) {
+            /* level not set by caller, decode from DER */
+            keyType = ANONk;
+            WOLFSSL_MSG_EX("keytype is ANONk");
+        } else {
+            /* TODO: need to cover the case where key level is set by caller
+             * and the DER buffer needs to be parsed with expectation
+             */
+            ret = BAD_FUNC_ARG;
+        }
+    }
+
+    if (ret == 0) {
+        ret = DecodeAsymKey_Assign(input, inOutIdx, inSz, &privKey, &privKeyLen,
+                                   &pubKey, &pubKeyLen, &keyType);
+        if (ret == 0) {
+            ret = oid_to_level_optim(keyType, &level, &optim);
+            if (ret == 0) {
+                ret = wc_sphincs_set_level_and_optim(key, level, optim);
+            }
+        }
+    }
+
+    if (ret == 0) {
+        /* copy private key to the key object */
+        ret = import_private_raw(privKey, privKeyLen, key);
+        WOLFSSL_MSG_EX("Sphincs key level=%d, optim=%d, privKeyLen=%d", level,
+                       optim, privKeyLen);
+    }
+
+    WOLFSSL_LEAVE("wc_Sphincs_DerToPrivateKey", ret);
+    return ret;
+}

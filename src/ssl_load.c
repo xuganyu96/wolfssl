@@ -923,6 +923,76 @@ static int ProcessBufferTryDecodeFalcon(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
 }
 #endif
 
+#ifdef HAVE_SPHINCS
+static int ProcessBufferTryDecodeSphincs(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
+                                         DerBuffer* der, int* keyFormat,
+                                         void* heap, byte* keyType,
+                                         int* keySize) {
+    WOLFSSL_ENTER("ProcessBufferTryDecodeSphincs");
+    int ret = NOT_COMPILED_IN;
+    word32 idx = 0;
+    sphincs_key *key;
+    int keyFormatTemp; /* enum Key_Sum */
+    enum SignatureAlgorithm keyTypeTemp; /* int */
+    int keySizeTemp;
+
+    key = (sphincs_key *)XMALLOC(sizeof(sphincs_key), heap,
+                                 DYNAMIC_TYPE_SPHINCS);
+    if (key == NULL) {
+        return MEMORY_E;
+    }
+
+    ret = wc_sphincs_init(key);
+    if (ret == 0) {
+        /* GYX: this decoding method is probably incorrect */
+        ret = wc_Sphincs_DerToPrivateKey(der->buffer, &idx, key, der->length);
+        if (ret == 0) {
+            ret = wc_sphincs_get_oid_sum(key, &keyFormatTemp);
+            if (ret == 0) {
+                if (keyFormatTemp == SPHINCS_FAST_LEVEL1k) {
+                    keyTypeTemp = sphincs_fast_level1_sa_algo;
+                    keySizeTemp = SPHINCS_LEVEL1_PRV_KEY_SIZE;
+                } else if (keyFormatTemp == SPHINCS_FAST_LEVEL3k) {
+                    keyTypeTemp = sphincs_fast_level3_sa_algo;
+                    keySizeTemp = SPHINCS_LEVEL3_PRV_KEY_SIZE;
+                } else if (keyFormatTemp == SPHINCS_FAST_LEVEL5k) {
+                    keyTypeTemp = sphincs_fast_level5_sa_algo;
+                    keySizeTemp = SPHINCS_LEVEL5_PRV_KEY_SIZE;
+                } else if (keyFormatTemp == SPHINCS_SMALL_LEVEL1k) {
+                    keyTypeTemp = sphincs_small_level1_sa_algo;
+                    keySizeTemp = SPHINCS_LEVEL1_PRV_KEY_SIZE;
+                } else if (keyFormatTemp == SPHINCS_SMALL_LEVEL3k) {
+                    keyTypeTemp = sphincs_small_level3_sa_algo;
+                    keySizeTemp = SPHINCS_LEVEL3_PRV_KEY_SIZE;
+                } else if (keyFormatTemp == SPHINCS_SMALL_LEVEL5k) {
+                    keyTypeTemp = sphincs_small_level5_sa_algo;
+                    keySizeTemp = SPHINCS_LEVEL5_PRV_KEY_SIZE;
+                } else {
+                    ret = ALGO_ID_E;
+                }
+            }
+            if (ret == 0) {
+                *keyFormat = keyFormatTemp;
+                *keyType = keyTypeTemp;
+                *keySize = keySizeTemp;
+            }
+        } else if (*keyFormat == 0) {
+            /* wc_sphincs_privatekeydecode returned error, this is not a sphincs
+             * key, but keyFormat is unknown, so try other formats
+             */
+            WOLFSSL_MSG("Not a SPHINCS+ key");
+            ret = 0;
+        }
+
+        wc_sphincs_free(key);
+    }
+
+    XFREE(key, heap, DYNAMIC_TYPE_SPHINCS);
+    WOLFSSL_LEAVE("ProcessBufferTryDecodeSphincs", ret);
+    return ret;
+}
+#endif /* HAVE_SPHINCS */
+
 #if defined(HAVE_DILITHIUM) && !defined(WOLFSSL_DILITHIUM_NO_SIGN) && \
     !defined(WOLFSSL_DILITHIUM_NO_ASN1)
 /* See if DER data is an Dilithium private key.
@@ -1282,6 +1352,21 @@ static int ProcessBufferTryDecode(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
         matchAnyKey = 1;
     }
 #endif /* HAVE_FALCON */
+#if defined(HAVE_SPHINCS)
+    /* Try SPHINCS+ if key format is SPHINCS or yet unknown */
+    if ((ret == 0) && ((*keyFormat == 0)
+                       || (*keyFormat == SPHINCS_FAST_LEVEL1k)
+                       || (*keyFormat == SPHINCS_FAST_LEVEL3k)
+                       || (*keyFormat == SPHINCS_FAST_LEVEL5k)
+                       || (*keyFormat == SPHINCS_SMALL_LEVEL1k)
+                       || (*keyFormat == SPHINCS_SMALL_LEVEL3k)
+                       || (*keyFormat == SPHINCS_SMALL_LEVEL5k)
+    )) {
+        ret = ProcessBufferTryDecodeSphincs(ctx, ssl, der, keyFormat, heap,
+                                            keyType, keySz);
+        matchAnyKey = 1;
+    }
+#endif /* HAVE_SPHINCS */
 #if defined(HAVE_DILITHIUM) && !defined(WOLFSSL_DILITHIUM_NO_SIGN) && \
     !defined(WOLFSSL_DILITHIUM_NO_ASN1)
     /* Try Falcon if key format is Dilithium level 2k, 3k or 5k or yet unknown.
