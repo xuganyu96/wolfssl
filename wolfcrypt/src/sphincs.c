@@ -369,7 +369,8 @@ int wc_sphincs_verify_msg(const byte *sig, word32 sigLen, const byte *msg,
             sig, sigLen, msg, msgLen, key->p);
         *res = (sphincs_err == 0) ? 1 : 0;
     } /* no need to check else since level and optim are already set */
-    WOLFSSL_MSG_EX("siglen=%d, msglen=%d, verified=%d\n", sigLen, msgLen, *res);
+    WOLFSSL_MSG_EX("SPHINCS: siglen=%d, msglen=%d, verified=%d", sigLen,
+                   msgLen, *res);
 #else
     ret = NOT_COMPILED_IN;
 #endif

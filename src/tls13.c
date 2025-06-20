@@ -10707,6 +10707,31 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
                 }
             }
         #endif /* HAVE_FALCON */
+        #ifdef HAVE_SPHINCS
+            if ((ssl->options.peerSigAlgo == sphincs_fast_level1_sa_algo
+                 || ssl->options.peerSigAlgo == sphincs_fast_level3_sa_algo
+                 || ssl->options.peerSigAlgo == sphincs_fast_level5_sa_algo
+                 || ssl->options.peerSigAlgo == sphincs_small_level1_sa_algo
+                 || ssl->options.peerSigAlgo == sphincs_small_level3_sa_algo
+                 || ssl->options.peerSigAlgo == sphincs_small_level5_sa_algo
+                ) && (ssl->peerSphincsKeyPresent)) {
+                int res = 0;
+                WOLFSSL_MSG("Doing Sphincs peer cert verify");
+                ret = wc_sphincs_verify_msg(sig, args->sigSz, args->sigData,
+                                            args->sigDataSz, &res,
+                                            ssl->peerSphincsKey);
+                if ((ret == 0) && (res == 1)) {
+                    WOLFSSL_MSG("SPHINCS signature good");
+                    ssl->options.peerAuthGood = 1;
+                    FreeKey(ssl, DYNAMIC_TYPE_SPHINCS,
+                            (void**)&ssl->peerSphincsKey);
+                    ssl->peerSphincsKeyPresent = 0;
+                } else if ((ret == 0) && (res == 0)) {
+                    WOLFSSL_MSG("SPHINCS signature invalid");
+                    ret = SIG_VERIFY_E;
+                }
+            }
+        #endif
         #if defined(HAVE_DILITHIUM) && !defined(WOLFSSL_DILITHIUM_NO_VERIFY)
             if (((ssl->options.peerSigAlgo == dilithium_level2_sa_algo) ||
                  (ssl->options.peerSigAlgo == dilithium_level3_sa_algo) ||
