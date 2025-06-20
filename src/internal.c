@@ -8849,6 +8849,10 @@ void wolfSSL_ResourceFree(WOLFSSL* ssl)
     FreeKey(ssl, DYNAMIC_TYPE_FALCON, (void**)&ssl->peerFalconKey);
     ssl->peerFalconKeyPresent = 0;
 #endif
+#if defined(HAVE_SPHINCS)
+    FreeKey(ssl, DYNAMIC_TYPE_SPHINCS, (void**)&ssl->peerSphincsKey);
+    ssl->peerSphincsKeyPresent = 0;
+#endif
 #ifdef WOLFSSL_HAVE_KEMTLS
     FreeKey(ssl, DYNAMIC_TYPE_MLKEM, (void**)&ssl->peerMlKemKey);
     ssl->peerMlKemKeyPresent = 0;
@@ -9120,6 +9124,10 @@ void FreeHandshakeResources(WOLFSSL* ssl)
         FreeKey(ssl, DYNAMIC_TYPE_FALCON, (void**)&ssl->peerFalconKey);
         ssl->peerFalconKeyPresent = 0;
 #endif /* HAVE_FALCON */
+#ifdef HAVE_SPHINCS
+        FreeKey(ssl, DYNAMIC_TYPE_SPHINCS, (void**)&ssl->peerSphincsKey);
+        ssl->peerSphincsKeyPresent = 0;
+#endif
 #if defined(HAVE_DILITHIUM)
         FreeKey(ssl, DYNAMIC_TYPE_DILITHIUM, (void**)&ssl->peerDilithiumKey);
         ssl->peerDilithiumKeyPresent = 0;
