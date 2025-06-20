@@ -19,6 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
+#include "wolfssl/wolfcrypt/sphincs.h"
 #include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 /*
@@ -7907,6 +7908,32 @@ static WC_INLINE void EncodeSigAlg(byte hashAlgo, byte hsType, byte* output)
             output[1] = FALCON_LEVEL5_SA_MINOR;
             break;
 #endif
+#ifdef HAVE_SPHINCS
+        case sphincs_fast_level1_sa_algo:
+            output[0] = SPHINCS_FAST_LEVEL1_SA_MAJOR;
+            output[1] = SPHINCS_FAST_LEVEL1_SA_MINOR;
+            break;
+        case sphincs_fast_level3_sa_algo:
+            output[0] = SPHINCS_FAST_LEVEL3_SA_MAJOR;
+            output[1] = SPHINCS_FAST_LEVEL3_SA_MINOR;
+            break;
+        case sphincs_fast_level5_sa_algo:
+            output[0] = SPHINCS_FAST_LEVEL5_SA_MAJOR;
+            output[1] = SPHINCS_FAST_LEVEL5_SA_MINOR;
+            break;
+        case sphincs_small_level1_sa_algo:
+            output[0] = SPHINCS_SMALL_LEVEL1_SA_MAJOR;
+            output[1] = SPHINCS_SMALL_LEVEL1_SA_MINOR;
+            break;
+        case sphincs_small_level3_sa_algo:
+            output[0] = SPHINCS_SMALL_LEVEL3_SA_MAJOR;
+            output[1] = SPHINCS_SMALL_LEVEL3_SA_MINOR;
+            break;
+        case sphincs_small_level5_sa_algo:
+            output[0] = SPHINCS_SMALL_LEVEL5_SA_MAJOR;
+            output[1] = SPHINCS_SMALL_LEVEL5_SA_MINOR;
+            break;
+#endif /* HAVE_SPHINCS */
 #ifdef HAVE_DILITHIUM
         case dilithium_level2_sa_algo:
             output[0] = DILITHIUM_LEVEL2_SA_MAJOR;
@@ -8104,6 +8131,31 @@ static WC_INLINE int DecodeTls13SigAlg(byte* input, byte* hashAlgo,
                 ret = INVALID_PARAMETER;
             break;
 #endif /* HAVE_FALCON */
+#ifdef HAVE_SPHINCS
+        case SPHINCS_SA_MAJOR:
+            if (input[1] == SPHINCS_FAST_LEVEL1_SA_MINOR) {
+                *hsType = sphincs_fast_level1_sa_algo;
+                *hashAlgo = sha512_mac;
+            } else if (input[1] == SPHINCS_FAST_LEVEL3_SA_MINOR) {
+                *hsType = sphincs_fast_level3_sa_algo;
+                *hashAlgo = sha512_mac;
+            } else if (input[1] == SPHINCS_FAST_LEVEL5_SA_MINOR) {
+                *hsType = sphincs_fast_level5_sa_algo;
+                *hashAlgo = sha512_mac;
+            } else if (input[1] == SPHINCS_SMALL_LEVEL1_SA_MINOR) {
+                *hsType = sphincs_small_level1_sa_algo;
+                *hashAlgo = sha512_mac;
+            } else if (input[1] == SPHINCS_SMALL_LEVEL3_SA_MINOR) {
+                *hsType = sphincs_small_level3_sa_algo;
+                *hashAlgo = sha512_mac;
+            } else if (input[1] == SPHINCS_SMALL_LEVEL5_SA_MINOR) {
+                *hsType = sphincs_small_level5_sa_algo;
+                *hashAlgo = sha512_mac;
+            } else {
+                ret = INVALID_PARAMETER;
+            }
+            break;
+#endif /* HAVE_SPHINCS */
 #if defined(HAVE_DILITHIUM)
         case DILITHIUM_SA_MAJOR:
             if (input[1] == DILITHIUM_LEVEL2_SA_MINOR) {
@@ -9182,12 +9234,13 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
                 }
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
                 ret = DecodePrivateKey(ssl, &args->sigLen);
-                WOLFSSL_MSG_EX("DecodePrivateKey returned %d\n", ret);
+                WOLFSSL_MSG_EX("DecodePrivateKey returned %d", ret);
                 if (ret != 0) {
                     goto exit_scv;
                 }
             }
 
+            WOLFSSL_MSG_EX("args->sigLen=%d, rem=%d", args->sigLen, rem);
             if (rem < 0 || (int)args->sigLen > rem) {
                 ERROR_OUT(BUFFER_E, exit_scv);
             }
@@ -9225,6 +9278,12 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
                 args->sigAlgo = ssl->buffers.keyType;
             }
         #endif /* HAVE_FALCON */
+        #if defined(HAVE_SPHINCS)
+            else if (ssl->hsType == DYNAMIC_TYPE_SPHINCS) {
+                WOLFSSL_MSG_EX("args->sigAlgo=%d", ssl->buffers.keyType);
+                args->sigAlgo = ssl->buffers.keyType;
+            }
+        #endif /* HAVE_SPHINCS */
         #if defined(HAVE_DILITHIUM)
             else if (ssl->hsType == DYNAMIC_TYPE_DILITHIUM) {
                 args->sigAlgo = ssl->buffers.keyType;
@@ -9391,6 +9450,11 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
                 args->sigLen = FALCON_MAX_SIG_SIZE;
             }
         #endif /* HAVE_FALCON */
+        #if defined(HAVE_SPHINCS)
+            if (ssl->hsType == DYNAMIC_TYPE_SPHINCS) {
+                args->sigLen = SPHINCS_MAX_SIG_SIZE;
+            }
+        #endif /* HAVE_SPHINCS */
         #if defined(HAVE_DILITHIUM)
             if (ssl->hsType == DYNAMIC_TYPE_DILITHIUM) {
                 args->sigLen = DILITHIUM_MAX_SIG_SIZE;
@@ -9509,6 +9573,14 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
                 args->length = (word16)args->sigLen;
             }
         #endif /* HAVE_FALCON */
+        #ifdef HAVE_SPHINCS
+            if (ssl->hsType == DYNAMIC_TYPE_SPHINCS) {
+                ret = wc_sphincs_sign_msg(args->sigData, args->sigDataSz,
+                                          sigOut, &args->sigLen,
+                                          (sphincs_key *)ssl->hsKey, ssl->rng);
+                args->length = (word16)args->sigLen;
+            }
+        #endif /* HAVE_SPHINCS */
         #if defined(HAVE_DILITHIUM) && !defined(WOLFSSL_DILITHIUM_NO_SIGN)
             if (ssl->hsType == DYNAMIC_TYPE_DILITHIUM) {
                 ret = wc_dilithium_sign_ctx_msg(NULL, 0, args->sigData,
@@ -10155,6 +10227,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
                 ret = DecodeTls13SigAlg(input + args->idx,
                         &ssl->options.peerHashAlgo, &ssl->options.peerSigAlgo);
+                WOLFSSL_MSG_EX("peerSigAlgo=%d", ssl->options.peerSigAlgo);
 #ifdef WOLFSSL_DUAL_ALG_CERTS
             }
             else {
@@ -10174,6 +10247,7 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
                 ERROR_OUT(BUFFER_ERROR, exit_dcv);
             }
             ato16(input + args->idx, &args->sz);
+            WOLFSSL_MSG_EX("args->sz=%d, ENCRYPT_LEN=%d", args->sz, ENCRYPT_LEN);
             args->idx += OPAQUE16_LEN;
 
             /* Signature data. */
@@ -10316,6 +10390,33 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
                                ssl->peerFalconKeyPresent;
             }
         #endif
+        #ifdef HAVE_SPHINCS
+            if (ssl->options.peerSigAlgo == sphincs_fast_level1_sa_algo) {
+                WOLFSSL_MSG("Peer sent SPHINCS fast level 1 sig");
+                validSigAlgo = (ssl->peerSphincsKey != NULL) &&
+                               ssl->peerSphincsKeyPresent;
+            } else if (ssl->options.peerSigAlgo == sphincs_fast_level3_sa_algo) {
+                WOLFSSL_MSG("Peer sent SPHINCS fast level 3 sig");
+                validSigAlgo = (ssl->peerSphincsKey != NULL) &&
+                               ssl->peerSphincsKeyPresent;
+            } else if (ssl->options.peerSigAlgo == sphincs_fast_level5_sa_algo) {
+                WOLFSSL_MSG("Peer sent SPHINCS fast level 5 sig");
+                validSigAlgo = (ssl->peerSphincsKey != NULL) &&
+                               ssl->peerSphincsKeyPresent;
+            } else if (ssl->options.peerSigAlgo == sphincs_small_level1_sa_algo) {
+                WOLFSSL_MSG("Peer sent SPHINCS small level 1 sig");
+                validSigAlgo = (ssl->peerSphincsKey != NULL) &&
+                               ssl->peerSphincsKeyPresent;
+            } else if (ssl->options.peerSigAlgo == sphincs_small_level3_sa_algo) {
+                WOLFSSL_MSG("Peer sent SPHINCS small level 3 sig");
+                validSigAlgo = (ssl->peerSphincsKey != NULL) &&
+                               ssl->peerSphincsKeyPresent;
+            } else if (ssl->options.peerSigAlgo == sphincs_small_level5_sa_algo) {
+                WOLFSSL_MSG("Peer sent SPHINCS small level 5 sig");
+                validSigAlgo = (ssl->peerSphincsKey != NULL) &&
+                               ssl->peerSphincsKeyPresent;
+            }
+        #endif /* HAVE_SPHINCS */
         #ifdef HAVE_DILITHIUM
             if (ssl->options.peerSigAlgo == dilithium_level2_sa_algo) {
                 WOLFSSL_MSG("Peer sent Dilithium Level 2 sig");

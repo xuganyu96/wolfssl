@@ -1603,7 +1603,9 @@ enum Misc {
     MAXEARLYDATASZ_LEN = 4,     /* maxEarlyDataSz size in ticket */
 #endif
 #endif
-#if defined(HAVE_FALCON) || defined(HAVE_DILITHIUM)
+#if defined(HAVE_SPHINCS)
+    ENCRYPT_LEN     = 8192,
+#elif defined(HAVE_FALCON) || defined(HAVE_DILITHIUM)
     ENCRYPT_LEN     = 5120,     /* Allow 5k byte buffer for dilithium and
                                  * hybridization with other algs. */
 #else
@@ -6114,6 +6116,10 @@ struct WOLFSSL {
 #ifdef HAVE_FALCON
     falcon_key*     peerFalconKey;
     byte            peerFalconKeyPresent;
+#endif
+#ifdef HAVE_SPHINCS
+    sphincs_key *peerSphincsKey;
+    byte peerSphincsKeyPresent;
 #endif
 #ifdef HAVE_DILITHIUM
     dilithium_key*  peerDilithiumKey;

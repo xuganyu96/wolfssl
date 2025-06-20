@@ -862,7 +862,14 @@ extern const WOLFSSL_ObjectInfo wolfssl_object_info[];
     #endif
 #endif
 
-#if defined(HAVE_FALCON) || defined(HAVE_DILITHIUM)
+#if defined(HAVE_SPHINCS)
+    /* GYX: according to RFC 8446 4.4.3, CertificateVerify's max size is
+     * 2^16 - 1 = 65535
+     * SPHINCS max sig size: 49856
+     * SPHINCS min sig size: 8000
+     */
+    #define WC_MAX_CERT_VERIFY_SZ 8000
+#elif defined(HAVE_FALCON) || defined(HAVE_DILITHIUM)
     #define WC_MAX_CERT_VERIFY_SZ 6000            /* For Dilithium */
 #elif defined(WOLFSSL_CERT_EXT)
     #define WC_MAX_CERT_VERIFY_SZ 2048            /* For larger extensions */

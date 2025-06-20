@@ -19,7 +19,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
-#include "wolfssl/wolfcrypt/sphincs.h"
 #include "wolfssl/wolfcrypt/types.h"
 #include <stdlib.h>
 #include <wolfssl/wolfcrypt/libwolfssl_sources.h>
@@ -16940,6 +16939,64 @@ int ProcessPeerCerts(WOLFSSL* ssl, byte* input, word32* inOutIdx,
                         break;
                     }
                 #endif /* HAVE_FALCON */
+                #ifdef HAVE_SPHINCS
+                    case SPHINCS_FAST_LEVEL1k:
+                    case SPHINCS_FAST_LEVEL3k:
+                    case SPHINCS_FAST_LEVEL5k:
+                    case SPHINCS_SMALL_LEVEL1k:
+                    case SPHINCS_SMALL_LEVEL3k:
+                    case SPHINCS_SMALL_LEVEL5k:
+                    {
+                        int keyRet = 0;
+                        if (ssl->peerSphincsKey == NULL) {
+                            keyRet = AllocKey(ssl, DYNAMIC_TYPE_SPHINCS,
+                                              (void**)&ssl->peerSphincsKey);
+                        } else if (ssl->peerSphincsKeyPresent) {
+                            WOLFSSL_MSG("reusing sphincs key not supported");
+                        }
+
+                        if (keyRet == 0) {
+                            switch (args->dCert->keyOID) {
+                                case SPHINCS_FAST_LEVEL1k:
+                                    keyRet = wc_sphincs_set_level_and_optim(
+                                        ssl->peerSphincsKey, 1, FAST_VARIANT);
+                                    break;
+                                case SPHINCS_FAST_LEVEL3k:
+                                    keyRet = wc_sphincs_set_level_and_optim(
+                                        ssl->peerSphincsKey, 3, FAST_VARIANT);
+                                    break;
+                                case SPHINCS_FAST_LEVEL5k:
+                                    keyRet = wc_sphincs_set_level_and_optim(
+                                        ssl->peerSphincsKey, 5, FAST_VARIANT);
+                                    break;
+                                case SPHINCS_SMALL_LEVEL1k:
+                                    keyRet = wc_sphincs_set_level_and_optim(
+                                        ssl->peerSphincsKey, 1, SMALL_VARIANT);
+                                    break;
+                                case SPHINCS_SMALL_LEVEL3k:
+                                    keyRet = wc_sphincs_set_level_and_optim(
+                                        ssl->peerSphincsKey, 3, SMALL_VARIANT);
+                                    break;
+                                case SPHINCS_SMALL_LEVEL5k:
+                                    keyRet = wc_sphincs_set_level_and_optim(
+                                        ssl->peerSphincsKey, 5, SMALL_VARIANT);
+                                    break;
+                            }
+                        }
+
+                        if (keyRet != 0
+                            || wc_sphincs_import_public(args->dCert->publicKey,
+                                                        args->dCert->pubKeySize,
+                                                        ssl->peerSphincsKey) != 0) {
+                            ret = PEER_KEY_ERROR;
+                            WOLFSSL_ERROR_VERBOSE(ret);
+                        } else {
+                            WOLFSSL_MSG("Peer public key is SPHINCS");
+                            ssl->peerSphincsKeyPresent = 1;
+                        }
+                        break;
+                    }
+                #endif
                 #if defined(HAVE_DILITHIUM) && \
                     !defined(WOLFSSL_DILITHIUM_NO_VERIFY)
                     case ML_DSA_LEVEL2k:
