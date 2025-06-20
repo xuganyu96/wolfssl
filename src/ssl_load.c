@@ -944,29 +944,28 @@ static int ProcessBufferTryDecodeSphincs(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
 
     ret = wc_sphincs_init(key);
     if (ret == 0) {
-        /* GYX: this decoding method is probably incorrect */
         ret = wc_Sphincs_DerToPrivateKey(der->buffer, &idx, key, der->length);
         if (ret == 0) {
             ret = wc_sphincs_get_oid_sum(key, &keyFormatTemp);
             if (ret == 0) {
                 if (keyFormatTemp == SPHINCS_FAST_LEVEL1k) {
                     keyTypeTemp = sphincs_fast_level1_sa_algo;
-                    keySizeTemp = SPHINCS_LEVEL1_PRV_KEY_SIZE;
+                    keySizeTemp = SPHINCS_LEVEL1_KEY_SIZE;
                 } else if (keyFormatTemp == SPHINCS_FAST_LEVEL3k) {
                     keyTypeTemp = sphincs_fast_level3_sa_algo;
-                    keySizeTemp = SPHINCS_LEVEL3_PRV_KEY_SIZE;
+                    keySizeTemp = SPHINCS_LEVEL3_KEY_SIZE;
                 } else if (keyFormatTemp == SPHINCS_FAST_LEVEL5k) {
                     keyTypeTemp = sphincs_fast_level5_sa_algo;
-                    keySizeTemp = SPHINCS_LEVEL5_PRV_KEY_SIZE;
+                    keySizeTemp = SPHINCS_LEVEL5_KEY_SIZE;
                 } else if (keyFormatTemp == SPHINCS_SMALL_LEVEL1k) {
                     keyTypeTemp = sphincs_small_level1_sa_algo;
-                    keySizeTemp = SPHINCS_LEVEL1_PRV_KEY_SIZE;
+                    keySizeTemp = SPHINCS_LEVEL1_KEY_SIZE;
                 } else if (keyFormatTemp == SPHINCS_SMALL_LEVEL3k) {
                     keyTypeTemp = sphincs_small_level3_sa_algo;
-                    keySizeTemp = SPHINCS_LEVEL3_PRV_KEY_SIZE;
+                    keySizeTemp = SPHINCS_LEVEL3_KEY_SIZE;
                 } else if (keyFormatTemp == SPHINCS_SMALL_LEVEL5k) {
                     keyTypeTemp = sphincs_small_level5_sa_algo;
-                    keySizeTemp = SPHINCS_LEVEL5_PRV_KEY_SIZE;
+                    keySizeTemp = SPHINCS_LEVEL5_KEY_SIZE;
                 } else {
                     ret = ALGO_ID_E;
                 }
@@ -974,6 +973,7 @@ static int ProcessBufferTryDecodeSphincs(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
             if (ret == 0) {
                 *keyFormat = keyFormatTemp;
                 *keyType = keyTypeTemp;
+                WOLFSSL_MSG_EX("GYX: keySz=%d", keySizeTemp);
                 *keySize = keySizeTemp;
             }
         } else if (*keyFormat == 0) {
@@ -1619,6 +1619,13 @@ static int ProcessBufferPrivateKey(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
     if (ret == 0) {
         /* Try to decode the DER data. */
         ret = ProcessBufferTryDecode(ctx, ssl, der, &algId, heap, type);
+        if (ssl) {
+            WOLFSSL_MSG_EX("ssl->buffers.keyType=%d, ssl->buffers.keySz=%d",
+                           ssl->buffers.keyType, ssl->buffers.key->length);
+        } else {
+            WOLFSSL_MSG_EX("ctx->PrivateKeyType=%d, ctx->privateKeySz=%d",
+                           ctx->privateKeyType, ctx->privateKeySz);
+        }
     }
 
 #if defined(WOLFSSL_ENCRYPTED_KEYS) && !defined(NO_PWDBASED)

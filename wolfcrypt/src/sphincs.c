@@ -1218,7 +1218,7 @@ static int wc_Sphincs_PrivateKeyOnlySize(sphincs_key *key, word32 *len) {
     return 0;
 }
 
-static int import_private_raw(const byte *in, word32 len, sphincs_key *key) {
+int wc_sphincs_import_private_raw(const byte *in, word32 len, sphincs_key *key) {
     int ret = 0;
     word32 privKeyLen = 0;
     if ((key == NULL) || (in == NULL)) {
@@ -1263,10 +1263,19 @@ int wc_Sphincs_DerToPrivateKey(const byte *input, word32 *inOutIdx,
             /* level not set by caller, decode from DER */
             keyType = ANONk;
             WOLFSSL_MSG_EX("keytype is ANONk");
+        } else if (key->level == 1 && key->optim == FAST_VARIANT) {
+            keyType = SPHINCS_FAST_LEVEL1k;
+        } else if (key->level == 3 && key->optim == FAST_VARIANT) {
+            keyType = SPHINCS_FAST_LEVEL3k;
+        } else if (key->level == 5 && key->optim == FAST_VARIANT) {
+            keyType = SPHINCS_FAST_LEVEL5k;
+        } else if (key->level == 1 && key->optim == SMALL_VARIANT) {
+            keyType = SPHINCS_SMALL_LEVEL1k;
+        } else if (key->level == 3 && key->optim == SMALL_VARIANT) {
+            keyType = SPHINCS_SMALL_LEVEL3k;
+        } else if (key->level == 5 && key->optim == SMALL_VARIANT) {
+            keyType = SPHINCS_SMALL_LEVEL5k;
         } else {
-            /* TODO: need to cover the case where key level is set by caller
-             * and the DER buffer needs to be parsed with expectation
-             */
             ret = BAD_FUNC_ARG;
         }
     }
@@ -1284,7 +1293,7 @@ int wc_Sphincs_DerToPrivateKey(const byte *input, word32 *inOutIdx,
 
     if (ret == 0) {
         /* copy private key to the key object */
-        ret = import_private_raw(privKey, privKeyLen, key);
+        ret = wc_sphincs_import_private_raw(privKey, privKeyLen, key);
         WOLFSSL_MSG_EX("Sphincs key level=%d, optim=%d, privKeyLen=%d", level,
                        optim, privKeyLen);
     }

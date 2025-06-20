@@ -19,7 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
+#include "wolfssl/wolfcrypt/sphincs.h"
 #include "wolfssl/wolfcrypt/types.h"
+#include <stdlib.h>
 #include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 /*
@@ -8232,6 +8234,11 @@ void FreeKey(WOLFSSL* ssl, int type, void** pKey)
                 wc_falcon_free((falcon_key*)*pKey);
                 break;
         #endif /* HAVE_FALCON */
+        #if defined(HAVE_SPHINCS)
+            case DYNAMIC_TYPE_SPHINCS:
+                wc_sphincs_free((sphincs_key*)*pKey);
+                break;
+        #endif /* HAVE_SPHINCS */
         #if defined(HAVE_DILITHIUM)
             case DYNAMIC_TYPE_DILITHIUM:
                 wc_dilithium_free((dilithium_key*)*pKey);
@@ -8317,6 +8324,11 @@ int AllocKey(WOLFSSL* ssl, int type, void** pKey)
             sz = sizeof(falcon_key);
             break;
     #endif /* HAVE_FALCON */
+    #if defined(HAVE_SPHINCS)
+        case DYNAMIC_TYPE_SPHINCS:
+            sz = sizeof(sphincs_key);
+            break;
+    #endif /* HAVE_SPHINCS */
     #if defined(HAVE_DILITHIUM)
         case DYNAMIC_TYPE_DILITHIUM:
             sz = sizeof(dilithium_key);
@@ -8399,6 +8411,12 @@ int AllocKey(WOLFSSL* ssl, int type, void** pKey)
             ret = 0;
             break;
     #endif /* HAVE_FALCON */
+    #if defined(HAVE_SPHINCS)
+        case DYNAMIC_TYPE_SPHINCS:
+            wc_sphincs_init((sphincs_key*)*pKey);
+            ret = 0;
+            break;
+    #endif /* HAVE_SPHINCS */
     #if defined(HAVE_DILITHIUM)
         case DYNAMIC_TYPE_DILITHIUM:
             wc_dilithium_init_ex((dilithium_key*)*pKey, ssl->heap, ssl->devId);
@@ -30245,6 +30263,72 @@ int DecodePrivateKey(WOLFSSL *ssl, word32* length)
         }
     }
 #endif /* HAVE_FALCON */
+#ifdef HAVE_SPHINCS
+    #if !defined(NO_RSA) || defined(HAVE_ECC)
+        FreeKey(ssl, ssl->hsType, (void**)&ssl->hsKey);
+    #endif
+
+    if (ssl->buffers.keyType == sphincs_fast_level1_sa_algo
+        || ssl->buffers.keyType == sphincs_fast_level3_sa_algo
+        || ssl->buffers.keyType == sphincs_fast_level5_sa_algo
+        || ssl->buffers.keyType == sphincs_small_level1_sa_algo
+        || ssl->buffers.keyType == sphincs_small_level3_sa_algo
+        || ssl->buffers.keyType == sphincs_small_level5_sa_algo
+        || ssl->buffers.keyType == 0) {
+        ssl->hsType = DYNAMIC_TYPE_SPHINCS;
+        ret = AllocKey(ssl, ssl->hsType, &ssl->hsKey);
+        if (ret != 0) {
+            goto exit_dpk;
+        }
+        switch (ssl->buffers.keyType) {
+            case sphincs_fast_level1_sa_algo:
+                ret = wc_sphincs_set_level_and_optim((sphincs_key *)ssl->hsKey,
+                                                     1, FAST_VARIANT);
+                break;
+            case sphincs_fast_level3_sa_algo:
+                ret = wc_sphincs_set_level_and_optim((sphincs_key *)ssl->hsKey,
+                                                     3, FAST_VARIANT);
+                break;
+            case sphincs_fast_level5_sa_algo:
+                ret = wc_sphincs_set_level_and_optim((sphincs_key *)ssl->hsKey,
+                                                     5, FAST_VARIANT);
+                break;
+            case sphincs_small_level1_sa_algo:
+                ret = wc_sphincs_set_level_and_optim((sphincs_key *)ssl->hsKey,
+                                                     1, SMALL_VARIANT);
+                break;
+            case sphincs_small_level3_sa_algo:
+                ret = wc_sphincs_set_level_and_optim((sphincs_key *)ssl->hsKey,
+                                                     3, SMALL_VARIANT);
+                break;
+            case sphincs_small_level5_sa_algo:
+                ret = wc_sphincs_set_level_and_optim((sphincs_key *)ssl->hsKey,
+                                                     5, SMALL_VARIANT);
+                break;
+            case 0:
+                WOLFSSL_MSG("GYX: unhandled edge case in DecodePrivateKey");
+                ret = NOT_COMPILED_IN;
+                break;
+            default:
+                ret = ALGO_ID_E;
+                break;
+        }
+        if (ret != 0) {
+            goto exit_dpk;
+        }
+        WOLFSSL_MSG("Trying SPHINCS private key");
+        idx = 0;
+        ret = wc_Sphincs_DerToPrivateKey(ssl->buffers.key->buffer, &idx,
+                                         (sphincs_key *)ssl->hsKey,
+                                         ssl->buffers.key->length);
+        if (ret == 0) {
+            WOLFSSL_MSG("Using SPHINCS+ private key");
+            /* GYX: skip minimal key size check for now */
+            *length = wc_sphincs_sig_size((sphincs_key *)ssl->hsKey);
+            goto exit_dpk;
+        }
+    }
+#endif /* HAVE_SPHINCS */
 #if defined(HAVE_DILITHIUM) && !defined(WOLFSSL_DILITHIUM_NO_SIGN) && \
     !defined(WOLFSSL_DILITHIUM_NO_ASN1)
     #if !defined(NO_RSA) || defined(HAVE_ECC)

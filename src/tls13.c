@@ -9182,8 +9182,10 @@ static int SendTls13CertificateVerify(WOLFSSL* ssl)
                 }
 #endif /* WOLFSSL_DUAL_ALG_CERTS */
                 ret = DecodePrivateKey(ssl, &args->sigLen);
-                if (ret != 0)
+                WOLFSSL_MSG_EX("DecodePrivateKey returned %d\n", ret);
+                if (ret != 0) {
                     goto exit_scv;
+                }
             }
 
             if (rem < 0 || (int)args->sigLen > rem) {
