@@ -10001,9 +10001,9 @@ static int TLSX_KeyShare_ProcessOtMlKemClient(WOLFSSL* ssl,
     }
     if (ret == 0) {
         WOLFSSL_MSG("OT-ML-KEM Ciphertext");
-        WOLFSSL_BUFFER(keyShareEntry->ke, ctLen);
+        WOLFSSL_BUFFER(keyShareEntry->ke, MIN(32, ctLen));
         WOLFSSL_MSG("OT-ML-KEM SharedSecret");
-        WOLFSSL_BUFFER(ssOutput, ssLen);
+        WOLFSSL_BUFFER(ssOutput, MIN(32, ssLen));
         *ssOutSz = ssLen;
     }
 
@@ -10885,9 +10885,9 @@ static int TLSX_KeyShare_HandleOtMlKemKeyServer(WOLFSSL *ssl, KeyShareEntry *kse
     if (ret == 0) {
         ret = wc_OtMlKemKey_Encapsulate(&kem, ciphertext, ssOutput, ssl->rng);
         WOLFSSL_MSG("OT-ML-KEM Ciphertext");
-        WOLFSSL_BUFFER(ciphertext, ctLen);
+        WOLFSSL_BUFFER(ciphertext, MIN(32, ctLen));
         WOLFSSL_MSG("OT-ML-KEM SharedSecret");
-        WOLFSSL_BUFFER(ssOutput, ssLen);
+        WOLFSSL_BUFFER(ssOutput, MIN(32, ssLen));
     }
     if (ret == 0) {
         XFREE(kse->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
