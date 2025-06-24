@@ -29220,7 +29220,7 @@ static int MatchSigAlgo(WOLFSSL* ssl, int sigAlgo)
 #endif
     /* Signature algorithm matches certificate. */
     int is_match = sigAlgo == ssl->options.sigAlgo;
-    WOLFSSL_LEAVE("MatchSigAlgo", is_match);
+    // WOLFSSL_LEAVE("MatchSigAlgo", is_match);
     return is_match;
 }
 
