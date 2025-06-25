@@ -4895,36 +4895,70 @@ typedef struct ThreadCrypt {
 #endif
 
 #ifdef WOLFSSL_HAVE_TELEMETRY
-/* GYX: a collection of client-side telemetries
- * For now I only care about "time of key exchange" and "time of auth"
- * but we can definitely do better
- *
- * All timestamps are in microseconds
+/* A collection of timestamps used for computing telemetries
  */
 struct Telemetry {
     /* Start of SendTls13ClientHello */
     word64 ch_start_ts;
-    byte ch_start_set;
+    /* Start of key_share's KeyGen */
+    word64 keygen_start_ts;
+    /* End of key_share's KeyGen */
+    word64 keygen_done_ts;
     /* End of SendTls13ClientHello */
     word64 ch_sent_ts;
-    byte ch_sent_set;
     /* Start of DoTls13ServerHello */
     word64 sh_start_ts;
-    byte sh_start_set;
+    /* Start of key_share's decap/agree */
+    word64 decap_start_ts;
+    /* End of key_share's decap/agree */
+    word64 decap_done_ts;
     /* End of DoTls13ServerHello */
     word64 sh_done_ts;
-    byte sh_done_set;
     /* Start of DoTls13Certificate */
     word64 cert_start_ts;
-    byte cert_start_set;
+    /* Start of verifying signature or encapsulating KemCiphertext */
+    word64 auth_start_ts;
+    /* End of verifying signature or encapsulating KemCiphertext */
+    word64 auth_done_ts;
     /* Handshake is finished */
     word64 hs_done_ts;
-    byte hs_done_set;
 };
 
+/* Set everything to zero. A zero timestamp indicates that the timestamp has
+ * not be set.
+ */
 WOLFSSL_API void wolfSSL_reset_telemetry(WOLFSSL *ssl);
+/* Time callback (uint64_t (*time_cb)) is a function that takes no argument and
+ * returns some representation of the "current time" in microseconds; the
+ * absolute value is not as important as the fact that the difference between
+ * two callback outputs encode the number of microseconds passed between the
+ * two calls.
+ */
 WOLFSSL_API int wolfSSL_set_time_cb(WOLFSSL *ssl, uint64_t (*time_cb)(void));
 WOLFSSL_API int wolfSSL_export_telemetry(WOLFSSL *ssl, Telemetry *tel);
+/* Compute durations.
+ *
+ * Return 0 all telemetry timestamps have been set and are sensible (done is
+ * later than start), or -1 otherwise.
+ *
+ * Parameters:
+ *   ssl               - The WOLFSSL session containing telemetry data.
+ *   kex_cpu_dur       - Output: key exchange CPU time.
+ *   kex_crypto_cpu_dur- Output: key exchange CPU time on cryptographic ops.
+ *   kex_dur           - Output: total key exchange phase duration.
+ *   auth_crypto_dur   - Output: crypto time for authentication.
+ *   auth_dur          - Output: total authentication duration.
+ *   hs_dur            - Output: complete TLS handshake duration.
+ */
+WOLFSSL_API int wolfSSL_telemetry_ts_to_durs(WOLFSSL *ssl,
+                                             uint64_t *kex_cpu_dur,
+                                             uint64_t *kex_crypto_cpu_dur,
+                                             uint64_t *kex_dur,
+                                             uint64_t *auth_crypto_dur,
+                                             uint64_t *auth_dur,
+                                             uint64_t *hs_dur);
+#define WOLFSSL_TELEMETRY_CSV_HEADER \
+    "kex_cpu_dur,kex_crypto_cpu_dur,kex_dur,auth_crypto_dur,auth_dur,hs_dur"
 #endif
 
 /* buffers for struct WOLFSSL */
@@ -6458,6 +6492,7 @@ struct WOLFSSL {
 #endif /* WOLFSSL_SYS_CRYPTO_POLICY */
 #ifdef WOLFSSL_HAVE_TELEMETRY
     Telemetry tel;
+    /* callback function, returns some microsecond reading */
     uint64_t (*tel_time_us)(void);
 #endif
 };

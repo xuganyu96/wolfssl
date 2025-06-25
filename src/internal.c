@@ -15370,7 +15370,6 @@ static int AdjustCMForParams(WOLFSSL* ssl)
 #endif
 
 #ifdef WOLFSSL_HAVE_TELEMETRY
-/* set all telemetry flags to false */
 void wolfSSL_reset_telemetry(WOLFSSL *ssl) {
     if (ssl) {
         XMEMSET(&ssl->tel, 0, sizeof(Telemetry));
@@ -15391,6 +15390,78 @@ int wolfSSL_set_time_cb(WOLFSSL *ssl, uint64_t (*time_cb)(void)) {
         return 0;
     }
     return BAD_FUNC_ARG;
+}
+
+/* Return 1 iff both inputs are non-zero and to is greater than from
+ */
+static int validate_tel_ts(uint64_t from, uint64_t to) {
+    return ((from != 0) && (to != 0) && (to > from));
+}
+
+int wolfSSL_telemetry_ts_to_durs(WOLFSSL *ssl, uint64_t *kex_cpu_dur,
+                                 uint64_t *kex_crypto_cpu_dur,
+                                 uint64_t *kex_dur, uint64_t *auth_crypto_dur,
+                                 uint64_t *auth_dur, uint64_t *hs_dur) {
+    WOLFSSL_MSG_EX(
+        "Telemetry timestamps: ch_start_ts=%llu, keygen_start_ts=%llu, "
+        "keygen_done_ts=%llu, ch_sent_ts=%llu, sh_start_ts=%llu, "
+        "decap_start_ts=%llu, decap_done_ts=%llu, sh_done_ts=%llu, "
+        "cert_start_ts=%llu, auth_start_ts=%llu, auth_done_ts=%llu, "
+        "hs_done_ts=%llu",
+        ssl->tel.ch_start_ts,
+        ssl->tel.keygen_start_ts,
+        ssl->tel.keygen_done_ts,
+        ssl->tel.ch_sent_ts,
+        ssl->tel.sh_start_ts,
+        ssl->tel.decap_start_ts,
+        ssl->tel.decap_done_ts,
+        ssl->tel.sh_done_ts,
+        ssl->tel.cert_start_ts,
+        ssl->tel.auth_start_ts,
+        ssl->tel.auth_done_ts,
+        ssl->tel.hs_done_ts
+    );
+    if (validate_tel_ts(ssl->tel.ch_start_ts, ssl->tel.ch_sent_ts)
+        && validate_tel_ts(ssl->tel.sh_start_ts, ssl->tel.sh_done_ts)) {
+        *kex_cpu_dur = (ssl->tel.ch_sent_ts - ssl->tel.ch_start_ts)
+            + (ssl->tel.sh_done_ts - ssl->tel.sh_start_ts);
+    } else {
+        WOLFSSL_MSG("kex_cpu_dur is bad");
+        return -1;
+    }
+    if (validate_tel_ts(ssl->tel.keygen_start_ts, ssl->tel.keygen_done_ts)
+        && validate_tel_ts(ssl->tel.decap_start_ts, ssl->tel.decap_done_ts)) {
+        *kex_crypto_cpu_dur = (ssl->tel.keygen_done_ts - ssl->tel.keygen_start_ts)
+            + (ssl->tel.decap_done_ts - ssl->tel.decap_start_ts);
+    } else {
+        WOLFSSL_MSG("kex_crypto_cpu_dur is bad");
+        return -1;
+    }
+    if (validate_tel_ts(ssl->tel.ch_start_ts, ssl->tel.sh_done_ts)) {
+        *kex_dur = ssl->tel.sh_done_ts - ssl->tel.ch_start_ts;
+    } else {
+        WOLFSSL_MSG("kex_dur is bad");
+        return -1;
+    }
+    if (validate_tel_ts(ssl->tel.auth_start_ts, ssl->tel.auth_done_ts)) {
+        *auth_crypto_dur = ssl->tel.auth_done_ts - ssl->tel.auth_start_ts;
+    } else {
+        WOLFSSL_MSG("auth_crypto_dur is bad");
+        return -1;
+    }
+    if (validate_tel_ts(ssl->tel.cert_start_ts, ssl->tel.hs_done_ts)) {
+        *auth_dur = ssl->tel.hs_done_ts - ssl->tel.cert_start_ts;
+    } else {
+        WOLFSSL_MSG("auth_dur is bad");
+        return -1;
+    }
+    if (validate_tel_ts(ssl->tel.ch_start_ts, ssl->tel.hs_done_ts)) {
+        *hs_dur = ssl->tel.hs_done_ts - ssl->tel.ch_start_ts;
+    } else {
+        WOLFSSL_MSG("hs_dur is bad");
+        return -1;
+    }
+    return 0;
 }
 #endif
 

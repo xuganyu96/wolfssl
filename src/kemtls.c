@@ -490,6 +490,17 @@ int DoKemTlsClientKemCiphertext(WOLFSSL *ssl, byte *input, word32 *inOutIdx,
  */
 int handle_PQCleanMlKemKey_cert(WOLFSSL *ssl, DecodedCert *cert) {
     WOLFSSL_ENTER("handle_PQCleanMlKemKey_cert");
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    /* With KEMTLS, the crypto operation in authentication is "encapsulating
+     * authentication secret. With this implementation, this encapsulation is
+     * done eagerly when processing Certificate, not when constructing
+     * KemCiphertext
+     */
+    if (ssl->tel_time_us != NULL) {
+        WOLFSSL_MSG("auth_start is set");
+        ssl->tel.auth_start_ts = ssl->tel_time_us();
+    }
+#endif /* WOLFSSL_HAVE_TELEMETRY */
     int ret, level;
 
     if (ssl->peerMlKemKey == NULL) {
@@ -565,6 +576,12 @@ int handle_PQCleanMlKemKey_cert(WOLFSSL *ssl, DecodedCert *cert) {
         ssl->peerMlKemKeyPresent = 1;
         ssl->options.haveMlKemAuth = 1;
     }
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        WOLFSSL_MSG("auth_done is set");
+        ssl->tel.auth_done_ts = ssl->tel_time_us();
+    }
+#endif /* WOLFSSL_HAVE_TELEMETRY */
     WOLFSSL_LEAVE("handle_PQCleanMlKemKey_cert", ret);
     return ret;
 }
@@ -573,6 +590,17 @@ int handle_HqcKey_cert(WOLFSSL *ssl, DecodedCert *cert) {
     WOLFSSL_ENTER("handle_HqcKey_cert");
     int ret, level;
 
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    /* With KEMTLS, the crypto operation in authentication is "encapsulating
+     * authentication secret. With this implementation, this encapsulation is
+     * done eagerly when processing Certificate, not when constructing
+     * KemCiphertext
+     */
+    if (ssl->tel_time_us != NULL) {
+        WOLFSSL_MSG("auth_start is set");
+        ssl->tel.auth_start_ts = ssl->tel_time_us();
+    }
+#endif /* WOLFSSL_HAVE_TELEMETRY */
     if (ssl->peerHqcKey == NULL) {
         ret = AllocKey(ssl, DYNAMIC_TYPE_HQC, (void **)&ssl->peerHqcKey);
     } else if (ssl->peerHqcKeyPresent) {
@@ -644,6 +672,12 @@ int handle_HqcKey_cert(WOLFSSL *ssl, DecodedCert *cert) {
         ssl->peerHqcKeyPresent = 1;
         ssl->options.haveHqcAuth = 1;
     }
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        WOLFSSL_MSG("auth_done is set");
+        ssl->tel.auth_done_ts = ssl->tel_time_us();
+    }
+#endif /* WOLFSSL_HAVE_TELEMETRY */
     WOLFSSL_LEAVE("handle_HqcKey_cert", ret);
     return ret;
 }

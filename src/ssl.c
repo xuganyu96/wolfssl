@@ -10602,7 +10602,6 @@ int wolfSSL_DTLS_SetCookieSecret(WOLFSSL* ssl,
 #ifdef WOLFSSL_HAVE_TELEMETRY
             if (ssl->tel_time_us != NULL) {
                 ssl->tel.hs_done_ts = ssl->tel_time_us();
-                ssl->tel.hs_done_set = 1;
             }
 #endif
             return WOLFSSL_SUCCESS;

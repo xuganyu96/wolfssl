@@ -9080,6 +9080,12 @@ static int TLSX_KeyShare_GenPqcHybridKeyClient(WOLFSSL *ssl, KeyShareEntry* kse)
  */
 int TLSX_KeyShare_GenKey(WOLFSSL *ssl, KeyShareEntry *kse)
 {
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        WOLFSSL_MSG("keygen_start is set");
+        ssl->tel.keygen_start_ts = ssl->tel_time_us();
+    }
+#endif
     int ret;
     /* Named FFDHE groups have a bit set to identify them. */
     if (WOLFSSL_NAMED_GROUP_IS_FFDHE(kse->group))
@@ -9098,6 +9104,12 @@ int TLSX_KeyShare_GenKey(WOLFSSL *ssl, KeyShareEntry *kse)
         ret = TLSX_KeyShare_GenEccKey(ssl, kse);
 #ifdef WOLFSSL_ASYNC_CRYPT
     kse->lastRet = ret;
+#endif
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        WOLFSSL_MSG("keygen_done is set");
+        ssl->tel.keygen_done_ts = ssl->tel_time_us();
+    }
 #endif
     return ret;
 }
@@ -10400,6 +10412,12 @@ static int TLSX_KeyShare_Process(WOLFSSL* ssl, KeyShareEntry* keyShareEntry)
     if (ssl->arrays->preMasterSz == 0)
         ssl->arrays->preMasterSz = ENCRYPT_LEN;
 
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        WOLFSSL_MSG("decap_start is set");
+        ssl->tel.decap_start_ts = ssl->tel_time_us();
+    }
+#endif /* WOLFSSL_HAVE_TELEMETRY */
     /* Use Key Share Data from server. */
     if (WOLFSSL_NAMED_GROUP_IS_FFDHE(keyShareEntry->group))
         ret = TLSX_KeyShare_ProcessDh(ssl, keyShareEntry);
@@ -10426,6 +10444,12 @@ static int TLSX_KeyShare_Process(WOLFSSL* ssl, KeyShareEntry* keyShareEntry)
     keyShareEntry->lastRet = ret;
 #endif
 
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        WOLFSSL_MSG("decap_done is set");
+        ssl->tel.decap_done_ts = ssl->tel_time_us();
+    }
+#endif /* WOLFSSL_HAVE_TELEMETRY */
     return ret;
 }
 

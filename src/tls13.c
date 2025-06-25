@@ -4279,7 +4279,6 @@ int SendTls13ClientHello(WOLFSSL* ssl)
 #ifdef WOLFSSL_HAVE_TELEMETRY
     if (ssl->tel_time_us != NULL) {
         ssl->tel.ch_start_ts = ssl->tel_time_us();
-        ssl->tel.ch_start_set = 1;
     }
 #endif
 
@@ -4741,7 +4740,6 @@ int SendTls13ClientHello(WOLFSSL* ssl)
 #ifdef WOLFSSL_HAVE_TELEMETRY
     if (ssl->tel_time_us != NULL) {
         ssl->tel.ch_sent_ts = ssl->tel_time_us();
-        ssl->tel.ch_sent_set = 1;
     }
 #endif
     WOLFSSL_LEAVE("SendTls13ClientHello", ret);
@@ -5053,7 +5051,6 @@ int DoTls13ServerHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
 #ifdef WOLFSSL_HAVE_TELEMETRY
     if (ssl->tel_time_us != NULL) {
         ssl->tel.sh_start_ts = ssl->tel_time_us();
-        ssl->tel.sh_start_set = 1;
     }
 #endif
 
@@ -5432,10 +5429,10 @@ int DoTls13ServerHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
 #endif
 
 #ifdef WOLFSSL_HAVE_TELEMETRY
-    if (ssl->tel_time_us != NULL) {
-        ssl->tel.sh_done_ts = ssl->tel_time_us();
-        ssl->tel.sh_done_set = 1;
-    }
+        /* GYX: Not sure if this is even called */
+        if (ssl->tel_time_us != NULL) {
+            ssl->tel.sh_done_ts = ssl->tel_time_us();
+        }
 #endif
         WOLFSSL_LEAVE("DoTls13ServerHello", ret);
 
@@ -5618,9 +5615,9 @@ int DoTls13ServerHello(WOLFSSL* ssl, const byte* input, word32* inOutIdx,
 #endif
 
 #ifdef WOLFSSL_HAVE_TELEMETRY
+    /* GYX: this is probably the right place to call */
     if (ssl->tel_time_us != NULL) {
         ssl->tel.sh_done_ts = ssl->tel_time_us();
-        ssl->tel.sh_done_set = 1;
     }
 #endif
     WOLFSSL_LEAVE("DoTls13ServerHello", ret);
@@ -9924,7 +9921,6 @@ static int DoTls13Certificate(WOLFSSL* ssl, byte* input, word32* inOutIdx,
 #ifdef WOLFSSL_HAVE_TELEMETRY
     if (ssl->tel_time_us != NULL) {
         ssl->tel.cert_start_ts = ssl->tel_time_us();
-        ssl->tel.cert_start_set = 1;
     }
 #endif
 
@@ -10568,6 +10564,12 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
 
         case TLS_ASYNC_DO:
         {
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        WOLFSSL_MSG("auth_start is set");
+        ssl->tel.auth_start_ts = ssl->tel_time_us();
+    }
+#endif /* WOLFSSL_HAVE_TELEMETRY */
             sig = input + args->idx;
         #ifdef WOLFSSL_DUAL_ALG_CERTS
             if (ssl->sigSpec != NULL &&
@@ -10877,6 +10879,12 @@ static int DoTls13CertificateVerify(WOLFSSL* ssl, byte* input,
             }
         #endif /* WOLFSSL_DUAL_ALG_CERTS */
 
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    if (ssl->tel_time_us != NULL) {
+        WOLFSSL_MSG("auth_done is set");
+        ssl->tel.auth_done_ts = ssl->tel_time_us();
+    }
+#endif /* WOLFSSL_HAVE_TELEMETRY */
             /* Advance state and proceed */
             ssl->options.asyncState = TLS_ASYNC_VERIFY;
         } /* case TLS_ASYNC_DO */
@@ -12828,9 +12836,9 @@ int DoTls13HandShakeMsgType(WOLFSSL* ssl, byte* input, word32* inOutIdx,
         WOLFSSL_MSG("processing server hello");
         ret = DoTls13ServerHello(ssl, input, inOutIdx, size, &type);
 #ifdef WOLFSSL_HAVE_TELEMETRY
+        /* GYX: this feels redundant but oh well */
         if (ret == 0 && ssl->tel_time_us != NULL) {
             ssl->tel.sh_done_ts = ssl->tel_time_us();
-            ssl->tel.sh_done_set = 1;
         }
 #endif
 
@@ -13555,7 +13563,6 @@ int wolfSSL_connect_TLSv13(WOLFSSL* ssl)
 #ifdef WOLFSSL_HAVE_TELEMETRY
                     if (ssl->tel_time_us != NULL) {
                         ssl->tel.hs_done_ts = ssl->tel_time_us();
-                        ssl->tel.hs_done_set = 1;
                     }
 #endif
                     return WOLFSSL_SUCCESS;
@@ -13715,7 +13722,6 @@ int wolfSSL_connect_TLSv13(WOLFSSL* ssl)
 #ifdef WOLFSSL_HAVE_TELEMETRY
             if (ssl->tel_time_us != NULL) {
                 ssl->tel.hs_done_ts = ssl->tel_time_us();
-                ssl->tel.hs_done_set = 1;
             }
 #endif
             return WOLFSSL_SUCCESS;
