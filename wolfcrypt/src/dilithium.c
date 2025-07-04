@@ -8568,11 +8568,11 @@ int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
                 sig, sigLen, msg, msgLen, key->p);
             break;
         case 3:
-            ret = PQCLEAN_MLDSA44_CLEAN_crypto_sign_verify(
+            ret = PQCLEAN_MLDSA65_CLEAN_crypto_sign_verify(
                 sig, sigLen, msg, msgLen, key->p);
             break;
         case 5:
-            ret = PQCLEAN_MLDSA44_CLEAN_crypto_sign_verify(
+            ret = PQCLEAN_MLDSA87_CLEAN_crypto_sign_verify(
                 sig, sigLen, msg, msgLen, key->p);
             break;
         default:
