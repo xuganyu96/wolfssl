@@ -15401,7 +15401,7 @@ static int validate_tel_ts(uint64_t from, uint64_t to) {
 int wolfSSL_telemetry_ts_to_durs(WOLFSSL *ssl, uint64_t *kex_cpu_dur,
                                  uint64_t *kex_crypto_cpu_dur,
                                  uint64_t *kex_dur, uint64_t *auth_crypto_dur,
-                                 uint64_t *auth_dur, uint64_t *hs_dur) {
+                                 uint64_t *auth_dur, uint64_t *hs_dur, uint64_t *t2capp) {
     WOLFSSL_MSG_EX(
         "Telemetry timestamps: ch_start_ts=%llu, keygen_start_ts=%llu, "
         "keygen_done_ts=%llu, ch_sent_ts=%llu, sh_start_ts=%llu, "
@@ -15459,6 +15459,12 @@ int wolfSSL_telemetry_ts_to_durs(WOLFSSL *ssl, uint64_t *kex_cpu_dur,
         *hs_dur = ssl->tel.hs_done_ts - ssl->tel.ch_start_ts;
     } else {
         WOLFSSL_MSG("hs_dur is bad");
+        return -1;
+    }
+    if (validate_tel_ts(ssl->tel.ch_start_ts, ssl->tel.c_appdata_start_ts)) {
+        *t2capp = ssl->tel.c_appdata_start_ts - ssl->tel.ch_start_ts;
+    } else {
+        WOLFSSL_MSG("t2capp is bad");
         return -1;
     }
     return 0;

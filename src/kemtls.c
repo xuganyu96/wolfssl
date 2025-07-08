@@ -324,6 +324,16 @@ int connect_KEMTLS(WOLFSSL *ssl) {
     }
     ssl->options.connectState = CLIENT_KEM_FINISHED_SENT;
     WOLFSSL_MSG("connectState: CLIENT_KEM_FINISHED_SENT");
+#ifdef WOLFSSL_HAVE_TELEMETRY
+    /* In KEMTLS, client can start sending application after sending its own
+     * Finished, but before receiving server's Finished. Application data sent
+     * before receiving server's Finished is implicitly authenticated
+     */
+    if (ssl->tel_time_us != NULL) {
+        WOLFSSL_MSG("c_cappdata_start_ts is set");
+        ssl->tel.c_appdata_start_ts = ssl->tel_time_us();
+    }
+#endif
 
     /* handle server's Finished */
     while (ssl->options.serverState < SERVER_KEM_FINISHED_DONE) {

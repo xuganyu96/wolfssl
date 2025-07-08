@@ -4920,6 +4920,12 @@ struct Telemetry {
     word64 auth_start_ts;
     /* End of verifying signature or encapsulating KemCiphertext */
     word64 auth_done_ts;
+    /* The moment when client can start sending application data. For
+     * signature-based authentication, this is the same as hs_done_ts; for
+     * KEM-based authentication, this is after client's Finished is sent but
+     * before server's Finished is received
+     */
+    word64 c_appdata_start_ts;
     /* Handshake is finished */
     word64 hs_done_ts;
 };
@@ -4949,6 +4955,7 @@ WOLFSSL_API int wolfSSL_export_telemetry(WOLFSSL *ssl, Telemetry *tel);
  *   auth_crypto_dur   - Output: crypto time for authentication.
  *   auth_dur          - Output: total authentication duration.
  *   hs_dur            - Output: complete TLS handshake duration.
+ *   t2capp            - Output: time to client application data
  */
 WOLFSSL_API int wolfSSL_telemetry_ts_to_durs(WOLFSSL *ssl,
                                              uint64_t *kex_cpu_dur,
@@ -4956,9 +4963,10 @@ WOLFSSL_API int wolfSSL_telemetry_ts_to_durs(WOLFSSL *ssl,
                                              uint64_t *kex_dur,
                                              uint64_t *auth_crypto_dur,
                                              uint64_t *auth_dur,
-                                             uint64_t *hs_dur);
+                                             uint64_t *hs_dur,
+                                             uint64_t *t2capp);
 #define WOLFSSL_TELEMETRY_CSV_HEADER \
-    "kex_cpu_dur,kex_crypto_cpu_dur,kex_dur,auth_crypto_dur,auth_dur,hs_dur"
+    "kex_cpu_dur,kex_crypto_cpu_dur,kex_dur,auth_crypto_dur,auth_dur,hs_dur,time2clientapp"
 #endif
 
 /* buffers for struct WOLFSSL */
