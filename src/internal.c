@@ -15461,11 +15461,15 @@ int wolfSSL_telemetry_ts_to_durs(WOLFSSL *ssl, uint64_t *kex_cpu_dur,
         WOLFSSL_MSG("hs_dur is bad");
         return -1;
     }
-    if (validate_tel_ts(ssl->tel.ch_start_ts, ssl->tel.c_appdata_start_ts)) {
-        *t2capp = ssl->tel.c_appdata_start_ts - ssl->tel.ch_start_ts;
+    if (ssl->options.haveMlKemAuth || ssl->options.haveHqcAuth) {
+        if (validate_tel_ts(ssl->tel.ch_start_ts, ssl->tel.c_appdata_start_ts)) {
+            *t2capp = ssl->tel.c_appdata_start_ts - ssl->tel.ch_start_ts;
+        } else {
+            WOLFSSL_MSG("t2capp is bad");
+            return -1;
+        }
     } else {
-        WOLFSSL_MSG("t2capp is bad");
-        return -1;
+        *t2capp = *hs_dur;
     }
     return 0;
 }
