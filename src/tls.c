@@ -19,6 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
+#include "wolfssl/wolfcrypt/logging.h"
 #include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
 #ifndef WOLFCRYPT_ONLY
@@ -10586,6 +10587,7 @@ static int TLSX_KeyShare_HandlePqcHybridKeyServer(WOLFSSL* ssl,
 int TLSX_KeyShare_Use(const WOLFSSL* ssl, word16 group, word16 len, byte* data,
                       KeyShareEntry **kse, TLSX** extensions)
 {
+    WOLFSSL_ENTER("TLSX_KeyShare_Use");
     int            ret = 0;
     TLSX*          extension;
     KeyShareEntry* keyShareEntry = NULL;
@@ -10595,8 +10597,10 @@ int TLSX_KeyShare_Use(const WOLFSSL* ssl, word16 group, word16 len, byte* data,
     if (extension == NULL) {
         /* Push new KeyShare extension. */
         ret = TLSX_Push(extensions, TLSX_KEY_SHARE, NULL, ssl->heap);
-        if (ret != 0)
+        if (ret != 0) {
+            WOLFSSL_LEAVE("TLSX_KeyShare_Use", ret);
             return ret;
+        }
 
         extension = TLSX_Find(*extensions, TLSX_KEY_SHARE);
         if (extension == NULL)
@@ -10641,16 +10645,20 @@ int TLSX_KeyShare_Use(const WOLFSSL* ssl, word16 group, word16 len, byte* data,
                                                data, len,
                                                ssl->arrays->preMasterSecret,
                                                &ssl->arrays->preMasterSz);
-        if (ret != 0)
+        if (ret != 0) {
+            WOLFSSL_LEAVE("TLSX_KeyShare_Use", ret);
             return ret;
+        }
     }
     else if (ssl->options.side == WOLFSSL_SERVER_END &&
              WOLFSSL_NAMED_GROUP_IS_PQC_HYBRID(group)) {
         ret = TLSX_KeyShare_HandlePqcHybridKeyServer((WOLFSSL*)ssl,
                                                      keyShareEntry,
                                                      data, len);
-        if (ret != 0)
+        if (ret != 0) {
+            WOLFSSL_LEAVE("TLSX_KeyShare_Use", ret);
             return ret;
+        }
     }
     else
 #endif
@@ -10665,13 +10673,16 @@ int TLSX_KeyShare_Use(const WOLFSSL* ssl, word16 group, word16 len, byte* data,
          * this path shouldn't be taken when parsing a ClientHello in stateless
          * mode. */
         ret = TLSX_KeyShare_GenKey((WOLFSSL*)ssl, keyShareEntry);
-        if (ret != 0)
+        if (ret != 0) {
+            WOLFSSL_LEAVE("TLSX_KeyShare_Use", ret);
             return ret;
+        }
     }
 
     if (kse != NULL)
         *kse = keyShareEntry;
 
+    WOLFSSL_LEAVE("TLSX_KeyShare_Use", 0);
     return 0;
 }
 
@@ -10822,6 +10833,11 @@ static const word16 preferredGroup[] = {
     #endif
 #endif
 #endif /* WOLFSSL_MLKEM_KYBER */
+#ifdef HAVE_HQC
+    WOLFSSL_HQC_128,
+    WOLFSSL_HQC_192,
+    WOLFSSL_HQC_256,
+#endif
     WOLFSSL_NAMED_GROUP_INVALID
 };
 
