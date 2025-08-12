@@ -4716,6 +4716,12 @@ static int TLSX_IsGroupSupported(int namedGroup)
     #endif
 #endif
 #endif /* WOLFSSL_HAVE_MLKEM */
+#ifdef HAVE_HQC
+        case WOLFSSL_HQC_128:
+        case WOLFSSL_HQC_192:
+        case WOLFSSL_HQC_256:
+            break;
+#endif
         default:
             return 0;
     }
