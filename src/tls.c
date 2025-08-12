@@ -8532,15 +8532,8 @@ static void findEccPqc(int *ecc, int *pqc, int *pqc_first, int group)
 }
 
 #ifndef WOLFSSL_MLKEM_NO_MAKE_KEY
-/* Create a key share entry using pqc parameters group on the client side.
- * Generates a key pair.
- *
- * ssl   The SSL/TLS object.
- * kse   The key share entry object.
- * returns 0 on success, otherwise failure.
- */
-static int TLSX_KeyShare_GenPqcKeyClient(WOLFSSL *ssl, KeyShareEntry* kse)
-{
+static int TLSX_KeyShare_GenMlKemKeyClient(WOLFSSL *ssl, KeyShareEntry *kse) {
+    WOLFSSL_ENTER("TLSX_KeyShare_GenMlKemKeyClient");
     int ret = 0;
     int type = 0;
 #ifndef WOLFSSL_TLSX_PQC_MLKEM_STORE_OBJ
@@ -8686,9 +8679,42 @@ static int TLSX_KeyShare_GenPqcKeyClient(WOLFSSL *ssl, KeyShareEntry* kse)
     XFREE(kem, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
     #endif
 
+    WOLFSSL_LEAVE("TLSX_KeyShare_GenMlKemKeyClient", ret);
+    return ret;
+}
+#endif /* !WOLFSSL_MLKEM_NO_MAKE_KEY */
+
+/* Create a key share entry using pqc parameters group on the client side.
+ * Generates a key pair.
+ *
+ * ssl   The SSL/TLS object.
+ * kse   The key share entry object.
+ * returns 0 on success, otherwise failure.
+ */
+static int TLSX_KeyShare_GenPqcKeyClient(WOLFSSL *ssl, KeyShareEntry* kse) {
+    WOLFSSL_ENTER("TLSX_KeyShare_GenPqcKeyClient");
+    int ret = 0;
+    if ((ssl == NULL) || (kse == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    switch (kse->group) {
+#ifdef WOLFSSL_HAVE_MLKEM
+        case WOLFSSL_ML_KEM_512:
+        case WOLFSSL_ML_KEM_768:
+        case WOLFSSL_ML_KEM_1024:
+            ret = TLSX_KeyShare_GenMlKemKeyClient(ssl, kse);
+            break;
+#endif
+        default:
+            ret = NOT_COMPILED_IN;
+            break;
+    }
+
+    WOLFSSL_LEAVE("TLSX_KeyShare_GenPqcKeyClient", ret);
     return ret;
 }
 
+#ifndef WOLFSSL_MLKEM_NO_MAKE_KEY
 /* Create a key share entry using both ecdhe and pqc parameters groups.
  * Generates two key pairs on the client side.
  *
@@ -8838,6 +8864,7 @@ static int TLSX_KeyShare_GenPqcHybridKeyClient(WOLFSSL *ssl, KeyShareEntry* kse)
  */
 int TLSX_KeyShare_GenKey(WOLFSSL *ssl, KeyShareEntry *kse)
 {
+    WOLFSSL_ENTER("TLSX_KeyShare_GenKey");
     int ret;
     /* Named FFDHE groups have a bit set to identify them. */
     if (WOLFSSL_NAMED_GROUP_IS_FFDHE(kse->group))
@@ -8857,6 +8884,7 @@ int TLSX_KeyShare_GenKey(WOLFSSL *ssl, KeyShareEntry *kse)
 #ifdef WOLFSSL_ASYNC_CRYPT
     kse->lastRet = ret;
 #endif
+    WOLFSSL_LEAVE("TLSX_KeyShare_GenKey", ret);
     return ret;
 }
 
@@ -10597,10 +10625,8 @@ int TLSX_KeyShare_Use(const WOLFSSL* ssl, word16 group, word16 len, byte* data,
     if (extension == NULL) {
         /* Push new KeyShare extension. */
         ret = TLSX_Push(extensions, TLSX_KEY_SHARE, NULL, ssl->heap);
-        if (ret != 0) {
-            WOLFSSL_LEAVE("TLSX_KeyShare_Use", ret);
+        if (ret != 0)
             return ret;
-        }
 
         extension = TLSX_Find(*extensions, TLSX_KEY_SHARE);
         if (extension == NULL)
@@ -10645,20 +10671,16 @@ int TLSX_KeyShare_Use(const WOLFSSL* ssl, word16 group, word16 len, byte* data,
                                                data, len,
                                                ssl->arrays->preMasterSecret,
                                                &ssl->arrays->preMasterSz);
-        if (ret != 0) {
-            WOLFSSL_LEAVE("TLSX_KeyShare_Use", ret);
+        if (ret != 0)
             return ret;
-        }
     }
     else if (ssl->options.side == WOLFSSL_SERVER_END &&
              WOLFSSL_NAMED_GROUP_IS_PQC_HYBRID(group)) {
         ret = TLSX_KeyShare_HandlePqcHybridKeyServer((WOLFSSL*)ssl,
                                                      keyShareEntry,
                                                      data, len);
-        if (ret != 0) {
-            WOLFSSL_LEAVE("TLSX_KeyShare_Use", ret);
+        if (ret != 0)
             return ret;
-        }
     }
     else
 #endif
@@ -10673,16 +10695,13 @@ int TLSX_KeyShare_Use(const WOLFSSL* ssl, word16 group, word16 len, byte* data,
          * this path shouldn't be taken when parsing a ClientHello in stateless
          * mode. */
         ret = TLSX_KeyShare_GenKey((WOLFSSL*)ssl, keyShareEntry);
-        if (ret != 0) {
-            WOLFSSL_LEAVE("TLSX_KeyShare_Use", ret);
+        if (ret != 0)
             return ret;
-        }
     }
 
     if (kse != NULL)
         *kse = keyShareEntry;
 
-    WOLFSSL_LEAVE("TLSX_KeyShare_Use", 0);
     return 0;
 }
 
