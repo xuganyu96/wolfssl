@@ -4538,7 +4538,11 @@ WOLFSSL_API int wolfSSL_CTX_UseOCSPStaplingV2(WOLFSSL_CTX* ctx,
 #endif
 #endif
 
-/* Named Groups */
+/* Named Groups
+ *
+ * Group encoding for post-quantum and/or hybrid groups can be found here:
+ * https://github.com/open-quantum-safe/oqs-provider/blob/main/oqs-template/oqs-kem-info.md
+ */
 enum {
     WOLFSSL_NAMED_GROUP_INVALID = 0,
 #if 0 /* Not Supported */
@@ -4638,6 +4642,11 @@ enum {
     WOLFSSL_X448_ML_KEM_768       = 12215,
 #endif /* WOLFSSL_NO_ML_KEM */
 #endif /* HAVE_PQC */
+#ifdef HAVE_HQC
+    WOLFSSL_HQC_128               = 65048,
+    WOLFSSL_HQC_192               = 65051,
+    WOLFSSL_HQC_256               = 65054,
+#endif
     WOLF_ENUM_DUMMY_LAST_ELEMENT(SSL_H)
 };
 
