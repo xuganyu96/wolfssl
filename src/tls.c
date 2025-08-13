@@ -51,6 +51,9 @@
     #include <wolfssl/wolfcrypt/ext_mlkem.h>
 #endif
 #endif
+#ifdef HAVE_HQC
+    #include <wolfssl/wolfcrypt/hqc.h>
+#endif
 
 #if defined(WOLFSSL_RENESAS_TSIP_TLS)
     #include <wolfssl/wolfcrypt/port/Renesas/renesas_tsip_internal.h>
@@ -8684,6 +8687,82 @@ static int TLSX_KeyShare_GenMlKemKeyClient(WOLFSSL *ssl, KeyShareEntry *kse) {
 }
 #endif /* !WOLFSSL_MLKEM_NO_MAKE_KEY */
 
+#ifdef HAVE_HQC
+static int TLSX_KeyShare_GenHqcKeyClient(WOLFSSL *ssl, KeyShareEntry *kse) {
+    WOLFSSL_ENTER("TLSX_KeyShare_GenHqcKeyClient");
+    int ret = 0;
+
+    HqcKey key;
+    int level;
+
+    if ((ret = wc_HqcKey_GetLevelFromNamedGroup(kse->group, &level)) < 0) {
+        WOLFSSL_MSG_EX("Invalid named group %d", kse->group);
+        goto cleanup;
+    }
+    if ((ret = wc_HqcKey_Init(&key)) < 0) {
+        WOLFSSL_MSG_EX("Failed to initialize HQC key (err=%d)", ret);
+        goto cleanup;
+    }
+    if ((ret = wc_HqcKey_SetLevel(&key, level)) < 0) {
+        WOLFSSL_MSG_EX("Failed to set HQC level to %d (err=%d)", level, ret);
+        goto cleanup;
+    }
+    if ((ret = wc_HqcKey_PrivateKeySize(&key, &kse->privKeyLen)) < 0) {
+        WOLFSSL_MSG_EX("Failed to get private key size (err=%d)", ret);
+        goto cleanup;
+    }
+    if ((kse->privKey = XMALLOC(kse->privKeyLen, ssl->heap,
+                                DYNAMIC_TYPE_PRIVATE_KEY)) == NULL) {
+        WOLFSSL_MSG_EX("Failed to allocate %d bytes kse->privKey",
+                       kse->privKeyLen);
+        ret = MEMORY_ERROR;
+        goto cleanup;
+    }
+    if ((ret = wc_HqcKey_PublicKeySize(&key, &kse->pubKeyLen)) < 0) {
+        WOLFSSL_MSG_EX("Failed to get public key size (err=%d)", ret);
+        goto cleanup;
+    }
+    if ((kse->pubKey = XMALLOC(kse->pubKeyLen, ssl->heap,
+                               DYNAMIC_TYPE_PUBLIC_KEY)) == NULL) {
+        WOLFSSL_MSG_EX("Failed to allocate %d bytes kse->pubKey",
+                       kse->pubKeyLen);
+        ret = MEMORY_ERROR;
+        goto cleanup;
+    }
+    if ((ret = wc_HqcKey_MakeKey(&key, ssl->rng)) < 0) {
+        WOLFSSL_MSG_EX("Failed to generate HQC key (err=%d)", ret);
+        goto cleanup;
+    }
+    if ((ret = wc_HqcKey_ExportPublicKey(&key, kse->pubKey,
+                                         kse->pubKeyLen)) < 0) {
+        WOLFSSL_MSG_EX("Failed to export HQC public key (err=%d)", ret);
+        goto cleanup;
+    }
+    if ((ret = wc_HqcKey_ExportPrivateKey(&key, kse->privKey,
+                                          kse->privKeyLen)) < 0) {
+        WOLFSSL_MSG_EX("Failed to export HQC private key (err=%d)", ret);
+        goto cleanup;
+    }
+
+cleanup:
+    wc_HqcKey_Free(&key);
+    if (ret != 0) {
+        if (kse->pubKey) {
+            XFREE(kse->pubKey, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+            kse->pubKey = NULL;
+        }
+        if (kse->privKey) {
+            ForceZero(kse->privKey, kse->privKeyLen);
+            XFREE(kse->privKey, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+            kse->privKey = NULL;
+        }
+    }
+
+    WOLFSSL_LEAVE("TLSX_KeyShare_GenHqcKeyClient", ret);
+    return ret;
+}
+#endif /* HAVE_HQC */
+
 /* Create a key share entry using pqc parameters group on the client side.
  * Generates a key pair.
  *
@@ -8703,6 +8782,13 @@ static int TLSX_KeyShare_GenPqcKeyClient(WOLFSSL *ssl, KeyShareEntry* kse) {
         case WOLFSSL_ML_KEM_768:
         case WOLFSSL_ML_KEM_1024:
             ret = TLSX_KeyShare_GenMlKemKeyClient(ssl, kse);
+            break;
+#endif
+#ifdef HAVE_HQC
+        case WOLFSSL_HQC_128:
+        case WOLFSSL_HQC_192:
+        case WOLFSSL_HQC_256:
+            ret = TLSX_KeyShare_GenHqcKeyClient(ssl, kse);
             break;
 #endif
         default:
