@@ -9659,6 +9659,7 @@ static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
                                              unsigned char* ssOutput,
                                              word32* ssOutSz)
 {
+    WOLFSSL_ENTER("TLSX_KeyShare_ProcessPqcClient_ex");
     int       ret = 0;
     KyberKey* kem = (KyberKey*)keyShareEntry->key;
 #ifndef WOLFSSL_TLSX_PQC_MLKEM_STORE_OBJ
@@ -9752,6 +9753,7 @@ static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
     XFREE(keyShareEntry->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
     keyShareEntry->ke = NULL;
 
+    WOLFSSL_LEAVE("TLSX_KeyShare_ProcessPqcClient_ex", ret);
     return ret;
 }
 
@@ -10349,26 +10351,16 @@ static int TLSX_KeyShare_New(KeyShareEntry** list, int group, void *heap,
 }
 
 #if defined(WOLFSSL_HAVE_MLKEM) && !defined(WOLFSSL_MLKEM_NO_ENCAPSULATE)
-/* Process the Kyber key share extension on the server side.
- *
- * ssl            The SSL/TLS object.
- * keyShareEntry  The key share entry object to be sent to the client.
- * data           The key share data received from the client.
- * len            The length of the key share data from the client.
- * ssOutput       The destination buffer for the shared secret.
- * ssOutSz        The size of the generated shared secret.
- *
- * returns 0 on success and other values indicate failure.
- */
-static int TLSX_KeyShare_HandlePqcKeyServer(WOLFSSL* ssl,
-    KeyShareEntry* keyShareEntry, byte* clientData, word16 clientLen,
-    unsigned char* ssOutput, word32* ssOutSz)
-{
+static int
+TLSX_KeyShare_HandleMlKemKeyServer(WOLFSSL *ssl, KeyShareEntry *keyShareEntry,
+                                   byte *clientData, word16 clientLen,
+                                   unsigned char *ssOutput, word32 *ssOutSz) {
+    WOLFSSL_ENTER("TLSX_KeyShare_HandleMlKemKeyServer");
     /* We are on the server side. The key share contains a PQC KEM public key
      * that we are using for an encapsulate operation. The resulting ciphertext
      * is stored in the server key share. */
-    KyberKey* kemKey = (KyberKey*)keyShareEntry->key;
-    byte* ciphertext = NULL;
+    KyberKey *kemKey = (KyberKey *)keyShareEntry->key;
+    byte *ciphertext = NULL;
     int ret = 0;
     word32 pubSz = 0;
     word32 ctSz = 0;
@@ -10383,7 +10375,7 @@ static int TLSX_KeyShare_HandlePqcKeyServer(WOLFSSL* ssl,
         int type = 0;
 
         /* Allocate a Kyber key to hold private key. */
-        kemKey = (KyberKey*) XMALLOC(sizeof(KyberKey), ssl->heap,
+        kemKey = (KyberKey *)XMALLOC(sizeof(KyberKey), ssl->heap,
                                      DYNAMIC_TYPE_PRIVATE_KEY);
         if (kemKey == NULL) {
             WOLFSSL_MSG("GenPqcKey memory error");
@@ -10420,7 +10412,7 @@ static int TLSX_KeyShare_HandlePqcKeyServer(WOLFSSL* ssl,
     }
 
     if (ret == 0) {
-        ciphertext = (byte*)XMALLOC(ctSz, ssl->heap, DYNAMIC_TYPE_TLSX);
+        ciphertext = (byte *)XMALLOC(ctSz, ssl->heap, DYNAMIC_TYPE_TLSX);
 
         if (ciphertext == NULL) {
             WOLFSSL_MSG("Ciphertext memory allocation failure.");
@@ -10432,8 +10424,7 @@ static int TLSX_KeyShare_HandlePqcKeyServer(WOLFSSL* ssl,
         ret = wc_KyberKey_DecodePublicKey(kemKey, clientData, pubSz);
     }
     if (ret == 0) {
-        ret = wc_KyberKey_Encapsulate(kemKey, ciphertext,
-                                      ssOutput, ssl->rng);
+        ret = wc_KyberKey_Encapsulate(kemKey, ciphertext, ssOutput, ssl->rng);
         if (ret != 0) {
             WOLFSSL_MSG("wc_KyberKey encapsulation failure.");
         }
@@ -10460,6 +10451,54 @@ static int TLSX_KeyShare_HandlePqcKeyServer(WOLFSSL* ssl,
     wc_KyberKey_Free(kemKey);
     XFREE(kemKey, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
     keyShareEntry->key = NULL;
+
+    WOLFSSL_LEAVE("TLSX_KeyShare_HandleMlKemKeyServer", ret);
+    return ret;
+}
+#endif /* WOLFSSL_HAVE_MLKEM && !WOLFSSL_MLKEM_NO_ENCAPSULATE */
+
+#if defined(WOLFSSL_HAVE_MLKEM) && !defined(WOLFSSL_MLKEM_NO_ENCAPSULATE)
+/* Process the Kyber key share extension on the server side.
+ *
+ * ssl            The SSL/TLS object.
+ * keyShareEntry  The key share entry object to be sent to the client.
+ * data           The key share data received from the client.
+ * len            The length of the key share data from the client.
+ * ssOutput       The destination buffer for the shared secret.
+ * ssOutSz        The size of the generated shared secret.
+ *
+ * returns 0 on success and other values indicate failure.
+ */
+static int TLSX_KeyShare_HandlePqcKeyServer(WOLFSSL *ssl, KeyShareEntry *kse,
+                                            byte *clientData, word16 clientLen,
+                                            unsigned char *ssOutput,
+                                            word32 *ssOutSz) {
+    WOLFSSL_ENTER("TLSX_KeyShare_HandlePqcKeyServer");
+    int ret;
+    if (!ssl || !kse || !clientData || !ssOutput) {
+        ret = BAD_FUNC_ARG;
+        goto exit;
+    }
+
+    switch (kse->group) {
+#ifdef WOLFSSL_HAVE_MLKEM
+    case WOLFSSL_ML_KEM_512:
+    case WOLFSSL_ML_KEM_768:
+    case WOLFSSL_ML_KEM_1024:
+        ret = TLSX_KeyShare_HandleMlKemKeyServer(ssl, kse, clientData,
+                                                 clientLen, ssOutput, ssOutSz);
+        break;
+#endif
+#ifdef HAVE_HQC
+    case WOLFSSL_HQC_128:
+    case WOLFSSL_HQC_192:
+    case WOLFSSL_HQC_256:
+        ret = NOT_COMPILED_IN;
+        break;
+#endif
+    }
+exit:
+    WOLFSSL_LEAVE("TLSX_KeyShare_HandlePqcKeyServer", ret);
     return ret;
 }
 
