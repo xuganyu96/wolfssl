@@ -166,6 +166,44 @@ int wc_HqcKey_MakeKey(HqcKey *key, WC_RNG *rng) {
 #endif
 }
 
+/* Encapsulate a HQC secret.
+ *
+ * User is responsible for making sure ct and ss have enough capacity.
+ *
+ * return:
+ * BAD_FUNC_ARG     If necessary pointer is NULL; if key->level is invalid; if
+ *                  key->pubkey is not set
+ */
+int wc_HqcKey_Encapsulate(HqcKey *key, byte *ct, byte *ss, WC_RNG *rng) {
+    if (!key || !ct || !ss || !rng) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level(key->level) || !key->pubkey_set) {
+        return BAD_FUNC_ARG;
+    }
+
+#ifdef CLEAN_HQC
+    set_wc_rng(rng);
+    switch (key->level) {
+    case 1:
+        PQCLEAN_HQC128_CLEAN_crypto_kem_enc(ct, ss, key->pubkey);
+        break;
+    case 3:
+        PQCLEAN_HQC192_CLEAN_crypto_kem_enc(ct, ss, key->pubkey);
+        break;
+    case 5:
+        PQCLEAN_HQC256_CLEAN_crypto_kem_enc(ct, ss, key->pubkey);
+        break;
+    default:
+        return BAD_FUNC_ARG;
+    }
+#else
+    return NOT_COMPILED_IN;
+#endif
+
+    return 0;
+}
+
 int wc_HqcKey_ExportPublicKey(HqcKey *key, byte *buf, word32 len) {
     if ((key == NULL) || (buf == NULL)) {
         return BAD_FUNC_ARG;
@@ -206,4 +244,37 @@ int wc_HqcKey_ExportPrivateKey(HqcKey *key, byte *buf, word32 len) {
     }
     XMEMCPY(buf, key->privkey, cplen);
     return 0;
+}
+
+/* Copy public key bytes from input buffer to key->pubkey
+ *
+ * return:
+ * BAD_FUNC_ARG if any pointer is NULL, if key's level is not set, or if key's
+ *              public key is already set
+ * BUFFER_E     if input buffer len does not match expected public key length
+ */
+int wc_HqcKey_ImportPublicKey(HqcKey *key, byte *buf, word32 len) {
+    if (!key || !buf) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level(key->level) || key->pubkey_set) {
+        return BAD_FUNC_ARG;
+    }
+    int ret;
+    word32 pubKeyLen;
+    if ((ret = wc_HqcKey_PublicKeySize(key, &pubKeyLen)) < 0) {
+        return ret;
+    }
+    if (pubKeyLen != len) {
+        return BUFFER_E;
+    }
+    XMEMCPY(key->pubkey, buf, len);
+    key->pubkey_set = 1;
+
+    return 0;
+}
+
+int wc_HqcKey_ImportPrivateKey(HqcKey *key, byte *buf, word32 len) {
+    int ret = NOT_COMPILED_IN;
+    return ret;
 }

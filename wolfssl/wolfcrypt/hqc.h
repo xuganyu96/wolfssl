@@ -51,8 +51,11 @@ int wc_HqcKey_PrivateKeySize(HqcKey *key, word32 *len);
 int wc_HqcKey_CiphertextSize(HqcKey *key, word32 *len);
 int wc_HqcKey_SharedSecretSize(HqcKey *key, word32 *len);
 int wc_HqcKey_MakeKey(HqcKey *key, WC_RNG *rng);
+int wc_HqcKey_Encapsulate(HqcKey *key, byte *ct, byte *ss, WC_RNG *rng);
 int wc_HqcKey_ExportPublicKey(HqcKey *key, byte *buf, word32 len);
 int wc_HqcKey_ExportPrivateKey(HqcKey *key, byte *buf, word32 len);
+int wc_HqcKey_ImportPublicKey(HqcKey *key, byte *buf, word32 len);
+int wc_HqcKey_ImportPrivateKey(HqcKey *key, byte *buf, word32 len);
 #endif /* HAVE_HQC */
 
 #endif /* WOLFCRYPT_HQC_H */
