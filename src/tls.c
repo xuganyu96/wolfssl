@@ -8695,9 +8695,18 @@ static int TLSX_KeyShare_GenHqcKeyClient(WOLFSSL *ssl, KeyShareEntry *kse) {
     HqcKey key;
     int level;
 
-    if ((ret = wc_HqcKey_GetLevelFromNamedGroup(kse->group, &level)) < 0) {
-        WOLFSSL_MSG_EX("Invalid named group %d", kse->group);
-        goto cleanup;
+    switch (kse->group) {
+    case WOLFSSL_HQC_128:
+        level = 1;
+        break;
+    case WOLFSSL_HQC_192:
+        level = 3;
+        break;
+    case WOLFSSL_HQC_256:
+        level = 5;
+        break;
+    default:
+        return BAD_FUNC_ARG;
     }
     if ((ret = wc_HqcKey_Init(&key)) < 0) {
         WOLFSSL_MSG_EX("Failed to initialize HQC key (err=%d)", ret);
@@ -8733,8 +8742,8 @@ static int TLSX_KeyShare_GenHqcKeyClient(WOLFSSL *ssl, KeyShareEntry *kse) {
         WOLFSSL_MSG_EX("Failed to generate HQC key (err=%d)", ret);
         goto cleanup;
     }
-    if ((ret = wc_HqcKey_ExportPublicKey(&key, kse->pubKey,
-                                         kse->pubKeyLen)) < 0) {
+    if ((ret = wc_HqcKey_ExportPublicKey(&key, kse->pubKey, kse->pubKeyLen)) <
+        0) {
         WOLFSSL_MSG_EX("Failed to export HQC public key (err=%d)", ret);
         goto cleanup;
     }
