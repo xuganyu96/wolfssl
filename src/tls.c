@@ -19,6 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
  */
 
+#include "wolfssl/wolfcrypt/error-crypt.h"
 #include "wolfssl/wolfcrypt/logging.h"
 #include <wolfssl/wolfcrypt/libwolfssl_sources.h>
 
@@ -9645,21 +9646,11 @@ static int TLSX_KeyShare_ProcessEcc(WOLFSSL* ssl, KeyShareEntry* keyShareEntry)
 }
 
 #if defined(WOLFSSL_HAVE_MLKEM) && !defined(WOLFSSL_MLKEM_NO_DECAPSULATE)
-/* Process the Kyber key share extension on the client side.
- *
- * ssl            The SSL/TLS object.
- * keyShareEntry  The key share entry object to use to calculate shared secret.
- * ssOutput       The destination buffer for the shared secret.
- * ssOutSz        The size of the generated shared secret.
- *
- * returns 0 on success and other values indicate failure.
- */
-static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
+static int TLSX_KeyShare_ProcessMlKemClient(WOLFSSL* ssl,
                                              KeyShareEntry* keyShareEntry,
                                              unsigned char* ssOutput,
-                                             word32* ssOutSz)
-{
-    WOLFSSL_ENTER("TLSX_KeyShare_ProcessPqcClient_ex");
+                                             word32* ssOutSz) {
+    WOLFSSL_ENTER("TLSX_KeyShare_ProcessMlKemClient");
     int       ret = 0;
     KyberKey* kem = (KyberKey*)keyShareEntry->key;
 #ifndef WOLFSSL_TLSX_PQC_MLKEM_STORE_OBJ
@@ -9753,6 +9744,49 @@ static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
     XFREE(keyShareEntry->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
     keyShareEntry->ke = NULL;
 
+    WOLFSSL_LEAVE("TLSX_KeyShare_ProcessMlKemClient", ret);
+    return ret;
+}
+#endif
+
+/* Process a PQC KEM ciphertext from a key share entry
+ *
+ * ssl            The SSL/TLS object.
+ * keyShareEntry  The key share entry object to use to calculate shared secret.
+ * ssOutput       The destination buffer for the shared secret.
+ * ssOutSz        The size of the generated shared secret.
+ *
+ * returns 0 on success and other values indicate failure.
+ */
+static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
+                                             KeyShareEntry* keyShareEntry,
+                                             unsigned char* ssOutput,
+                                             word32* ssOutSz)
+{
+    WOLFSSL_ENTER("TLSX_KeyShare_ProcessPqcClient_ex");
+    int ret;
+    if (!ssl || !keyShareEntry || !ssOutput || !ssOutSz) {
+        return BAD_FUNC_ARG;
+    }
+    switch (keyShareEntry->group) {
+#ifdef WOLFSSL_HAVE_MLKEM
+    case WOLFSSL_ML_KEM_512:
+    case WOLFSSL_ML_KEM_768:
+    case WOLFSSL_ML_KEM_1024:
+        ret = TLSX_KeyShare_ProcessMlKemClient(ssl, keyShareEntry, ssOutput, ssOutSz);
+        break;
+#endif
+#ifdef HAVE_HQC
+    case WOLFSSL_HQC_128:
+    case WOLFSSL_HQC_192:
+    case WOLFSSL_HQC_256:
+        ret = NOT_COMPILED_IN;
+        break;
+    default:
+        ret = BAD_FUNC_ARG;
+        break;
+#endif
+    }
     WOLFSSL_LEAVE("TLSX_KeyShare_ProcessPqcClient_ex", ret);
     return ret;
 }
@@ -9772,6 +9806,7 @@ static int TLSX_KeyShare_ProcessPqcClient(WOLFSSL* ssl,
                                              &ssl->arrays->preMasterSz);
 }
 
+#if defined(WOLFSSL_HAVE_MLKEM) && !defined(WOLFSSL_MLKEM_NO_DECAPSULATE)
 /* Process the hybrid key share extension on the client side.
  *
  * ssl            The SSL/TLS object.
