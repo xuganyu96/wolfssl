@@ -204,6 +204,47 @@ int wc_HqcKey_Encapsulate(HqcKey *key, byte *ct, byte *ss, WC_RNG *rng) {
     return 0;
 }
 
+/* User is responsible for ensuring that `ss` has enough capacity to hold shared
+ * secret
+ */
+int wc_HqcKey_Decapsulate(HqcKey *key, byte *ss, const byte *ct, word32 len) {
+    int ret;
+    word32 ctLen;
+    if (!key || !ss || !ct) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level(key->level) || !key->privkey_set) {
+        WOLFSSL_MSG("HQC key level is invalid, or missing private key");
+        return BAD_FUNC_ARG;
+    }
+    if ((ret = wc_HqcKey_CiphertextSize(key, &ctLen)) < 0) {
+        return ret;
+    }
+    if (ctLen > len) {
+        return BUFFER_E;
+    }
+
+#ifdef CLEAN_HQC
+    switch (key->level) {
+    case 1:
+        PQCLEAN_HQC128_CLEAN_crypto_kem_dec(ss, ct, key->privkey);
+        break;
+    case 3:
+        PQCLEAN_HQC192_CLEAN_crypto_kem_dec(ss, ct, key->privkey);
+        break;
+    case 5:
+        PQCLEAN_HQC256_CLEAN_crypto_kem_dec(ss, ct, key->privkey);
+        break;
+    default:
+        return BAD_FUNC_ARG; /* should not happen! */
+    }
+#else
+    return NOT_COMPILED_IN;
+#endif
+
+    return 0;
+}
+
 int wc_HqcKey_ExportPublicKey(HqcKey *key, byte *buf, word32 len) {
     if ((key == NULL) || (buf == NULL)) {
         return BAD_FUNC_ARG;
@@ -275,6 +316,23 @@ int wc_HqcKey_ImportPublicKey(HqcKey *key, byte *buf, word32 len) {
 }
 
 int wc_HqcKey_ImportPrivateKey(HqcKey *key, byte *buf, word32 len) {
-    int ret = NOT_COMPILED_IN;
-    return ret;
+    if (!key || !buf) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level(key->level) || key->privkey_set) {
+        WOLFSSL_MSG("Invalid level, or private key already set");
+        return BAD_FUNC_ARG;
+    }
+    int ret;
+    word32 privKeyLen;
+    if ((ret = wc_HqcKey_PrivateKeySize(key, &privKeyLen)) < 0) {
+        return ret;
+    }
+    if (privKeyLen > len) {
+        return BUFFER_E;
+    }
+    XMEMCPY(key->privkey, buf, privKeyLen);
+    key->privkey_set = 1;
+
+    return 0;
 }

@@ -9647,9 +9647,9 @@ static int TLSX_KeyShare_ProcessEcc(WOLFSSL* ssl, KeyShareEntry* keyShareEntry)
 
 #if defined(WOLFSSL_HAVE_MLKEM) && !defined(WOLFSSL_MLKEM_NO_DECAPSULATE)
 static int TLSX_KeyShare_ProcessMlKemClient(WOLFSSL* ssl,
-                                             KeyShareEntry* keyShareEntry,
-                                             unsigned char* ssOutput,
-                                             word32* ssOutSz) {
+                                            KeyShareEntry* keyShareEntry,
+                                            unsigned char* ssOutput,
+                                            word32* ssOutSz) {
     WOLFSSL_ENTER("TLSX_KeyShare_ProcessMlKemClient");
     int       ret = 0;
     KyberKey* kem = (KyberKey*)keyShareEntry->key;
@@ -9749,6 +9749,120 @@ static int TLSX_KeyShare_ProcessMlKemClient(WOLFSSL* ssl,
 }
 #endif
 
+#ifdef HAVE_HQC
+/* ssOutSz:         On input, the capacity of the ssOutput buffer.
+ *                  On output, the length of data in the ssOutput buffer
+ *
+ * Return:
+ * BUFFER_E         kse->privKeyLen or kse->keLen does not match the expected
+ *                  private key and/or ciphertext length
+ */
+static int TLSX_KeyShare_ProcessHqcClient(WOLFSSL *ssl, KeyShareEntry *kse,
+                                          byte *ssOutput, word32 *ssOutSz) {
+    WOLFSSL_ENTER("TLSX_KeyShare_ProcessHqcClient");
+    int ret, level;
+    HqcKey *key = NULL;
+    word32 ctLen, privKeyLen, ssLen;
+
+    if (ssl->options.side == WOLFSSL_SERVER_END) {
+        return 0;
+    }
+
+    if (!ssl || !kse || !ssOutput || !ssOutSz) {
+        ret = BAD_FUNC_ARG;
+        goto exit;
+    }
+    if (!kse->privKey || !kse->ke) {
+        WOLFSSL_MSG_EX("KeyShare entry missing private key or ciphertext");
+        ret = BAD_FUNC_ARG;
+        goto exit;
+    }
+    switch (kse->group) {
+    case WOLFSSL_HQC_128:
+        level = 1;
+        break;
+    case WOLFSSL_HQC_192:
+        level = 3;
+        break;
+    case WOLFSSL_HQC_256:
+        level = 5;
+        break;
+    default:
+        ret = BAD_FUNC_ARG; /* should not happen */
+        goto exit;
+    }
+
+    if ((key = XMALLOC(sizeof(*key), ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY)) ==
+        NULL) {
+        ret = MEMORY_E;
+        goto exit;
+    }
+    if ((ret = wc_HqcKey_Init(key)) < 0) {
+        WOLFSSL_MSG_EX("Failed to init HQC key (err=%d)", ret);
+        goto exit;
+    }
+    if ((ret = wc_HqcKey_SetLevel(key, level)) < 0) {
+        WOLFSSL_MSG_EX("Failed to set HQC level %d (err=%d)", level, ret);
+        goto exit;
+    }
+    if ((ret = wc_HqcKey_SharedSecretSize(key, &ssLen)) < 0) {
+        WOLFSSL_MSG_EX("Failed to get HQC shared secret size (err=%d)", ret);
+        goto exit;
+    }
+    if (ssLen > *ssOutSz) {
+        WOLFSSL_MSG_EX("Need %d bytes for ssOutput, has %d", ssLen, *ssOutSz);
+        ret = BUFFER_E;
+        goto exit;
+    }
+    if ((ret = wc_HqcKey_CiphertextSize(key, &ctLen)) < 0) {
+        WOLFSSL_MSG_EX("Failed to get HQC ciphertext size (err=%d)", ret);
+        goto exit;
+    }
+    if (ctLen != kse->keLen) {
+        WOLFSSL_MSG_EX("Expected ciphertext len=%d, found %d", ctLen,
+                       kse->keLen);
+        ret = BUFFER_E;
+        goto exit;
+    }
+    if ((ret = wc_HqcKey_PrivateKeySize(key, &privKeyLen)) < 0) {
+        WOLFSSL_MSG_EX("Failed to get HQC private key size (err=%d)", ret);
+        goto exit;
+    }
+    if (privKeyLen != kse->privKeyLen) {
+        WOLFSSL_MSG_EX("Expected private key len=%d, found %d", privKeyLen,
+                       kse->privKeyLen);
+        ret = BUFFER_E;
+        goto exit;
+    }
+    if ((ret = wc_HqcKey_ImportPrivateKey(key, kse->privKey, kse->privKeyLen)) <
+        0) {
+        WOLFSSL_MSG_EX("Failed to import HQC private key (err=%d)", ret);
+        goto exit;
+    }
+    if ((ret = wc_HqcKey_Decapsulate(key, ssOutput, kse->ke, kse->keLen)) < 0) {
+        WOLFSSL_MSG_EX("Failed to decapsulate HQC ciphertext (err=%d)", ret);
+        goto exit;
+    }
+    *ssOutSz = ssLen;
+
+exit:
+    if (key) {
+        XFREE(key, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+        key = NULL;
+    }
+    if (kse->ke) {
+        XFREE(kse->ke, ssl->heap, DYNAMIC_TYPE_PUBLIC_KEY);
+        kse->ke = NULL;
+    }
+    if (kse->key) {
+        XFREE(kse->key, ssl->heap, DYNAMIC_TYPE_PRIVATE_KEY);
+        kse->key = NULL;
+    }
+    WOLFSSL_LEAVE("TLSX_KeyShare_ProcessHqcClient", ret);
+    return ret;
+}
+#endif
+
 /* Process a PQC KEM ciphertext from a key share entry
  *
  * ssl            The SSL/TLS object.
@@ -9773,14 +9887,16 @@ static int TLSX_KeyShare_ProcessPqcClient_ex(WOLFSSL* ssl,
     case WOLFSSL_ML_KEM_512:
     case WOLFSSL_ML_KEM_768:
     case WOLFSSL_ML_KEM_1024:
-        ret = TLSX_KeyShare_ProcessMlKemClient(ssl, keyShareEntry, ssOutput, ssOutSz);
+        ret = TLSX_KeyShare_ProcessMlKemClient(ssl, keyShareEntry, ssOutput,
+                                               ssOutSz);
         break;
 #endif
 #ifdef HAVE_HQC
     case WOLFSSL_HQC_128:
     case WOLFSSL_HQC_192:
     case WOLFSSL_HQC_256:
-        ret = NOT_COMPILED_IN;
+        ret = TLSX_KeyShare_ProcessHqcClient(ssl, keyShareEntry, ssOutput,
+                                             ssOutSz);
         break;
     default:
         ret = BAD_FUNC_ARG;
