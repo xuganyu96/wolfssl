@@ -2,7 +2,7 @@
 
 #include <wolfssl/wolfcrypt/hqc.h>
 
-#ifdef CLEAN_HQC
+#ifdef HAVE_PQCLEAN
 #include <common/randombytes.h>
 #endif
 
@@ -142,7 +142,7 @@ int wc_HqcKey_MakeKey(HqcKey *key, WC_RNG *rng) {
     if (!is_valid_level(key->level)) {
         return BAD_FUNC_ARG;
     }
-#ifdef CLEAN_HQC
+#ifdef HAVE_PQCLEAN
     set_wc_rng(rng);
 
     switch (key->level) {
@@ -182,7 +182,7 @@ int wc_HqcKey_Encapsulate(HqcKey *key, byte *ct, byte *ss, WC_RNG *rng) {
         return BAD_FUNC_ARG;
     }
 
-#ifdef CLEAN_HQC
+#ifdef HAVE_PQCLEAN
     set_wc_rng(rng);
     switch (key->level) {
     case 1:
@@ -224,7 +224,7 @@ int wc_HqcKey_Decapsulate(HqcKey *key, byte *ss, const byte *ct, word32 len) {
         return BUFFER_E;
     }
 
-#ifdef CLEAN_HQC
+#ifdef HAVE_PQCLEAN
     switch (key->level) {
     case 1:
         PQCLEAN_HQC128_CLEAN_crypto_kem_dec(ss, ct, key->privkey);

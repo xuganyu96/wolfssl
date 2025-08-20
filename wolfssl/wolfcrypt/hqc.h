@@ -7,7 +7,7 @@
 
 #ifdef HAVE_HQC
 
-#ifdef CLEAN_HQC
+#ifdef HAVE_PQCLEAN
 #include <crypto_kem/hqc-128/clean/api.h>
 #include <crypto_kem/hqc-192/clean/api.h>
 #include <crypto_kem/hqc-256/clean/api.h>
@@ -27,7 +27,7 @@
 
 #else
 #error "No other implementation found"
-#endif /* CLEAN_HQC */
+#endif /* HAVE_PQCLEAN */
 
 #define HQC_MAX_PRIVKEY_SIZE HQC_LEVEL5_PRIVKEY_SIZE
 #define HQC_MAX_PUBKEY_SIZE HQC_LEVEL5_PUBKEY_SIZE
