@@ -15043,7 +15043,7 @@ static int ProcessPeerCertCheckKey(WOLFSSL* ssl, ProcPeerCertArgs* args)
     #if defined(HAVE_FALCON)
         case FALCON_LEVEL1k:
             if (ssl->options.minFalconKeySz < 0 ||
-                FALCON_LEVEL1_KEY_SIZE < (word16)ssl->options.minFalconKeySz) {
+                FALCON_LEVEL1_PRIVKEY_SIZE < (word16)ssl->options.minFalconKeySz) {
                 WOLFSSL_MSG("Falcon key size in cert chain error");
                 ret = FALCON_KEY_SIZE_E;
                 WOLFSSL_ERROR_VERBOSE(ret);
@@ -15051,7 +15051,7 @@ static int ProcessPeerCertCheckKey(WOLFSSL* ssl, ProcPeerCertArgs* args)
             break;
         case FALCON_LEVEL5k:
             if (ssl->options.minFalconKeySz < 0 ||
-                FALCON_LEVEL5_KEY_SIZE < (word16)ssl->options.minFalconKeySz) {
+                FALCON_LEVEL5_PRIVKEY_SIZE < (word16)ssl->options.minFalconKeySz) {
                 WOLFSSL_MSG("Falcon key size in cert chain error");
                 ret = FALCON_KEY_SIZE_E;
                 WOLFSSL_ERROR_VERBOSE(ret);
@@ -16753,7 +16753,7 @@ int ProcessPeerCerts(WOLFSSL* ssl, byte* input, word32* inOutIdx,
                         /* check size of peer Falcon key */
                         if (ret == 0 && ssl->peerFalconKeyPresent &&
                                !ssl->options.verifyNone &&
-                               FALCON_MAX_KEY_SIZE <
+                               FALCON_MAX_PRIVKEY_SIZE <
                                ssl->options.minFalconKeySz) {
                             ret = FALCON_KEY_SIZE_E;
                             WOLFSSL_ERROR_VERBOSE(ret);

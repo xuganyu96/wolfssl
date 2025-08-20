@@ -372,7 +372,7 @@ void wc_falcon_free(falcon_key* key)
  * outLen  [in/out]  On in, the number of bytes in array.
  *                   On out, the number bytes put into array.
  * returns BAD_FUNC_ARG when a parameter is NULL,
- *         BUFFER_E when outLen is less than FALCON_LEVEL1_PUB_KEY_SIZE,
+ *         BUFFER_E when outLen is less than FALCON_LEVEL1_PUBKEY_SIZE,
  *         0 otherwise.
  */
 int wc_falcon_export_public(falcon_key* key,
@@ -392,22 +392,22 @@ int wc_falcon_export_public(falcon_key* key,
     }
 
     /* check and set up out length */
-    if ((key->level == 1) && (*outLen < FALCON_LEVEL1_PUB_KEY_SIZE)) {
-        *outLen = FALCON_LEVEL1_PUB_KEY_SIZE;
+    if ((key->level == 1) && (*outLen < FALCON_LEVEL1_PUBKEY_SIZE)) {
+        *outLen = FALCON_LEVEL1_PUBKEY_SIZE;
         return BUFFER_E;
     }
-    else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_PUB_KEY_SIZE)) {
-        *outLen = FALCON_LEVEL5_PUB_KEY_SIZE;
+    else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_PUBKEY_SIZE)) {
+        *outLen = FALCON_LEVEL5_PUBKEY_SIZE;
         return BUFFER_E;
     }
 
     if (key->level == 1) {
-        *outLen = FALCON_LEVEL1_PUB_KEY_SIZE;
-        XMEMCPY(out, key->p, FALCON_LEVEL1_PUB_KEY_SIZE);
+        *outLen = FALCON_LEVEL1_PUBKEY_SIZE;
+        XMEMCPY(out, key->p, FALCON_LEVEL1_PUBKEY_SIZE);
     }
     else if (key->level == 5) {
-        *outLen = FALCON_LEVEL5_PUB_KEY_SIZE;
-        XMEMCPY(out, key->p, FALCON_LEVEL5_PUB_KEY_SIZE);
+        *outLen = FALCON_LEVEL5_PUBKEY_SIZE;
+        XMEMCPY(out, key->p, FALCON_LEVEL5_PUBKEY_SIZE);
     }
 
     return 0;
@@ -434,10 +434,10 @@ int wc_falcon_import_public(const byte* in, word32 inLen,
         return BAD_FUNC_ARG;
     }
 
-    if ((key->level == 1) && (inLen != FALCON_LEVEL1_PUB_KEY_SIZE)) {
+    if ((key->level == 1) && (inLen != FALCON_LEVEL1_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
     }
-    else if ((key->level == 5) && (inLen != FALCON_LEVEL5_PUB_KEY_SIZE)) {
+    else if ((key->level == 5) && (inLen != FALCON_LEVEL5_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
     }
 
@@ -478,12 +478,12 @@ static int parse_private_key(const byte* priv, word32 privSz,
     *outSz = privSz - idx;
 
     /* And finally it is concat(priv,pub). Key size check. */
-    if ((key->level == 1) && (*outSz != FALCON_LEVEL1_KEY_SIZE +
-                                       FALCON_LEVEL1_PUB_KEY_SIZE)) {
+    if ((key->level == 1) && (*outSz != FALCON_LEVEL1_PRIVKEY_SIZE +
+                                       FALCON_LEVEL1_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
     }
-    else if ((key->level == 5) && (*outSz != FALCON_LEVEL5_KEY_SIZE +
-                                            FALCON_LEVEL5_PUB_KEY_SIZE)) {
+    else if ((key->level == 5) && (*outSz != FALCON_LEVEL5_PRIVKEY_SIZE +
+                                            FALCON_LEVEL5_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
     }
 
@@ -496,7 +496,7 @@ static int parse_private_key(const byte* priv, word32 privSz,
  * privSz  [in]  Number of bytes of data in array.
  * key     [in]  Falcon private key.
  * returns BAD_FUNC_ARG when a parameter is NULL or privSz is less than
- *         FALCON_LEVEL1_KEY_SIZE,
+ *         FALCON_LEVEL1_PRIVKEY_SIZE,
  *         0 otherwise.
  */
 int wc_falcon_import_private_only(const byte* priv, word32 privSz,
@@ -545,22 +545,22 @@ int wc_falcon_import_private_key(const byte* priv, word32 privSz,
             return BAD_FUNC_ARG;
         }
 
-        if ((newPrivSz != FALCON_LEVEL1_PRV_KEY_SIZE) &&
-            (newPrivSz != FALCON_LEVEL5_PRV_KEY_SIZE)) {
+        if ((newPrivSz != FALCON_LEVEL1_PRIVKEY_SIZE) &&
+            (newPrivSz != FALCON_LEVEL5_PRIVKEY_SIZE)) {
             return BAD_FUNC_ARG;
         }
 
         if (key->level == 1) {
-            pub = newPriv + FALCON_LEVEL1_KEY_SIZE;
-            pubSz = FALCON_LEVEL1_PUB_KEY_SIZE;
+            pub = newPriv + FALCON_LEVEL1_PRIVKEY_SIZE;
+            pubSz = FALCON_LEVEL1_PUBKEY_SIZE;
         }
         else if (key->level == 5) {
-            pub = newPriv + FALCON_LEVEL5_KEY_SIZE;
-            pubSz = FALCON_LEVEL5_PUB_KEY_SIZE;
+            pub = newPriv + FALCON_LEVEL5_PRIVKEY_SIZE;
+            pubSz = FALCON_LEVEL5_PUBKEY_SIZE;
         }
     }
-    else if ((pubSz != FALCON_LEVEL1_PUB_KEY_SIZE) &&
-             (pubSz != FALCON_LEVEL5_PUB_KEY_SIZE)) {
+    else if ((pubSz != FALCON_LEVEL1_PUBKEY_SIZE) &&
+             (pubSz != FALCON_LEVEL5_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
     }
 
@@ -583,7 +583,7 @@ int wc_falcon_import_private_key(const byte* priv, word32 privSz,
  * outLen  [in/out]  On in, the number of bytes in array.
  *                   On out, the number bytes put into array.
  * returns BAD_FUNC_ARG when a parameter is NULL,
- *         BUFFER_E when outLen is less than FALCON_LEVEL1_KEY_SIZE,
+ *         BUFFER_E when outLen is less than FALCON_LEVEL1_PRIVKEY_SIZE,
  *         0 otherwise.
  */
 int wc_falcon_export_private_only(falcon_key* key, byte* out, word32* outLen)
@@ -598,20 +598,20 @@ int wc_falcon_export_private_only(falcon_key* key, byte* out, word32* outLen)
     }
 
     /* check and set up out length */
-    if ((key->level == 1) && (*outLen < FALCON_LEVEL1_KEY_SIZE)) {
-        *outLen = FALCON_LEVEL1_KEY_SIZE;
+    if ((key->level == 1) && (*outLen < FALCON_LEVEL1_PRIVKEY_SIZE)) {
+        *outLen = FALCON_LEVEL1_PRIVKEY_SIZE;
         return BUFFER_E;
     }
-    else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_KEY_SIZE)) {
-        *outLen = FALCON_LEVEL5_KEY_SIZE;
+    else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_PRIVKEY_SIZE)) {
+        *outLen = FALCON_LEVEL5_PRIVKEY_SIZE;
         return BUFFER_E;
     }
 
     if (key->level == 1) {
-        *outLen = FALCON_LEVEL1_KEY_SIZE;
+        *outLen = FALCON_LEVEL1_PRIVKEY_SIZE;
     }
     else if (key->level == 5) {
-        *outLen = FALCON_LEVEL5_KEY_SIZE;
+        *outLen = FALCON_LEVEL5_PRIVKEY_SIZE;
     }
 
     XMEMCPY(out, key->k, *outLen);
@@ -626,7 +626,7 @@ int wc_falcon_export_private_only(falcon_key* key, byte* out, word32* outLen)
  * outLen  [in/out]  On in, the number of bytes in array.
  *                   On out, the number bytes put into array.
  * returns BAD_FUNC_ARG when a parameter is NULL,
- *         BUFFER_E when outLen is less than FALCON_LEVEL1_PRV_KEY_SIZE,
+ *         BUFFER_E when outLen is less than FALCON_LEVEL1_PRIVKEY_SIZE,
  *         0 otherwise.
  */
 int wc_falcon_export_private(falcon_key* key, byte* out, word32* outLen)
@@ -640,27 +640,27 @@ int wc_falcon_export_private(falcon_key* key, byte* out, word32* outLen)
         return BAD_FUNC_ARG;
     }
 
-    if ((key->level == 1) && (*outLen < FALCON_LEVEL1_PRV_KEY_SIZE)) {
-        *outLen = FALCON_LEVEL1_PRV_KEY_SIZE;
+    if ((key->level == 1) && (*outLen < FALCON_LEVEL1_PRIVKEY_SIZE)) {
+        *outLen = FALCON_LEVEL1_PRIVKEY_SIZE;
         return BUFFER_E;
     }
-    else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_PRV_KEY_SIZE)) {
-        *outLen = FALCON_LEVEL5_PRV_KEY_SIZE;
+    else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_PRIVKEY_SIZE)) {
+        *outLen = FALCON_LEVEL5_PRIVKEY_SIZE;
         return BUFFER_E;
     }
 
 
     if (key->level == 1) {
-        *outLen = FALCON_LEVEL1_PRV_KEY_SIZE;
-        XMEMCPY(out, key->k, FALCON_LEVEL1_KEY_SIZE);
-        XMEMCPY(out + FALCON_LEVEL1_KEY_SIZE, key->p,
-                FALCON_LEVEL1_PUB_KEY_SIZE);
+        *outLen = FALCON_LEVEL1_PRIVKEY_SIZE;
+        XMEMCPY(out, key->k, FALCON_LEVEL1_PRIVKEY_SIZE);
+        XMEMCPY(out + FALCON_LEVEL1_PRIVKEY_SIZE, key->p,
+                FALCON_LEVEL1_PUBKEY_SIZE);
     }
     else if (key->level == 5) {
-        *outLen = FALCON_LEVEL5_PRV_KEY_SIZE;
-        XMEMCPY(out, key->k, FALCON_LEVEL5_KEY_SIZE);
-        XMEMCPY(out + FALCON_LEVEL5_KEY_SIZE, key->p,
-                FALCON_LEVEL5_PUB_KEY_SIZE);
+        *outLen = FALCON_LEVEL5_PRIVKEY_SIZE;
+        XMEMCPY(out, key->k, FALCON_LEVEL5_PRIVKEY_SIZE);
+        XMEMCPY(out + FALCON_LEVEL5_PRIVKEY_SIZE, key->p,
+                FALCON_LEVEL5_PUBKEY_SIZE);
     }
 
     return 0;
@@ -675,8 +675,8 @@ int wc_falcon_export_private(falcon_key* key, byte* out, word32* outLen)
  * pubSz   [in/out]  On in, the number of bytes in public key array.
  *                   On out, the number bytes put into array.
  * returns BAD_FUNC_ARG when a parameter is NULL,
- *         BUFFER_E when privSz is less than FALCON_LEVEL1_PRV_KEY_SIZE or pubSz is less
- *         than FALCON_LEVEL1_PUB_KEY_SIZE,
+ *         BUFFER_E when privSz is less than FALCON_LEVEL1_PRIVKEY_SIZE or pubSz is less
+ *         than FALCON_LEVEL1_PUBKEY_SIZE,
  *         0 otherwise.
  */
 int wc_falcon_export_key(falcon_key* key, byte* priv, word32 *privSz,
@@ -713,12 +713,12 @@ int wc_falcon_check_key(falcon_key* key)
     /* The public key is also decoded and stored within the private key buffer
      * behind the private key. Hence, we can compare both stored public keys. */
     if (key->level == 1) {
-        ret = XMEMCMP(key->p, key->k + FALCON_LEVEL1_KEY_SIZE,
-                      FALCON_LEVEL1_PUB_KEY_SIZE);
+        ret = XMEMCMP(key->p, key->k + FALCON_LEVEL1_PRIVKEY_SIZE,
+                      FALCON_LEVEL1_PUBKEY_SIZE);
     }
     else if (key->level == 5) {
-        ret = XMEMCMP(key->p, key->k + FALCON_LEVEL5_KEY_SIZE,
-                      FALCON_LEVEL5_PUB_KEY_SIZE);
+        ret = XMEMCMP(key->p, key->k + FALCON_LEVEL5_PRIVKEY_SIZE,
+                      FALCON_LEVEL5_PUBKEY_SIZE);
     }
 
     if (ret != 0) {
@@ -732,7 +732,7 @@ int wc_falcon_check_key(falcon_key* key)
  *
  * key     [in]      Falcon private/public key.
  * returns BAD_FUNC_ARG when key is NULL,
- *         FALCON_LEVEL1_KEY_SIZE otherwise.
+ *         FALCON_LEVEL1_PRIVKEY_SIZE otherwise.
  */
 int wc_falcon_size(falcon_key* key)
 {
@@ -741,10 +741,10 @@ int wc_falcon_size(falcon_key* key)
     }
 
     if (key->level == 1) {
-        return FALCON_LEVEL1_KEY_SIZE;
+        return FALCON_LEVEL1_PRIVKEY_SIZE;
     }
     else if (key->level == 5) {
-        return FALCON_LEVEL5_KEY_SIZE;
+        return FALCON_LEVEL5_PRIVKEY_SIZE;
     }
 
     return BAD_FUNC_ARG;
@@ -754,7 +754,7 @@ int wc_falcon_size(falcon_key* key)
  *
  * key     [in]      Falcon private/public key.
  * returns BAD_FUNC_ARG when key is NULL,
- *         FALCON_LEVEL1_PRV_KEY_SIZE otherwise.
+ *         FALCON_LEVEL1_PRIVKEY_SIZE otherwise.
  */
 int wc_falcon_priv_size(falcon_key* key)
 {
@@ -763,10 +763,10 @@ int wc_falcon_priv_size(falcon_key* key)
     }
 
     if (key->level == 1) {
-        return FALCON_LEVEL1_PRV_KEY_SIZE;
+        return FALCON_LEVEL1_PRIVKEY_SIZE;
     }
     else if (key->level == 5) {
-        return FALCON_LEVEL5_PRV_KEY_SIZE;
+        return FALCON_LEVEL5_PRIVKEY_SIZE;
     }
 
     return BAD_FUNC_ARG;
@@ -776,7 +776,7 @@ int wc_falcon_priv_size(falcon_key* key)
  *
  * key     [in]      Falcon private/public key.
  * returns BAD_FUNC_ARG when key is NULL,
- *         FALCON_LEVEL1_PUB_KEY_SIZE otherwise.
+ *         FALCON_LEVEL1_PUBKEY_SIZE otherwise.
  */
 int wc_falcon_pub_size(falcon_key* key)
 {
@@ -785,10 +785,10 @@ int wc_falcon_pub_size(falcon_key* key)
     }
 
     if (key->level == 1) {
-        return FALCON_LEVEL1_PUB_KEY_SIZE;
+        return FALCON_LEVEL1_PUBKEY_SIZE;
     }
     else if (key->level == 5) {
-        return FALCON_LEVEL5_PUB_KEY_SIZE;
+        return FALCON_LEVEL5_PUBKEY_SIZE;
     }
 
     return BAD_FUNC_ARG;
@@ -820,7 +820,7 @@ int wc_Falcon_PrivateKeyDecode(const byte* input, word32* inOutIdx,
                                      falcon_key* key, word32 inSz)
 {
     int ret = 0;
-    byte privKey[FALCON_MAX_PRV_KEY_SIZE], pubKey[FALCON_MAX_PUB_KEY_SIZE];
+    byte privKey[FALCON_MAX_PRIVKEY_SIZE], pubKey[FALCON_MAX_PUBKEY_SIZE];
     word32 privKeyLen = (word32)sizeof(privKey);
     word32 pubKeyLen = (word32)sizeof(pubKey);
     int keytype = 0;
@@ -857,7 +857,7 @@ int wc_Falcon_PublicKeyDecode(const byte* input, word32* inOutIdx,
                                     falcon_key* key, word32 inSz)
 {
     int ret = 0;
-    byte pubKey[FALCON_MAX_PUB_KEY_SIZE];
+    byte pubKey[FALCON_MAX_PUBKEY_SIZE];
     word32 pubKeyLen = (word32)sizeof(pubKey);
     int keytype = 0;
 
@@ -905,7 +905,7 @@ int wc_Falcon_PublicKeyToDer(falcon_key* key, byte* output, word32 inLen,
                              int withAlg)
 {
     int    ret;
-    byte   pubKey[FALCON_MAX_PUB_KEY_SIZE];
+    byte   pubKey[FALCON_MAX_PUBKEY_SIZE];
     word32 pubKeyLen = (word32)sizeof(pubKey);
     int    keytype = 0;
 
@@ -940,13 +940,13 @@ int wc_Falcon_KeyToDer(falcon_key* key, byte* output, word32 inLen)
     }
 
     if (key->level == 1) {
-        return SetAsymKeyDer(key->k, FALCON_LEVEL1_KEY_SIZE, key->p,
-                             FALCON_LEVEL1_KEY_SIZE, output, inLen,
+        return SetAsymKeyDer(key->k, FALCON_LEVEL1_PRIVKEY_SIZE, key->p,
+                             FALCON_LEVEL1_PRIVKEY_SIZE, output, inLen,
                              FALCON_LEVEL1k);
     }
     else if (key->level == 5) {
-        return SetAsymKeyDer(key->k, FALCON_LEVEL5_KEY_SIZE, key->p,
-                             FALCON_LEVEL5_KEY_SIZE, output, inLen,
+        return SetAsymKeyDer(key->k, FALCON_LEVEL5_PRIVKEY_SIZE, key->p,
+                             FALCON_LEVEL5_PRIVKEY_SIZE, output, inLen,
                              FALCON_LEVEL5k);
     }
 
@@ -960,11 +960,11 @@ int wc_Falcon_PrivateKeyToDer(falcon_key* key, byte* output, word32 inLen)
     }
 
     if (key->level == 1) {
-        return SetAsymKeyDer(key->k, FALCON_LEVEL1_KEY_SIZE, NULL, 0, output,
+        return SetAsymKeyDer(key->k, FALCON_LEVEL1_PRIVKEY_SIZE, NULL, 0, output,
                              inLen, FALCON_LEVEL1k);
     }
     else if (key->level == 5) {
-        return SetAsymKeyDer(key->k, FALCON_LEVEL5_KEY_SIZE, NULL, 0, output,
+        return SetAsymKeyDer(key->k, FALCON_LEVEL5_PRIVKEY_SIZE, NULL, 0, output,
                              inLen, FALCON_LEVEL5k);
     }
 

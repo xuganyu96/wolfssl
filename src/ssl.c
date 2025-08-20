@@ -5952,14 +5952,14 @@ int AddCA(WOLFSSL_CERT_MANAGER* cm, DerBuffer** pDer, int type, int verify)
             #if defined(HAVE_FALCON)
             case FALCON_LEVEL1k:
                 if (cm->minFalconKeySz < 0 ||
-                          FALCON_LEVEL1_KEY_SIZE < (word16)cm->minFalconKeySz) {
+                          FALCON_LEVEL1_PRIVKEY_SIZE < (word16)cm->minFalconKeySz) {
                     ret = FALCON_KEY_SIZE_E;
                     WOLFSSL_MSG("\tCA Falcon level 1 key size error");
                 }
                 break;
             case FALCON_LEVEL5k:
                 if (cm->minFalconKeySz < 0 ||
-                          FALCON_LEVEL5_KEY_SIZE < (word16)cm->minFalconKeySz) {
+                          FALCON_LEVEL5_PRIVKEY_SIZE < (word16)cm->minFalconKeySz) {
                     ret = FALCON_KEY_SIZE_E;
                     WOLFSSL_MSG("\tCA Falcon level 5 key size error");
                 }

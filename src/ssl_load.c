@@ -866,13 +866,13 @@ static int ProcessBufferTryDecodeFalcon(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
     if (ret == 0) {
         /* Set up key to parse the format specified. */
         if ((*keyFormat == FALCON_LEVEL1k) || ((*keyFormat == 0) &&
-                ((der->length == FALCON_LEVEL1_KEY_SIZE) ||
-                 (der->length == FALCON_LEVEL1_PRV_KEY_SIZE)))) {
+                ((der->length == FALCON_LEVEL1_PRIVKEY_SIZE) ||
+                 (der->length == FALCON_LEVEL1_PRIVKEY_SIZE)))) {
             ret = wc_falcon_set_level(key, 1);
         }
         else if ((*keyFormat == FALCON_LEVEL5k) || ((*keyFormat == 0) &&
-                 ((der->length == FALCON_LEVEL5_KEY_SIZE) ||
-                  (der->length == FALCON_LEVEL5_PRV_KEY_SIZE)))) {
+                 ((der->length == FALCON_LEVEL5_PRIVKEY_SIZE) ||
+                  (der->length == FALCON_LEVEL5_PRIVKEY_SIZE)))) {
             ret = wc_falcon_set_level(key, 5);
         }
         else {
@@ -893,11 +893,11 @@ static int ProcessBufferTryDecodeFalcon(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
             /* Format is known. */
             if (*keyFormat == FALCON_LEVEL1k) {
                 *keyType = falcon_level1_sa_algo;
-                *keySize = FALCON_LEVEL1_KEY_SIZE;
+                *keySize = FALCON_LEVEL1_PRIVKEY_SIZE;
             }
             else {
                 *keyType = falcon_level5_sa_algo;
-                *keySize = FALCON_LEVEL5_KEY_SIZE;
+                *keySize = FALCON_LEVEL5_PRIVKEY_SIZE;
             }
 
             /* Check that the size of the Falcon key is enough. */
@@ -1727,20 +1727,20 @@ static int ProcessBufferCertPublicKey(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
         case FALCON_LEVEL1k:
             keyType = falcon_level1_sa_algo;
             /* Falcon is fixed key size */
-            keySz = FALCON_LEVEL1_KEY_SIZE;
+            keySz = FALCON_LEVEL1_PRIVKEY_SIZE;
             if (checkKeySz) {
                 ret = CHECK_KEY_SZ(ssl ? ssl->options.minFalconKeySz :
-                    ctx->minFalconKeySz, FALCON_MAX_KEY_SIZE, keySz,
+                    ctx->minFalconKeySz, FALCON_MAX_PRIVKEY_SIZE, keySz,
                     FALCON_KEY_SIZE_E);
             }
             break;
         case FALCON_LEVEL5k:
             keyType = falcon_level5_sa_algo;
             /* Falcon is fixed key size */
-            keySz = FALCON_LEVEL5_KEY_SIZE;
+            keySz = FALCON_LEVEL5_PRIVKEY_SIZE;
             if (checkKeySz) {
                 ret = CHECK_KEY_SZ(ssl ? ssl->options.minFalconKeySz :
-                    ctx->minFalconKeySz, FALCON_MAX_KEY_SIZE, keySz,
+                    ctx->minFalconKeySz, FALCON_MAX_PRIVKEY_SIZE, keySz,
                     FALCON_KEY_SIZE_E);
             }
             break;
@@ -1948,20 +1948,20 @@ static int ProcessBufferCertAltPublicKey(WOLFSSL_CTX* ctx, WOLFSSL* ssl,
         case FALCON_LEVEL1k:
             keyType = falcon_level1_sa_algo;
             /* Falcon is fixed key size */
-            keySz = FALCON_LEVEL1_KEY_SIZE;
+            keySz = FALCON_LEVEL1_PRIVKEY_SIZE;
             if (checkKeySz) {
                 ret = CHECK_KEY_SZ(ssl ? ssl->options.minFalconKeySz :
-                    ctx->minFalconKeySz, FALCON_MAX_KEY_SIZE, keySz,
+                    ctx->minFalconKeySz, FALCON_MAX_PRIVKEY_SIZE, keySz,
                     FALCON_KEY_SIZE_E);
             }
             break;
         case FALCON_LEVEL5k:
             keyType = falcon_level5_sa_algo;
             /* Falcon is fixed key size */
-            keySz = FALCON_LEVEL5_KEY_SIZE;
+            keySz = FALCON_LEVEL5_PRIVKEY_SIZE;
             if (checkKeySz) {
                 ret = CHECK_KEY_SZ(ssl ? ssl->options.minFalconKeySz :
-                    ctx->minFalconKeySz, FALCON_MAX_KEY_SIZE, keySz,
+                    ctx->minFalconKeySz, FALCON_MAX_PRIVKEY_SIZE, keySz,
                     FALCON_KEY_SIZE_E);
             }
             break;
