@@ -29,14 +29,16 @@
 
 #ifdef HAVE_LIBOQS
 #include <oqs/oqs.h>
+#elif defined(HAVE_PQCLEAN)
+#include <common/randombytes.h>
 #endif
 
 #include <wolfssl/wolfcrypt/sphincs.h>
 #ifdef NO_INLINE
-    #include <wolfssl/wolfcrypt/misc.h>
+#include <wolfssl/wolfcrypt/misc.h>
 #else
-    #define WOLFSSL_MISC_INCLUDED
-    #include <wolfcrypt/src/misc.c>
+#define WOLFSSL_MISC_INCLUDED
+#include <wolfcrypt/src/misc.c>
 #endif
 
 /* Sign the message using the sphincs private key.
@@ -51,9 +53,8 @@
  *          BUFFER_E when outLen is less than SPHINCS_FAST_LEVEL1_SIG_SIZE,
  *          0 otherwise.
  */
-int wc_sphincs_sign_msg(const byte* in, word32 inLen, byte* out, word32 *outLen,
-                        sphincs_key* key, WC_RNG* rng)
-{
+int wc_sphincs_sign_msg(const byte *in, word32 inLen, byte *out, word32 *outLen,
+                        sphincs_key *key, WC_RNG *rng) {
     int ret = 0;
 #ifdef HAVE_LIBOQS
     OQS_SIG *oqssig = NULL;
@@ -71,20 +72,15 @@ int wc_sphincs_sign_msg(const byte* in, word32 inLen, byte* out, word32 *outLen,
     if (ret == 0) {
         if ((key->optim == FAST_VARIANT) && (key->level == 1)) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_sphincs_shake_128f_simple);
-        }
-        else if ((key->optim == FAST_VARIANT) && (key->level == 3)) {
+        } else if ((key->optim == FAST_VARIANT) && (key->level == 3)) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_sphincs_shake_192f_simple);
-        }
-        else if ((key->optim == FAST_VARIANT) && (key->level == 5)) {
+        } else if ((key->optim == FAST_VARIANT) && (key->level == 5)) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_sphincs_shake_256f_simple);
-        }
-        else if ((key->optim == SMALL_VARIANT) && (key->level == 1)) {
+        } else if ((key->optim == SMALL_VARIANT) && (key->level == 1)) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_sphincs_shake_128s_simple);
-        }
-        else if ((key->optim == SMALL_VARIANT) && (key->level == 3)) {
+        } else if ((key->optim == SMALL_VARIANT) && (key->level == 3)) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_sphincs_shake_192s_simple);
-        }
-        else if ((key->optim == SMALL_VARIANT) && (key->level == 5)) {
+        } else if ((key->optim == SMALL_VARIANT) && (key->level == 5)) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_sphincs_shake_256s_simple);
         }
 
@@ -99,29 +95,24 @@ int wc_sphincs_sign_msg(const byte* in, word32 inLen, byte* out, word32 *outLen,
             (*outLen < SPHINCS_FAST_LEVEL1_SIG_SIZE)) {
             *outLen = SPHINCS_FAST_LEVEL1_SIG_SIZE;
             ret = BUFFER_E;
-        }
-        else if ((key->level == 3) && (key->optim == FAST_VARIANT) &&
-            (*outLen < SPHINCS_FAST_LEVEL3_SIG_SIZE)) {
+        } else if ((key->level == 3) && (key->optim == FAST_VARIANT) &&
+                   (*outLen < SPHINCS_FAST_LEVEL3_SIG_SIZE)) {
             *outLen = SPHINCS_FAST_LEVEL3_SIG_SIZE;
             ret = BUFFER_E;
-        }
-        else if ((key->level == 5) && (key->optim == FAST_VARIANT) &&
-            (*outLen < SPHINCS_FAST_LEVEL5_SIG_SIZE)) {
+        } else if ((key->level == 5) && (key->optim == FAST_VARIANT) &&
+                   (*outLen < SPHINCS_FAST_LEVEL5_SIG_SIZE)) {
             *outLen = SPHINCS_FAST_LEVEL5_SIG_SIZE;
             ret = BUFFER_E;
-        }
-        else if ((key->level == 1) && (key->optim == SMALL_VARIANT) &&
-            (*outLen < SPHINCS_SMALL_LEVEL1_SIG_SIZE)) {
+        } else if ((key->level == 1) && (key->optim == SMALL_VARIANT) &&
+                   (*outLen < SPHINCS_SMALL_LEVEL1_SIG_SIZE)) {
             *outLen = SPHINCS_SMALL_LEVEL1_SIG_SIZE;
             ret = BUFFER_E;
-        }
-        else if ((key->level == 3) && (key->optim == SMALL_VARIANT) &&
-            (*outLen < SPHINCS_SMALL_LEVEL3_SIG_SIZE)) {
+        } else if ((key->level == 3) && (key->optim == SMALL_VARIANT) &&
+                   (*outLen < SPHINCS_SMALL_LEVEL3_SIG_SIZE)) {
             *outLen = SPHINCS_SMALL_LEVEL3_SIG_SIZE;
             ret = BUFFER_E;
-        }
-        else if ((key->level == 5) && (key->optim == SMALL_VARIANT) &&
-            (*outLen < SPHINCS_SMALL_LEVEL5_SIG_SIZE)) {
+        } else if ((key->level == 5) && (key->optim == SMALL_VARIANT) &&
+                   (*outLen < SPHINCS_SMALL_LEVEL5_SIG_SIZE)) {
             *outLen = SPHINCS_SMALL_LEVEL5_SIG_SIZE;
             ret = BUFFER_E;
         }
@@ -133,9 +124,8 @@ int wc_sphincs_sign_msg(const byte* in, word32 inLen, byte* out, word32 *outLen,
         ret = wolfSSL_liboqsRngMutexLock(rng);
     }
 
-    if ((ret == 0) &&
-        (OQS_SIG_sign(oqssig, out, &localOutLen, in, inLen, key->k)
-         == OQS_ERROR)) {
+    if ((ret == 0) && (OQS_SIG_sign(oqssig, out, &localOutLen, in, inLen,
+                                    key->k) == OQS_ERROR)) {
         ret = BAD_FUNC_ARG;
     }
 
@@ -166,9 +156,8 @@ int wc_sphincs_sign_msg(const byte* in, word32 inLen, byte* out, word32 *outLen,
  *          BUFFER_E when sigLen is less than SPHINCS_FAST_LEVEL1_SIG_SIZE,
  *          0 otherwise.
  */
-int wc_sphincs_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
-                          word32 msgLen, int* res, sphincs_key* key)
-{
+int wc_sphincs_verify_msg(const byte *sig, word32 sigLen, const byte *msg,
+                          word32 msgLen, int *res, sphincs_key *key) {
     int ret = 0;
 #ifdef HAVE_LIBOQS
     OQS_SIG *oqssig = NULL;
@@ -184,20 +173,15 @@ int wc_sphincs_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
     if (ret == 0) {
         if ((key->optim == FAST_VARIANT) && (key->level == 1)) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_sphincs_shake_128f_simple);
-        }
-        else if ((key->optim == FAST_VARIANT) && (key->level == 3)) {
+        } else if ((key->optim == FAST_VARIANT) && (key->level == 3)) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_sphincs_shake_192f_simple);
-        }
-        else if ((key->optim == FAST_VARIANT) && (key->level == 5)) {
+        } else if ((key->optim == FAST_VARIANT) && (key->level == 5)) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_sphincs_shake_256f_simple);
-        }
-        else if ((key->optim == SMALL_VARIANT) && (key->level == 1)) {
+        } else if ((key->optim == SMALL_VARIANT) && (key->level == 1)) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_sphincs_shake_128s_simple);
-        }
-        else if ((key->optim == SMALL_VARIANT) && (key->level == 3)) {
+        } else if ((key->optim == SMALL_VARIANT) && (key->level == 3)) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_sphincs_shake_192s_simple);
-        }
-        else if ((key->optim == SMALL_VARIANT) && (key->level == 5)) {
+        } else if ((key->optim == SMALL_VARIANT) && (key->level == 5)) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_sphincs_shake_256s_simple);
         }
 
@@ -206,10 +190,9 @@ int wc_sphincs_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
         }
     }
 
-    if ((ret == 0) &&
-        (OQS_SIG_verify(oqssig, msg, msgLen, sig, sigLen, key->p)
-         == OQS_ERROR)) {
-         ret = SIG_VERIFY_E;
+    if ((ret == 0) && (OQS_SIG_verify(oqssig, msg, msgLen, sig, sigLen,
+                                      key->p) == OQS_ERROR)) {
+        ret = SIG_VERIFY_E;
     }
 
     if (ret == 0) {
@@ -231,8 +214,7 @@ int wc_sphincs_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
  * key  [in]  Sphincs key.
  * returns BAD_FUNC_ARG when key is NULL
  */
-int wc_sphincs_init(sphincs_key* key)
-{
+int wc_sphincs_init(sphincs_key *key) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -248,8 +230,7 @@ int wc_sphincs_init(sphincs_key* key)
  * optim [in]   Either FAST_VARIANT or SMALL_VARIANT.
  * returns BAD_FUNC_ARG when key is NULL or level or optim are bad values.
  */
-int wc_sphincs_set_level_and_optim(sphincs_key* key, byte level, byte optim)
-{
+int wc_sphincs_set_level_and_optim(sphincs_key *key, byte level, byte optim) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -276,8 +257,7 @@ int wc_sphincs_set_level_and_optim(sphincs_key* key, byte level, byte optim)
  * optim [out] The optimization variant. FAST_VARIANT or SMALL_VARIANT.
  * returns BAD_FUNC_ARG when key is NULL or level has not been set.
  */
-int wc_sphincs_get_level_and_optim(sphincs_key* key, byte* level, byte* optim)
-{
+int wc_sphincs_get_level_and_optim(sphincs_key *key, byte *level, byte *optim) {
     if (key == NULL || level == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -299,8 +279,7 @@ int wc_sphincs_get_level_and_optim(sphincs_key* key, byte* level, byte* optim)
  *
  * key  [in]  Sphincs key.
  */
-void wc_sphincs_free(sphincs_key* key)
-{
+void wc_sphincs_free(sphincs_key *key) {
     if (key != NULL) {
         ForceZero(key, sizeof(*key));
     }
@@ -316,9 +295,7 @@ void wc_sphincs_free(sphincs_key* key)
  *         BUFFER_E when outLen is less than SPHINCS_FAST_LEVEL1_PUBKEY_SIZE,
  *         0 otherwise.
  */
-int wc_sphincs_export_public(sphincs_key* key,
-                             byte* out, word32* outLen)
-{
+int wc_sphincs_export_public(sphincs_key *key, byte *out, word32 *outLen) {
     /* sanity check on arguments */
     if ((key == NULL) || (out == NULL) || (outLen == NULL)) {
         return BAD_FUNC_ARG;
@@ -336,12 +313,10 @@ int wc_sphincs_export_public(sphincs_key* key,
     if ((key->level == 1) && (*outLen < SPHINCS_LEVEL1_PUBKEY_SIZE)) {
         *outLen = SPHINCS_LEVEL1_PUBKEY_SIZE;
         return BUFFER_E;
-    }
-    else if ((key->level == 3) && (*outLen < SPHINCS_LEVEL3_PUBKEY_SIZE)) {
+    } else if ((key->level == 3) && (*outLen < SPHINCS_LEVEL3_PUBKEY_SIZE)) {
         *outLen = SPHINCS_LEVEL3_PUBKEY_SIZE;
         return BUFFER_E;
-    }
-    else if ((key->level == 5) && (*outLen < SPHINCS_LEVEL5_PUBKEY_SIZE)) {
+    } else if ((key->level == 5) && (*outLen < SPHINCS_LEVEL5_PUBKEY_SIZE)) {
         *outLen = SPHINCS_LEVEL5_PUBKEY_SIZE;
         return BUFFER_E;
     }
@@ -349,12 +324,10 @@ int wc_sphincs_export_public(sphincs_key* key,
     if (key->level == 1) {
         *outLen = SPHINCS_LEVEL1_PUBKEY_SIZE;
         XMEMCPY(out, key->p, SPHINCS_LEVEL1_PUBKEY_SIZE);
-    }
-    else if (key->level == 3) {
+    } else if (key->level == 3) {
         *outLen = SPHINCS_LEVEL3_PUBKEY_SIZE;
         XMEMCPY(out, key->p, SPHINCS_LEVEL3_PUBKEY_SIZE);
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         *outLen = SPHINCS_LEVEL5_PUBKEY_SIZE;
         XMEMCPY(out, key->p, SPHINCS_LEVEL5_PUBKEY_SIZE);
     }
@@ -371,9 +344,7 @@ int wc_sphincs_export_public(sphincs_key* key,
  * returns BAD_FUNC_ARG when a parameter is NULL or key format is not supported,
  *         0 otherwise.
  */
-int wc_sphincs_import_public(const byte* in, word32 inLen,
-                             sphincs_key* key)
-{
+int wc_sphincs_import_public(const byte *in, word32 inLen, sphincs_key *key) {
     /* sanity check on arguments */
     if ((in == NULL) || (key == NULL)) {
         return BAD_FUNC_ARG;
@@ -389,11 +360,9 @@ int wc_sphincs_import_public(const byte* in, word32 inLen,
 
     if ((key->level == 1) && (inLen != SPHINCS_LEVEL1_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
-    }
-    else if ((key->level == 3) && (inLen != SPHINCS_LEVEL3_PUBKEY_SIZE)) {
+    } else if ((key->level == 3) && (inLen != SPHINCS_LEVEL3_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
-    }
-    else if ((key->level == 5) && (inLen != SPHINCS_LEVEL5_PUBKEY_SIZE)) {
+    } else if ((key->level == 5) && (inLen != SPHINCS_LEVEL5_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
     }
 
@@ -403,9 +372,8 @@ int wc_sphincs_import_public(const byte* in, word32 inLen,
     return 0;
 }
 
-static int parse_private_key(const byte* priv, word32 privSz,
-                             byte** out, word32 *outSz,
-                             sphincs_key* key) {
+static int parse_private_key(const byte *priv, word32 privSz, byte **out,
+                             word32 *outSz, sphincs_key *key) {
     word32 idx = 0;
     int ret = 0;
     int length = 0;
@@ -438,16 +406,16 @@ static int parse_private_key(const byte* priv, word32 privSz,
     *outSz = privSz - idx;
 
     /* And finally it is concat(priv,pub). Key size check. */
-    if ((key->level == 1) && (*outSz != SPHINCS_LEVEL1_PRIVKEY_SIZE +
-                                        SPHINCS_LEVEL1_PUBKEY_SIZE)) {
+    if ((key->level == 1) &&
+        (*outSz != SPHINCS_LEVEL1_PRIVKEY_SIZE + SPHINCS_LEVEL1_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
-    }
-    else if ((key->level == 3) && (*outSz != SPHINCS_LEVEL3_PRIVKEY_SIZE +
-                                             SPHINCS_LEVEL3_PUBKEY_SIZE)) {
+    } else if ((key->level == 3) &&
+               (*outSz !=
+                SPHINCS_LEVEL3_PRIVKEY_SIZE + SPHINCS_LEVEL3_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
-    }
-    else if ((key->level == 5) && (*outSz != SPHINCS_LEVEL5_PRIVKEY_SIZE +
-                                             SPHINCS_LEVEL5_PUBKEY_SIZE)) {
+    } else if ((key->level == 5) &&
+               (*outSz !=
+                SPHINCS_LEVEL5_PRIVKEY_SIZE + SPHINCS_LEVEL5_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
     }
 
@@ -463,25 +431,22 @@ static int parse_private_key(const byte* priv, word32 privSz,
  *         SPHINCS_LEVEL1_PRIVKEY_SIZE,
  *         0 otherwise.
  */
-int wc_sphincs_import_private_only(const byte* priv, word32 privSz,
-                                   sphincs_key* key)
-{
+int wc_sphincs_import_private_only(const byte *priv, word32 privSz,
+                                   sphincs_key *key) {
     int ret = 0;
     byte *newPriv = NULL;
     word32 newPrivSz = 0;
 
-    if ((ret = parse_private_key(priv, privSz, &newPriv, &newPrivSz, key))
-        != 0) {
-         return ret;
+    if ((ret = parse_private_key(priv, privSz, &newPriv, &newPrivSz, key)) !=
+        0) {
+        return ret;
     }
 
     if (key->level == 1) {
         XMEMCPY(key->k, newPriv, SPHINCS_LEVEL1_PRIVKEY_SIZE);
-    }
-    else if (key->level == 3) {
+    } else if (key->level == 3) {
         XMEMCPY(key->k, newPriv, SPHINCS_LEVEL3_PRIVKEY_SIZE);
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         XMEMCPY(key->k, newPriv, SPHINCS_LEVEL5_PRIVKEY_SIZE);
     }
     key->prvKeySet = 1;
@@ -499,17 +464,16 @@ int wc_sphincs_import_private_only(const byte* priv, word32 privSz,
  * returns BAD_FUNC_ARG when a required parameter is NULL or an invalid
  *         combination of keys/lengths is supplied, 0 otherwise.
  */
-int wc_sphincs_import_private_key(const byte* priv, word32 privSz,
-                                  const byte* pub, word32 pubSz,
-                                  sphincs_key* key)
-{
+int wc_sphincs_import_private_key(const byte *priv, word32 privSz,
+                                  const byte *pub, word32 pubSz,
+                                  sphincs_key *key) {
     int ret = 0;
     byte *newPriv = NULL;
     word32 newPrivSz = 0;
 
-    if ((ret = parse_private_key(priv, privSz, &newPriv, &newPrivSz, key))
-        != 0) {
-         return ret;
+    if ((ret = parse_private_key(priv, privSz, &newPriv, &newPrivSz, key)) !=
+        0) {
+        return ret;
     }
 
     if (pub == NULL) {
@@ -526,19 +490,16 @@ int wc_sphincs_import_private_key(const byte* priv, word32 privSz,
         if (key->level == 1) {
             pub = newPriv + SPHINCS_LEVEL1_PRIVKEY_SIZE;
             pubSz = SPHINCS_LEVEL1_PUBKEY_SIZE;
-        }
-        else if (key->level == 3) {
+        } else if (key->level == 3) {
             pub = newPriv + SPHINCS_LEVEL3_PRIVKEY_SIZE;
             pubSz = SPHINCS_LEVEL3_PUBKEY_SIZE;
-        }
-        else if (key->level == 5) {
+        } else if (key->level == 5) {
             pub = newPriv + SPHINCS_LEVEL5_PRIVKEY_SIZE;
             pubSz = SPHINCS_LEVEL5_PUBKEY_SIZE;
         }
-    }
-    else if ((pubSz != SPHINCS_LEVEL1_PUBKEY_SIZE) &&
-             (pubSz != SPHINCS_LEVEL3_PUBKEY_SIZE) &&
-             (pubSz != SPHINCS_LEVEL5_PUBKEY_SIZE)) {
+    } else if ((pubSz != SPHINCS_LEVEL1_PUBKEY_SIZE) &&
+               (pubSz != SPHINCS_LEVEL3_PUBKEY_SIZE) &&
+               (pubSz != SPHINCS_LEVEL5_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
     }
 
@@ -549,11 +510,9 @@ int wc_sphincs_import_private_key(const byte* priv, word32 privSz,
         /* make the private key (priv + pub) */
         if (key->level == 1) {
             XMEMCPY(key->k, newPriv, SPHINCS_LEVEL1_PRIVKEY_SIZE);
-        }
-        else if (key->level == 3) {
+        } else if (key->level == 3) {
             XMEMCPY(key->k, newPriv, SPHINCS_LEVEL3_PRIVKEY_SIZE);
-        }
-        else if (key->level == 5) {
+        } else if (key->level == 5) {
             XMEMCPY(key->k, newPriv, SPHINCS_LEVEL5_PRIVKEY_SIZE);
         }
         key->prvKeySet = 1;
@@ -572,8 +531,8 @@ int wc_sphincs_import_private_key(const byte* priv, word32 privSz,
  *         BUFFER_E when outLen is less than SPHINCS_LEVEL1_PRIVKEY_SIZE,
  *         0 otherwise.
  */
-int wc_sphincs_export_private_only(sphincs_key* key, byte* out, word32* outLen)
-{
+int wc_sphincs_export_private_only(sphincs_key *key, byte *out,
+                                   word32 *outLen) {
     /* sanity checks on arguments */
     if ((key == NULL) || (out == NULL) || (outLen == NULL)) {
         return BAD_FUNC_ARG;
@@ -591,23 +550,19 @@ int wc_sphincs_export_private_only(sphincs_key* key, byte* out, word32* outLen)
     if ((key->level == 1) && (*outLen < SPHINCS_LEVEL1_PRIVKEY_SIZE)) {
         *outLen = SPHINCS_LEVEL1_PRIVKEY_SIZE;
         return BUFFER_E;
-    }
-    else if ((key->level == 3) && (*outLen < SPHINCS_LEVEL3_PRIVKEY_SIZE)) {
+    } else if ((key->level == 3) && (*outLen < SPHINCS_LEVEL3_PRIVKEY_SIZE)) {
         *outLen = SPHINCS_LEVEL3_PRIVKEY_SIZE;
         return BUFFER_E;
-    }
-    else if ((key->level == 5) && (*outLen < SPHINCS_LEVEL5_PRIVKEY_SIZE)) {
+    } else if ((key->level == 5) && (*outLen < SPHINCS_LEVEL5_PRIVKEY_SIZE)) {
         *outLen = SPHINCS_LEVEL5_PRIVKEY_SIZE;
         return BUFFER_E;
     }
 
     if (key->level == 1) {
         *outLen = SPHINCS_LEVEL1_PRIVKEY_SIZE;
-    }
-    else if (key->level == 3) {
+    } else if (key->level == 3) {
         *outLen = SPHINCS_LEVEL3_PRIVKEY_SIZE;
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         *outLen = SPHINCS_LEVEL5_PRIVKEY_SIZE;
     }
 
@@ -625,8 +580,7 @@ int wc_sphincs_export_private_only(sphincs_key* key, byte* out, word32* outLen)
  * returns BAD_FUNC_ARG when a parameter is NULL,
  *         BUFFER_E when outLen is less than required, 0 otherwise.
  */
-int wc_sphincs_export_private(sphincs_key* key, byte* out, word32* outLen)
-{
+int wc_sphincs_export_private(sphincs_key *key, byte *out, word32 *outLen) {
     /* sanity checks on arguments */
     if ((key == NULL) || (out == NULL) || (outLen == NULL)) {
         return BAD_FUNC_ARG;
@@ -643,30 +597,25 @@ int wc_sphincs_export_private(sphincs_key* key, byte* out, word32* outLen)
     if ((key->level == 1) && (*outLen < SPHINCS_LEVEL1_PRIVKEY_SIZE)) {
         *outLen = SPHINCS_LEVEL1_PRIVKEY_SIZE;
         return BUFFER_E;
-    }
-    else if ((key->level == 3) && (*outLen < SPHINCS_LEVEL3_PRIVKEY_SIZE)) {
+    } else if ((key->level == 3) && (*outLen < SPHINCS_LEVEL3_PRIVKEY_SIZE)) {
         *outLen = SPHINCS_LEVEL3_PRIVKEY_SIZE;
         return BUFFER_E;
-    }
-    else if ((key->level == 5) && (*outLen < SPHINCS_LEVEL5_PRIVKEY_SIZE)) {
+    } else if ((key->level == 5) && (*outLen < SPHINCS_LEVEL5_PRIVKEY_SIZE)) {
         *outLen = SPHINCS_LEVEL5_PRIVKEY_SIZE;
         return BUFFER_E;
     }
-
 
     if (key->level == 1) {
         *outLen = SPHINCS_LEVEL1_PRIVKEY_SIZE;
         XMEMCPY(out, key->k, SPHINCS_LEVEL1_PRIVKEY_SIZE);
         XMEMCPY(out + SPHINCS_LEVEL1_PRIVKEY_SIZE, key->p,
                 SPHINCS_LEVEL1_PUBKEY_SIZE);
-    }
-    else if (key->level == 3) {
+    } else if (key->level == 3) {
         *outLen = SPHINCS_LEVEL3_PRIVKEY_SIZE;
         XMEMCPY(out, key->k, SPHINCS_LEVEL3_PRIVKEY_SIZE);
         XMEMCPY(out + SPHINCS_LEVEL3_PRIVKEY_SIZE, key->p,
                 SPHINCS_LEVEL3_PUBKEY_SIZE);
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         *outLen = SPHINCS_LEVEL5_PRIVKEY_SIZE;
         XMEMCPY(out, key->k, SPHINCS_LEVEL5_PRIVKEY_SIZE);
         XMEMCPY(out + SPHINCS_LEVEL5_PRIVKEY_SIZE, key->p,
@@ -688,9 +637,8 @@ int wc_sphincs_export_private(sphincs_key* key, byte* out, word32* outLen)
  *         BUFFER_E when privSz is or pubSz is less than required,
  *         0 otherwise.
  */
-int wc_sphincs_export_key(sphincs_key* key, byte* priv, word32 *privSz,
-                            byte* pub, word32 *pubSz)
-{
+int wc_sphincs_export_key(sphincs_key *key, byte *priv, word32 *privSz,
+                          byte *pub, word32 *pubSz) {
     int ret = 0;
 
     /* export private part */
@@ -711,8 +659,7 @@ int wc_sphincs_export_key(sphincs_key* key, byte* priv, word32 *privSz,
  *         other -ve value on hash failure,
  *         0 otherwise.
  */
-int wc_sphincs_check_key(sphincs_key* key)
-{
+int wc_sphincs_check_key(sphincs_key *key) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -727,19 +674,16 @@ int wc_sphincs_check_key(sphincs_key* key)
  * returns BAD_FUNC_ARG when key is NULL,
  *         SPHINCS_LEVELn_PRIVKEY_SIZE otherwise.
  */
-int wc_sphincs_size(sphincs_key* key)
-{
+int wc_sphincs_size(sphincs_key *key) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
 
     if (key->level == 1) {
         return SPHINCS_LEVEL1_PRIVKEY_SIZE;
-    }
-    else if (key->level == 3) {
+    } else if (key->level == 3) {
         return SPHINCS_LEVEL3_PRIVKEY_SIZE;
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         return SPHINCS_LEVEL5_PRIVKEY_SIZE;
     }
 
@@ -752,19 +696,16 @@ int wc_sphincs_size(sphincs_key* key)
  * returns BAD_FUNC_ARG when key is NULL,
  *         SPHINCS_LEVELn_PRIVKEY_SIZE otherwise.
  */
-int wc_sphincs_priv_size(sphincs_key* key)
-{
+int wc_sphincs_priv_size(sphincs_key *key) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
 
     if (key->level == 1) {
         return SPHINCS_LEVEL1_PRIVKEY_SIZE;
-    }
-    else if (key->level == 3) {
+    } else if (key->level == 3) {
         return SPHINCS_LEVEL3_PRIVKEY_SIZE;
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         return SPHINCS_LEVEL5_PRIVKEY_SIZE;
     }
 
@@ -777,19 +718,16 @@ int wc_sphincs_priv_size(sphincs_key* key)
  * returns BAD_FUNC_ARG when key is NULL,
  *         SPHINCS_FAST_LEVEL1_PUBKEY_SIZE otherwise.
  */
-int wc_sphincs_pub_size(sphincs_key* key)
-{
+int wc_sphincs_pub_size(sphincs_key *key) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
 
     if (key->level == 1) {
         return SPHINCS_LEVEL1_PUBKEY_SIZE;
-    }
-    else if (key->level == 3) {
+    } else if (key->level == 3) {
         return SPHINCS_LEVEL3_PUBKEY_SIZE;
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         return SPHINCS_LEVEL5_PUBKEY_SIZE;
     }
 
@@ -802,37 +740,30 @@ int wc_sphincs_pub_size(sphincs_key* key)
  * returns BAD_FUNC_ARG when key is NULL,
  *         SPHINCS_FAST_LEVEL1_SIG_SIZE otherwise.
  */
-int wc_sphincs_sig_size(sphincs_key* key)
-{
+int wc_sphincs_sig_size(sphincs_key *key) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
 
     if ((key->level == 1) && (key->optim == FAST_VARIANT)) {
         return SPHINCS_FAST_LEVEL1_SIG_SIZE;
-    }
-    else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
+    } else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
         return SPHINCS_FAST_LEVEL3_SIG_SIZE;
-    }
-    else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
+    } else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
         return SPHINCS_FAST_LEVEL5_SIG_SIZE;
-    }
-    else if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
         return SPHINCS_SMALL_LEVEL1_SIG_SIZE;
-    }
-    else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
         return SPHINCS_SMALL_LEVEL3_SIG_SIZE;
-    }
-    else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
         return SPHINCS_SMALL_LEVEL5_SIG_SIZE;
     }
 
     return BAD_FUNC_ARG;
 }
 
-int wc_Sphincs_PrivateKeyDecode(const byte* input, word32* inOutIdx,
-                                sphincs_key* key, word32 inSz)
-{
+int wc_Sphincs_PrivateKeyDecode(const byte *input, word32 *inOutIdx,
+                                sphincs_key *key, word32 inSz) {
     int ret = 0;
     byte privKey[SPHINCS_MAX_PRIVKEY_SIZE], pubKey[SPHINCS_MAX_PUBKEY_SIZE];
     word32 privKeyLen = (word32)sizeof(privKey);
@@ -845,43 +776,35 @@ int wc_Sphincs_PrivateKeyDecode(const byte* input, word32* inOutIdx,
 
     if ((key->level == 1) && (key->optim == FAST_VARIANT)) {
         keytype = SPHINCS_FAST_LEVEL1k;
-    }
-    else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
+    } else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
         keytype = SPHINCS_FAST_LEVEL3k;
-    }
-    else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
+    } else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
         keytype = SPHINCS_FAST_LEVEL5k;
-    }
-    else if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
         keytype = SPHINCS_SMALL_LEVEL1k;
-    }
-    else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
         keytype = SPHINCS_SMALL_LEVEL3k;
-    }
-    else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
         keytype = SPHINCS_SMALL_LEVEL5k;
-    }
-    else {
+    } else {
         return BAD_FUNC_ARG;
     }
 
-    ret = DecodeAsymKey(input, inOutIdx, inSz, privKey, &privKeyLen,
-                        pubKey, &pubKeyLen, keytype);
+    ret = DecodeAsymKey(input, inOutIdx, inSz, privKey, &privKeyLen, pubKey,
+                        &pubKeyLen, keytype);
     if (ret == 0) {
         if (pubKeyLen == 0) {
             ret = wc_sphincs_import_private_only(input, inSz, key);
-        }
-        else {
-            ret = wc_sphincs_import_private_key(privKey, privKeyLen,
-                                               pubKey, pubKeyLen, key);
+        } else {
+            ret = wc_sphincs_import_private_key(privKey, privKeyLen, pubKey,
+                                                pubKeyLen, key);
         }
     }
     return ret;
 }
 
-int wc_Sphincs_PublicKeyDecode(const byte* input, word32* inOutIdx,
-                               sphincs_key* key, word32 inSz)
-{
+int wc_Sphincs_PublicKeyDecode(const byte *input, word32 *inOutIdx,
+                               sphincs_key *key, word32 inSz) {
     int ret = 0;
     byte pubKey[SPHINCS_MAX_PUBKEY_SIZE];
     word32 pubKeyLen = (word32)sizeof(pubKey);
@@ -898,28 +821,22 @@ int wc_Sphincs_PublicKeyDecode(const byte* input, word32* inOutIdx,
 
     if ((key->level == 1) && (key->optim == FAST_VARIANT)) {
         keytype = SPHINCS_FAST_LEVEL1k;
-    }
-    else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
+    } else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
         keytype = SPHINCS_FAST_LEVEL3k;
-    }
-    else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
+    } else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
         keytype = SPHINCS_FAST_LEVEL5k;
-    }
-    else if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
         keytype = SPHINCS_SMALL_LEVEL1k;
-    }
-    else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
         keytype = SPHINCS_SMALL_LEVEL3k;
-    }
-    else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
         keytype = SPHINCS_SMALL_LEVEL5k;
-    }
-    else {
+    } else {
         return BAD_FUNC_ARG;
     }
 
-    ret = DecodeAsymKeyPublic(input, inOutIdx, inSz, pubKey, &pubKeyLen,
-                              keytype);
+    ret =
+        DecodeAsymKeyPublic(input, inOutIdx, inSz, pubKey, &pubKeyLen, keytype);
     if (ret == 0) {
         ret = wc_sphincs_import_public(pubKey, pubKeyLen, key);
     }
@@ -939,13 +856,12 @@ int wc_Sphincs_PublicKeyDecode(const byte* input, word32* inOutIdx,
  * @return  BAD_FUNC_ARG when key is NULL.
  * @return  MEMORY_E when dynamic memory allocation failed.
  */
-int wc_Sphincs_PublicKeyToDer(sphincs_key* key, byte* output, word32 inLen,
-                              int withAlg)
-{
-    int    ret;
-    byte   pubKey[SPHINCS_MAX_PUBKEY_SIZE];
+int wc_Sphincs_PublicKeyToDer(sphincs_key *key, byte *output, word32 inLen,
+                              int withAlg) {
+    int ret;
+    byte pubKey[SPHINCS_MAX_PUBKEY_SIZE];
     word32 pubKeyLen = (word32)sizeof(pubKey);
-    int    keytype = 0;
+    int keytype = 0;
 
     if (key == NULL) {
         return BAD_FUNC_ARG;
@@ -953,23 +869,17 @@ int wc_Sphincs_PublicKeyToDer(sphincs_key* key, byte* output, word32 inLen,
 
     if ((key->level == 1) && (key->optim == FAST_VARIANT)) {
         keytype = SPHINCS_FAST_LEVEL1k;
-    }
-    else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
+    } else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
         keytype = SPHINCS_FAST_LEVEL3k;
-    }
-    else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
+    } else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
         keytype = SPHINCS_FAST_LEVEL5k;
-    }
-    else if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
         keytype = SPHINCS_SMALL_LEVEL1k;
-    }
-    else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
         keytype = SPHINCS_SMALL_LEVEL3k;
-    }
-    else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
         keytype = SPHINCS_SMALL_LEVEL5k;
-    }
-    else {
+    } else {
         return BAD_FUNC_ARG;
     }
 
@@ -983,8 +893,7 @@ int wc_Sphincs_PublicKeyToDer(sphincs_key* key, byte* output, word32 inLen,
 }
 #endif
 
-int wc_Sphincs_KeyToDer(sphincs_key* key, byte* output, word32 inLen)
-{
+int wc_Sphincs_KeyToDer(sphincs_key *key, byte *output, word32 inLen) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -993,28 +902,23 @@ int wc_Sphincs_KeyToDer(sphincs_key* key, byte* output, word32 inLen)
         return SetAsymKeyDer(key->k, SPHINCS_LEVEL1_PRIVKEY_SIZE, key->p,
                              SPHINCS_LEVEL1_PRIVKEY_SIZE, output, inLen,
                              SPHINCS_FAST_LEVEL1k);
-    }
-    else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
+    } else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
         return SetAsymKeyDer(key->k, SPHINCS_LEVEL3_PRIVKEY_SIZE, key->p,
                              SPHINCS_LEVEL3_PRIVKEY_SIZE, output, inLen,
                              SPHINCS_FAST_LEVEL3k);
-    }
-    else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
+    } else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
         return SetAsymKeyDer(key->k, SPHINCS_LEVEL5_PRIVKEY_SIZE, key->p,
                              SPHINCS_LEVEL5_PRIVKEY_SIZE, output, inLen,
                              SPHINCS_FAST_LEVEL5k);
-    }
-    else if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
         return SetAsymKeyDer(key->k, SPHINCS_LEVEL1_PRIVKEY_SIZE, key->p,
                              SPHINCS_LEVEL1_PRIVKEY_SIZE, output, inLen,
                              SPHINCS_SMALL_LEVEL1k);
-    }
-    else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
         return SetAsymKeyDer(key->k, SPHINCS_LEVEL3_PRIVKEY_SIZE, key->p,
                              SPHINCS_LEVEL3_PRIVKEY_SIZE, output, inLen,
                              SPHINCS_SMALL_LEVEL3k);
-    }
-    else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
+    } else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
         return SetAsymKeyDer(key->k, SPHINCS_LEVEL5_PRIVKEY_SIZE, key->p,
                              SPHINCS_LEVEL5_PRIVKEY_SIZE, output, inLen,
                              SPHINCS_SMALL_LEVEL5k);
@@ -1023,37 +927,225 @@ int wc_Sphincs_KeyToDer(sphincs_key* key, byte* output, word32 inLen)
     return BAD_FUNC_ARG;
 }
 
-int wc_Sphincs_PrivateKeyToDer(sphincs_key* key, byte* output, word32 inLen)
-{
+int wc_Sphincs_PrivateKeyToDer(sphincs_key *key, byte *output, word32 inLen) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
 
     if ((key->level == 1) && (key->optim == FAST_VARIANT)) {
-        return SetAsymKeyDer(key->k, SPHINCS_LEVEL1_PRIVKEY_SIZE, NULL, 0, output,
-                             inLen, SPHINCS_FAST_LEVEL1k);
-    }
-    else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
-        return SetAsymKeyDer(key->k, SPHINCS_LEVEL3_PRIVKEY_SIZE, NULL, 0, output,
-                             inLen, SPHINCS_FAST_LEVEL3k);
-    }
-    else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
-        return SetAsymKeyDer(key->k, SPHINCS_LEVEL5_PRIVKEY_SIZE, NULL, 0, output,
-                             inLen, SPHINCS_FAST_LEVEL5k);
-    }
-    else if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
-        return SetAsymKeyDer(key->k, SPHINCS_LEVEL1_PRIVKEY_SIZE, NULL, 0, output,
-                             inLen, SPHINCS_SMALL_LEVEL1k);
-    }
-    else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
-        return SetAsymKeyDer(key->k, SPHINCS_LEVEL3_PRIVKEY_SIZE, NULL, 0, output,
-                             inLen, SPHINCS_SMALL_LEVEL3k);
-    }
-    else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
-        return SetAsymKeyDer(key->k, SPHINCS_LEVEL5_PRIVKEY_SIZE, NULL, 0, output,
-                             inLen, SPHINCS_SMALL_LEVEL5k);
+        return SetAsymKeyDer(key->k, SPHINCS_LEVEL1_PRIVKEY_SIZE, NULL, 0,
+                             output, inLen, SPHINCS_FAST_LEVEL1k);
+    } else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
+        return SetAsymKeyDer(key->k, SPHINCS_LEVEL3_PRIVKEY_SIZE, NULL, 0,
+                             output, inLen, SPHINCS_FAST_LEVEL3k);
+    } else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
+        return SetAsymKeyDer(key->k, SPHINCS_LEVEL5_PRIVKEY_SIZE, NULL, 0,
+                             output, inLen, SPHINCS_FAST_LEVEL5k);
+    } else if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
+        return SetAsymKeyDer(key->k, SPHINCS_LEVEL1_PRIVKEY_SIZE, NULL, 0,
+                             output, inLen, SPHINCS_SMALL_LEVEL1k);
+    } else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
+        return SetAsymKeyDer(key->k, SPHINCS_LEVEL3_PRIVKEY_SIZE, NULL, 0,
+                             output, inLen, SPHINCS_SMALL_LEVEL3k);
+    } else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
+        return SetAsymKeyDer(key->k, SPHINCS_LEVEL5_PRIVKEY_SIZE, NULL, 0,
+                             output, inLen, SPHINCS_SMALL_LEVEL5k);
     }
 
     return BAD_FUNC_ARG;
 }
+
+int wc_SphincsKey_Init(SphincsKey *key) {
+    if (!key)
+        return BAD_FUNC_ARG;
+    memset(key, 0, sizeof(*key));
+    return 0;
+}
+
+/* level and optim must be valid at the same time */
+static int is_valid_level_optim(int level, int optim) {
+    return ((level == 1) || (level == 3) || (level == 5)) &&
+           ((optim == FAST_VARIANT) || (optim == SMALL_VARIANT));
+}
+
+int wc_SphincsKey_SetLevelOptim(SphincsKey *key, int level, int optim) {
+    if (!key || !is_valid_level_optim(level, optim)) {
+        return BAD_FUNC_ARG;
+    }
+    key->level = level;
+    key->optim = optim;
+    return 0;
+}
+
+int wc_SphincsKey_GetLevelOptim(SphincsKey *key, int *level, int *optim) {
+    if (!key || !level || !optim) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level_optim(key->level, key->optim)) {
+        return BAD_FUNC_ARG;
+    }
+    *level = key->level;
+    *optim = key->optim;
+    return 0;
+}
+
+int wc_SphincsKey_MakeKey(SphincsKey *key, WC_RNG *rng) {
+    if (!key || !rng) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level_optim(key->level, key->optim)) {
+        return BAD_FUNC_ARG;
+    }
+#ifdef HAVE_PQCLEAN
+    int ret;
+    set_wc_rng(rng);
+    /* TODO: is it possible to use a switch statement? */
+    if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE128SSIMPLE_CLEAN_crypto_sign_keypair(
+            key->pubKey, key->privKey);
+    } else if ((key->level == 1) && (key->optim == FAST_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE128FSIMPLE_CLEAN_crypto_sign_keypair(
+            key->pubKey, key->privKey);
+    } else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_keypair(
+            key->pubKey, key->privKey);
+    } else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_crypto_sign_keypair(
+            key->pubKey, key->privKey);
+    } else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_keypair(
+            key->pubKey, key->privKey);
+    } else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_keypair(
+            key->pubKey, key->privKey);
+    } else {
+        return BAD_FUNC_ARG;
+    }
+    if (ret != 0) {
+        return BAD_FUNC_ARG;
+    }
+    key->pubKeySet = 1;
+    key->privKeySet = 1;
+    return 0;
+#else
+    return NOT_COMPILED_IN;
+#endif /* HAVE_PQCLEAN */
+}
+
+int wc_SphincsKey_Sign(const byte *msg, word32 msglen, byte *sig,
+                       word32 *siglen, SphincsKey *key, WC_RNG *rng) {
+    int ret = 0;
+    word32 siglen_cmp;
+    size_t siglen_wide;
+    if (!msg || !sig || !siglen || !key || !rng) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level_optim(key->level, key->optim) || !key->privKeySet) {
+        return BAD_FUNC_ARG;
+    }
+    if ((ret = wc_SphincsKey_SigSize(key, &siglen_cmp)) < 0) {
+        return ret;
+    }
+    if (*siglen < siglen_cmp) {
+        return BUFFER_E;
+    }
+#ifdef HAVE_PQCLEAN
+    set_wc_rng(rng);
+    if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE128SSIMPLE_CLEAN_crypto_sign_signature(
+            sig, &siglen_wide, msg, msglen, key->privKey);
+    } else if ((key->level == 1) && (key->optim == FAST_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE128FSIMPLE_CLEAN_crypto_sign_signature(
+            sig, &siglen_wide, msg, msglen, key->privKey);
+    } else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_signature(
+            sig, &siglen_wide, msg, msglen, key->privKey);
+    } else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_crypto_sign_signature(
+            sig, &siglen_wide, msg, msglen, key->privKey);
+    } else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_signature(
+            sig, &siglen_wide, msg, msglen, key->privKey);
+    } else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_signature(
+            sig, &siglen_wide, msg, msglen, key->privKey);
+    } else {
+        return BAD_FUNC_ARG;
+    }
+    if (ret != 0) {
+        return BAD_FUNC_ARG;
+    }
+    *siglen = (word32)siglen_wide;
+    return 0;
+#else
+    return NOT_COMPILED_IN;
+#endif /* HAVE_PQCLEAN */
+}
+
+int wc_SphincsKey_Verify(const byte *sig, word32 siglen, const byte *msg,
+                         word32 msglen, int *ok, SphincsKey *key) {
+    if (!sig || !msg || !ok || !key) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level_optim(key->level, key->optim) || !key->pubKeySet) {
+        return BAD_FUNC_ARG;
+    }
+    int ret;
+    if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE128SSIMPLE_CLEAN_crypto_sign_verify(
+            sig, siglen, msg, msglen, key->pubKey);
+    } else if ((key->level == 1) && (key->optim == FAST_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE128FSIMPLE_CLEAN_crypto_sign_verify(
+            sig, siglen, msg, msglen, key->pubKey);
+    } else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE192SSIMPLE_CLEAN_crypto_sign_verify(
+            sig, siglen, msg, msglen, key->pubKey);
+    } else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE192FSIMPLE_CLEAN_crypto_sign_verify(
+            sig, siglen, msg, msglen, key->pubKey);
+    } else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE256SSIMPLE_CLEAN_crypto_sign_verify(
+            sig, siglen, msg, msglen, key->pubKey);
+    } else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
+        ret = PQCLEAN_SPHINCSSHAKE256FSIMPLE_CLEAN_crypto_sign_verify(
+            sig, siglen, msg, msglen, key->pubKey);
+    } else {
+        return BAD_FUNC_ARG;
+    }
+    *ok = (ret == 0);
+    return 0;
+}
+
+int wc_SphincsKey_SigSize(SphincsKey *key, word32 *len) {
+    if (!key || !len) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level_optim(key->level, key->optim)) {
+        return BAD_FUNC_ARG;
+    }
+    if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
+        *len = SPHINCS_SMALL_LEVEL1_SIG_SIZE;
+    } else if ((key->level == 1) && (key->optim == FAST_VARIANT)) {
+        *len = SPHINCS_FAST_LEVEL1_SIG_SIZE;
+    } else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
+        *len = SPHINCS_SMALL_LEVEL3_SIG_SIZE;
+    } else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
+        *len = SPHINCS_FAST_LEVEL3_SIG_SIZE;
+    } else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
+        *len = SPHINCS_SMALL_LEVEL5_SIG_SIZE;
+    } else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
+        *len = SPHINCS_FAST_LEVEL5_SIG_SIZE;
+    } else {
+        return BAD_FUNC_ARG;
+    }
+    return 0;
+}
+
+int wc_SphincsKey_Free(SphincsKey *key) {
+    if (!key)
+        return BAD_FUNC_ARG;
+    memset(key, 0, sizeof(*key));
+    return 0;
+}
+
 #endif /* HAVE_PQC && HAVE_SPHINCS */

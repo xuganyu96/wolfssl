@@ -132,6 +132,7 @@ extern "C" {
 
 /* Structs */
 
+#if 1 /* TODO: after SphincsKey is implemented, deprecate this*/
 struct sphincs_key {
     bool pubKeySet;
     bool prvKeySet;
@@ -206,6 +207,33 @@ WOLFSSL_API int wc_Sphincs_PrivateKeyToDer(sphincs_key *key, byte *output,
                                            word32 inLen);
 WOLFSSL_API int wc_Sphincs_PublicKeyToDer(sphincs_key *key, byte *output,
                                           word32 inLen, int withAlg);
+#endif /* 1 */
+
+typedef struct SphincsKey {
+    /* 1, 3, or 5 */
+    int level;
+    /* FAST_VARIANT(1) or SMALL_VARIANT(2) */
+    int optim;
+    byte pubKey[SPHINCS_MAX_PUBKEY_SIZE];
+    byte pubKeySet;
+    byte privKey[SPHINCS_MAX_PRIVKEY_SIZE];
+    byte privKeySet;
+} SphincsKey;
+
+WOLFSSL_API int wc_SphincsKey_Init(SphincsKey *key);
+WOLFSSL_API int wc_SphincsKey_SetLevelOptim(SphincsKey *key, int level,
+                                            int optim);
+WOLFSSL_API int wc_SphincsKey_GetLevelOptim(SphincsKey *key, int *level,
+                                            int *optim);
+WOLFSSL_API int wc_SphincsKey_MakeKey(SphincsKey *key, WC_RNG *rng);
+WOLFSSL_API int wc_SphincsKey_Sign(const byte *msg, word32 msglen, byte *sig,
+                                   word32 *siglen, SphincsKey *key,
+                                   WC_RNG *rng);
+WOLFSSL_API int wc_SphincsKey_Verify(const byte *sig, word32 siglen,
+                                     const byte *msg, word32 msglen, int *ok,
+                                     SphincsKey *key);
+WOLFSSL_API int wc_SphincsKey_SigSize(SphincsKey *key, word32 *len);
+WOLFSSL_API int wc_SphincsKey_Free(SphincsKey *key);
 
 #ifdef __cplusplus
 } /* extern "C" */
