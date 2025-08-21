@@ -1116,6 +1116,27 @@ int wc_SphincsKey_Verify(const byte *sig, word32 siglen, const byte *msg,
     return 0;
 }
 
+int wc_SphincsKey_PrivateKeySize(SphincsKey *key, word32 *len) {
+    if (!key || !len)
+        return BAD_FUNC_ARG;
+    if (!is_valid_level_optim(key->level, key->optim))
+        return BAD_FUNC_ARG;
+    switch (key->level) {
+    case 1:
+        *len = SPHINCS_LEVEL1_PRIVKEY_SIZE;
+        break;
+    case 3:
+        *len = SPHINCS_LEVEL3_PRIVKEY_SIZE;
+        break;
+    case 5:
+        *len = SPHINCS_LEVEL5_PRIVKEY_SIZE;
+        break;
+    default:
+        return BAD_FUNC_ARG;
+    }
+    return 0;
+}
+
 int wc_SphincsKey_SigSize(SphincsKey *key, word32 *len) {
     if (!key || !len) {
         return BAD_FUNC_ARG;
@@ -1146,6 +1167,35 @@ int wc_SphincsKey_Free(SphincsKey *key) {
         return BAD_FUNC_ARG;
     memset(key, 0, sizeof(*key));
     return 0;
+}
+
+int wc_SphincsKey_PrivateKeyToDer(SphincsKey *key, byte *out, word32 len) {
+    if (!key) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level_optim(key->level, key->optim) || !key->privKeySet)
+        return BAD_FUNC_ARG;
+    int ret, oidsum;
+    word32 privKeyLen;
+    if ((ret = wc_SphincsKey_PrivateKeySize(key, &privKeyLen)) < 0) {
+        return ret;
+    }
+    if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
+        oidsum = SPHINCS_SMALL_LEVEL1k;
+    } else if ((key->level == 1) && (key->optim == FAST_VARIANT)) {
+        oidsum = SPHINCS_FAST_LEVEL1k;
+    } else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
+        oidsum = SPHINCS_SMALL_LEVEL3k;
+    } else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
+        oidsum = SPHINCS_FAST_LEVEL3k;
+    } else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
+        oidsum = SPHINCS_SMALL_LEVEL5k;
+    } else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
+        oidsum = SPHINCS_FAST_LEVEL5k;
+    } else {
+        return BAD_FUNC_ARG;
+    }
+    return SetAsymKeyDer(key->privKey, privKeyLen, NULL, 0, out, len, oidsum);
 }
 
 #endif /* HAVE_PQC && HAVE_SPHINCS */

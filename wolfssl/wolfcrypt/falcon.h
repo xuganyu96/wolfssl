@@ -208,7 +208,9 @@ WOLFSSL_API int wc_FalconKey_Sign(FalconKey *key, const byte *msg,
 WOLFSSL_API int wc_FalconKey_Verify(FalconKey *key, const byte *msg,
                                     word32 msglen, const byte *sig,
                                     word32 siglen, int *ok);
+WOLFSSL_API int wc_FalconKey_PrivateKeySize(FalconKey *key, word32 *len);
 WOLFSSL_API int wc_FalconKey_SigSize(FalconKey *key, word32 *siglen);
+WOLFSSL_API int wc_FalconKey_PrivateKeyToDer(FalconKey *key, byte *out, word32 len);
 
 #ifdef __cplusplus
 } /* extern "C" */

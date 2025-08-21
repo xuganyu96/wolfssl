@@ -1091,4 +1091,57 @@ int wc_FalconKey_Verify(FalconKey *key, const byte *msg, word32 msglen,
     return 0;
 }
 
+int wc_FalconKey_PrivateKeySize(FalconKey *key, word32 *len) {
+    if (!key || !len) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level(key->level)) {
+        return BAD_FUNC_ARG;
+    }
+    switch (key->level) {
+    case 1:
+        *len = FALCON_LEVEL1_PRIVKEY_SIZE;
+        break;
+    case 5:
+        *len = FALCON_LEVEL5_PRIVKEY_SIZE;
+        break;
+    default:
+        return BAD_FUNC_ARG;
+    }
+    return 0;
+}
+
+/* DER-encode the Falcon private key to the output buffer
+ *
+ * The output buffer may be NULL, and the function will return the expected
+ * length of DER encoding
+ *
+ * Return:
+ * The length of the DER encoding on success.
+ */
+int wc_FalconKey_PrivateKeyToDer(FalconKey *key, byte *out, word32 len) {
+    if (!key) {
+        return BAD_FUNC_ARG;
+    }
+    if (!key->privKeySet || !is_valid_level(key->level)) {
+        return BAD_FUNC_ARG;
+    }
+    int ret, oidsum;
+    word32 privKeyLen;
+    switch (key->level) {
+    case 1:
+        oidsum = FALCON_LEVEL1k;
+        break;
+    case 5:
+        oidsum = FALCON_LEVEL5k;
+        break;
+    default:
+        return BAD_FUNC_ARG;
+    }
+    if ((ret = wc_FalconKey_PrivateKeySize(key, &privKeyLen)) < 0) {
+        return ret;
+    }
+    return SetAsymKeyDer(key->privKey, privKeyLen, NULL, 0, out, len, oidsum);
+}
+
 #endif /* HAVE_PQCLEAN */

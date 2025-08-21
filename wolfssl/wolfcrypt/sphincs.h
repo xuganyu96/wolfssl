@@ -232,8 +232,10 @@ WOLFSSL_API int wc_SphincsKey_Sign(const byte *msg, word32 msglen, byte *sig,
 WOLFSSL_API int wc_SphincsKey_Verify(const byte *sig, word32 siglen,
                                      const byte *msg, word32 msglen, int *ok,
                                      SphincsKey *key);
+WOLFSSL_API int wc_SphincsKey_PrivateKeySize(SphincsKey *key, word32 *len);
 WOLFSSL_API int wc_SphincsKey_SigSize(SphincsKey *key, word32 *len);
 WOLFSSL_API int wc_SphincsKey_Free(SphincsKey *key);
+WOLFSSL_API int wc_SphincsKey_PrivateKeyToDer(SphincsKey *key, byte *out, word32 len);
 
 #ifdef __cplusplus
 } /* extern "C" */
