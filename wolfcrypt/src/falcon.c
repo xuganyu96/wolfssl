@@ -29,14 +29,16 @@
 
 #ifdef HAVE_LIBOQS
 #include <oqs/oqs.h>
+#elif defined(HAVE_PQCLEAN)
+#include <common/randombytes.h>
 #endif
 
 #include <wolfssl/wolfcrypt/falcon.h>
 #ifdef NO_INLINE
-    #include <wolfssl/wolfcrypt/misc.h>
+#include <wolfssl/wolfcrypt/misc.h>
 #else
-    #define WOLFSSL_MISC_INCLUDED
-    #include <wolfcrypt/src/misc.c>
+#define WOLFSSL_MISC_INCLUDED
+#include <wolfcrypt/src/misc.c>
 #endif
 
 /* Sign the message using the falcon private key.
@@ -51,10 +53,8 @@
  *          BUFFER_E when outLen is less than FALCON_LEVEL1_SIG_SIZE,
  *          0 otherwise.
  */
-int wc_falcon_sign_msg(const byte* in, word32 inLen,
-                              byte* out, word32 *outLen,
-                              falcon_key* key, WC_RNG* rng)
-{
+int wc_falcon_sign_msg(const byte *in, word32 inLen, byte *out, word32 *outLen,
+                       falcon_key *key, WC_RNG *rng) {
     int ret = 0;
 #ifdef HAVE_LIBOQS
     OQS_SIG *oqssig = NULL;
@@ -63,16 +63,17 @@ int wc_falcon_sign_msg(const byte* in, word32 inLen,
 
     /* sanity check on arguments */
     if ((in == NULL) || (out == NULL) || (outLen == NULL) || (key == NULL)) {
-        return  BAD_FUNC_ARG;
+        return BAD_FUNC_ARG;
     }
 
 #ifdef WOLF_CRYPTO_CB
-    #ifndef WOLF_CRYPTO_CB_FIND
+#ifndef WOLF_CRYPTO_CB_FIND
     if (key->devId != INVALID_DEVID)
-    #endif
+#endif
     {
         ret = wc_CryptoCb_PqcSign(in, inLen, out, outLen, NULL, 0,
-                WC_HASH_TYPE_NONE, rng, WC_PQC_SIG_TYPE_FALCON, key);
+                                  WC_HASH_TYPE_NONE, rng,
+                                  WC_PQC_SIG_TYPE_FALCON, key);
         if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
             return ret;
         /* fall-through when unavailable */
@@ -88,8 +89,7 @@ int wc_falcon_sign_msg(const byte* in, word32 inLen,
     if (ret == 0) {
         if (key->level == 1) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_falcon_512);
-        }
-        else if (key->level == 5) {
+        } else if (key->level == 5) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_falcon_1024);
         }
 
@@ -107,8 +107,7 @@ int wc_falcon_sign_msg(const byte* in, word32 inLen,
         if ((key->level == 1) && (*outLen < FALCON_LEVEL1_SIG_SIZE)) {
             *outLen = FALCON_LEVEL1_SIG_SIZE;
             ret = BUFFER_E;
-        }
-        else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_SIG_SIZE)) {
+        } else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_SIG_SIZE)) {
             *outLen = FALCON_LEVEL5_SIG_SIZE;
             ret = BUFFER_E;
         }
@@ -119,9 +118,8 @@ int wc_falcon_sign_msg(const byte* in, word32 inLen,
         ret = wolfSSL_liboqsRngMutexLock(rng);
     }
 
-    if ((ret == 0) &&
-        (OQS_SIG_sign(oqssig, out, &localOutLen, in, inLen, key->k)
-         == OQS_ERROR)) {
+    if ((ret == 0) && (OQS_SIG_sign(oqssig, out, &localOutLen, in, inLen,
+                                    key->k) == OQS_ERROR)) {
         ret = BAD_FUNC_ARG;
     }
 
@@ -152,9 +150,8 @@ int wc_falcon_sign_msg(const byte* in, word32 inLen,
  *          BUFFER_E when sigLen is less than FALCON_LEVEL1_SIG_SIZE,
  *          0 otherwise.
  */
-int wc_falcon_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
-                        word32 msgLen, int* res, falcon_key* key)
-{
+int wc_falcon_verify_msg(const byte *sig, word32 sigLen, const byte *msg,
+                         word32 msgLen, int *res, falcon_key *key) {
     int ret = 0;
 #ifdef HAVE_LIBOQS
     OQS_SIG *oqssig = NULL;
@@ -165,12 +162,13 @@ int wc_falcon_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
     }
 
 #ifdef WOLF_CRYPTO_CB
-    #ifndef WOLF_CRYPTO_CB_FIND
+#ifndef WOLF_CRYPTO_CB_FIND
     if (key->devId != INVALID_DEVID)
-    #endif
+#endif
     {
         ret = wc_CryptoCb_PqcVerify(sig, sigLen, msg, msgLen, NULL, 0,
-                WC_HASH_TYPE_NONE, res, WC_PQC_SIG_TYPE_FALCON, key);
+                                    WC_HASH_TYPE_NONE, res,
+                                    WC_PQC_SIG_TYPE_FALCON, key);
         if (ret != WC_NO_ERR_TRACE(CRYPTOCB_UNAVAILABLE))
             return ret;
         /* fall-through when unavailable */
@@ -186,8 +184,7 @@ int wc_falcon_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
     if (ret == 0) {
         if (key->level == 1) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_falcon_512);
-        }
-        else if (key->level == 5) {
+        } else if (key->level == 5) {
             oqssig = OQS_SIG_new(OQS_SIG_alg_falcon_1024);
         }
 
@@ -200,10 +197,9 @@ int wc_falcon_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
         ret = BUFFER_E;
     }
 
-    if ((ret == 0) &&
-        (OQS_SIG_verify(oqssig, msg, msgLen, sig, sigLen, key->p)
-         == OQS_ERROR)) {
-         ret = SIG_VERIFY_E;
+    if ((ret == 0) && (OQS_SIG_verify(oqssig, msg, msgLen, sig, sigLen,
+                                      key->p) == OQS_ERROR)) {
+        ret = SIG_VERIFY_E;
     }
 
     if (ret == 0) {
@@ -225,8 +221,7 @@ int wc_falcon_verify_msg(const byte* sig, word32 sigLen, const byte* msg,
  * key  [in]  Falcon key.
  * returns BAD_FUNC_ARG when key is NULL
  */
-int wc_falcon_init(falcon_key* key)
-{
+int wc_falcon_init(falcon_key *key) {
     return wc_falcon_init_ex(key, NULL, INVALID_DEVID);
 }
 
@@ -237,8 +232,7 @@ int wc_falcon_init(falcon_key* key)
  * devId[in]  Device ID.
  * returns BAD_FUNC_ARG when key is NULL
  */
-int wc_falcon_init_ex(falcon_key* key, void* heap, int devId)
-{
+int wc_falcon_init_ex(falcon_key *key, void *heap, int devId) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -254,16 +248,15 @@ int wc_falcon_init_ex(falcon_key* key, void* heap, int devId)
     key->labelLen = 0;
 #endif
 
-    (void) heap;
-    (void) devId;
+    (void)heap;
+    (void)devId;
 
     return 0;
 }
 
 #ifdef WOLF_PRIVATE_KEY_ID
-int wc_falcon_init_id(falcon_key* key, const unsigned char* id, int len,
-                         void* heap, int devId)
-{
+int wc_falcon_init_id(falcon_key *key, const unsigned char *id, int len,
+                      void *heap, int devId) {
     int ret = 0;
 
     if (key == NULL)
@@ -284,9 +277,8 @@ int wc_falcon_init_id(falcon_key* key, const unsigned char* id, int len,
     return ret;
 }
 
-int wc_falcon_init_label(falcon_key* key, const char* label, void* heap,
-                            int devId)
-{
+int wc_falcon_init_label(falcon_key *key, const char *label, void *heap,
+                         int devId) {
     int ret = 0;
     int labelLen = 0;
 
@@ -318,8 +310,7 @@ int wc_falcon_init_label(falcon_key* key, const char* label, void* heap,
  * level [in]   Either 1 or 5.
  * returns BAD_FUNC_ARG when key is NULL or level is not 1 and not 5.
  */
-int wc_falcon_set_level(falcon_key* key, byte level)
-{
+int wc_falcon_set_level(falcon_key *key, byte level) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -340,8 +331,7 @@ int wc_falcon_set_level(falcon_key* key, byte level)
  * level [out] The level.
  * returns BAD_FUNC_ARG when key is NULL or level has not been set.
  */
-int wc_falcon_get_level(falcon_key* key, byte* level)
-{
+int wc_falcon_get_level(falcon_key *key, byte *level) {
     if (key == NULL || level == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -358,8 +348,7 @@ int wc_falcon_get_level(falcon_key* key, byte* level)
  *
  * key  [in]  Falcon key.
  */
-void wc_falcon_free(falcon_key* key)
-{
+void wc_falcon_free(falcon_key *key) {
     if (key != NULL) {
         ForceZero(key, sizeof(*key));
     }
@@ -375,9 +364,7 @@ void wc_falcon_free(falcon_key* key)
  *         BUFFER_E when outLen is less than FALCON_LEVEL1_PUBKEY_SIZE,
  *         0 otherwise.
  */
-int wc_falcon_export_public(falcon_key* key,
-                            byte* out, word32* outLen)
-{
+int wc_falcon_export_public(falcon_key *key, byte *out, word32 *outLen) {
     /* sanity check on arguments */
     if ((key == NULL) || (out == NULL) || (outLen == NULL)) {
         return BAD_FUNC_ARG;
@@ -395,8 +382,7 @@ int wc_falcon_export_public(falcon_key* key,
     if ((key->level == 1) && (*outLen < FALCON_LEVEL1_PUBKEY_SIZE)) {
         *outLen = FALCON_LEVEL1_PUBKEY_SIZE;
         return BUFFER_E;
-    }
-    else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_PUBKEY_SIZE)) {
+    } else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_PUBKEY_SIZE)) {
         *outLen = FALCON_LEVEL5_PUBKEY_SIZE;
         return BUFFER_E;
     }
@@ -404,8 +390,7 @@ int wc_falcon_export_public(falcon_key* key,
     if (key->level == 1) {
         *outLen = FALCON_LEVEL1_PUBKEY_SIZE;
         XMEMCPY(out, key->p, FALCON_LEVEL1_PUBKEY_SIZE);
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         *outLen = FALCON_LEVEL5_PUBKEY_SIZE;
         XMEMCPY(out, key->p, FALCON_LEVEL5_PUBKEY_SIZE);
     }
@@ -422,9 +407,7 @@ int wc_falcon_export_public(falcon_key* key,
  * returns BAD_FUNC_ARG when a parameter is NULL or key format is not supported,
  *         0 otherwise.
  */
-int wc_falcon_import_public(const byte* in, word32 inLen,
-                                   falcon_key* key)
-{
+int wc_falcon_import_public(const byte *in, word32 inLen, falcon_key *key) {
     /* sanity check on arguments */
     if ((in == NULL) || (key == NULL)) {
         return BAD_FUNC_ARG;
@@ -436,8 +419,7 @@ int wc_falcon_import_public(const byte* in, word32 inLen,
 
     if ((key->level == 1) && (inLen != FALCON_LEVEL1_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
-    }
-    else if ((key->level == 5) && (inLen != FALCON_LEVEL5_PUBKEY_SIZE)) {
+    } else if ((key->level == 5) && (inLen != FALCON_LEVEL5_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
     }
 
@@ -447,9 +429,8 @@ int wc_falcon_import_public(const byte* in, word32 inLen,
     return 0;
 }
 
-static int parse_private_key(const byte* priv, word32 privSz,
-                             byte** out, word32 *outSz,
-                             falcon_key* key) {
+static int parse_private_key(const byte *priv, word32 privSz, byte **out,
+                             word32 *outSz, falcon_key *key) {
     word32 idx = 0;
     int ret = 0;
     int length = 0;
@@ -478,12 +459,11 @@ static int parse_private_key(const byte* priv, word32 privSz,
     *outSz = privSz - idx;
 
     /* And finally it is concat(priv,pub). Key size check. */
-    if ((key->level == 1) && (*outSz != FALCON_LEVEL1_PRIVKEY_SIZE +
-                                       FALCON_LEVEL1_PUBKEY_SIZE)) {
+    if ((key->level == 1) &&
+        (*outSz != FALCON_LEVEL1_PRIVKEY_SIZE + FALCON_LEVEL1_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
-    }
-    else if ((key->level == 5) && (*outSz != FALCON_LEVEL5_PRIVKEY_SIZE +
-                                            FALCON_LEVEL5_PUBKEY_SIZE)) {
+    } else if ((key->level == 5) && (*outSz != FALCON_LEVEL5_PRIVKEY_SIZE +
+                                                   FALCON_LEVEL5_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
     }
 
@@ -499,16 +479,15 @@ static int parse_private_key(const byte* priv, word32 privSz,
  *         FALCON_LEVEL1_PRIVKEY_SIZE,
  *         0 otherwise.
  */
-int wc_falcon_import_private_only(const byte* priv, word32 privSz,
-                                 falcon_key* key)
-{
+int wc_falcon_import_private_only(const byte *priv, word32 privSz,
+                                  falcon_key *key) {
     int ret = 0;
     byte *newPriv = NULL;
     word32 newPrivSz = 0;
 
-    if ((ret = parse_private_key(priv, privSz, &newPriv, &newPrivSz, key))
-        != 0) {
-         return ret;
+    if ((ret = parse_private_key(priv, privSz, &newPriv, &newPrivSz, key)) !=
+        0) {
+        return ret;
     }
 
     XMEMCPY(key->k, newPriv, newPrivSz);
@@ -527,17 +506,16 @@ int wc_falcon_import_private_only(const byte* priv, word32 privSz,
  * returns BAD_FUNC_ARG when a required parameter is NULL or an invalid
  *         combination of keys/lengths is supplied, 0 otherwise.
  */
-int wc_falcon_import_private_key(const byte* priv, word32 privSz,
-                                        const byte* pub, word32 pubSz,
-                                        falcon_key* key)
-{
+int wc_falcon_import_private_key(const byte *priv, word32 privSz,
+                                 const byte *pub, word32 pubSz,
+                                 falcon_key *key) {
     int ret = 0;
     byte *newPriv = NULL;
     word32 newPrivSz = 0;
 
-    if ((ret = parse_private_key(priv, privSz, &newPriv, &newPrivSz, key))
-        != 0) {
-         return ret;
+    if ((ret = parse_private_key(priv, privSz, &newPriv, &newPrivSz, key)) !=
+        0) {
+        return ret;
     }
 
     if (pub == NULL) {
@@ -553,14 +531,12 @@ int wc_falcon_import_private_key(const byte* priv, word32 privSz,
         if (key->level == 1) {
             pub = newPriv + FALCON_LEVEL1_PRIVKEY_SIZE;
             pubSz = FALCON_LEVEL1_PUBKEY_SIZE;
-        }
-        else if (key->level == 5) {
+        } else if (key->level == 5) {
             pub = newPriv + FALCON_LEVEL5_PRIVKEY_SIZE;
             pubSz = FALCON_LEVEL5_PUBKEY_SIZE;
         }
-    }
-    else if ((pubSz != FALCON_LEVEL1_PUBKEY_SIZE) &&
-             (pubSz != FALCON_LEVEL5_PUBKEY_SIZE)) {
+    } else if ((pubSz != FALCON_LEVEL1_PUBKEY_SIZE) &&
+               (pubSz != FALCON_LEVEL5_PUBKEY_SIZE)) {
         return BAD_FUNC_ARG;
     }
 
@@ -586,8 +562,7 @@ int wc_falcon_import_private_key(const byte* priv, word32 privSz,
  *         BUFFER_E when outLen is less than FALCON_LEVEL1_PRIVKEY_SIZE,
  *         0 otherwise.
  */
-int wc_falcon_export_private_only(falcon_key* key, byte* out, word32* outLen)
-{
+int wc_falcon_export_private_only(falcon_key *key, byte *out, word32 *outLen) {
     /* sanity checks on arguments */
     if ((key == NULL) || (out == NULL) || (outLen == NULL)) {
         return BAD_FUNC_ARG;
@@ -601,16 +576,14 @@ int wc_falcon_export_private_only(falcon_key* key, byte* out, word32* outLen)
     if ((key->level == 1) && (*outLen < FALCON_LEVEL1_PRIVKEY_SIZE)) {
         *outLen = FALCON_LEVEL1_PRIVKEY_SIZE;
         return BUFFER_E;
-    }
-    else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_PRIVKEY_SIZE)) {
+    } else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_PRIVKEY_SIZE)) {
         *outLen = FALCON_LEVEL5_PRIVKEY_SIZE;
         return BUFFER_E;
     }
 
     if (key->level == 1) {
         *outLen = FALCON_LEVEL1_PRIVKEY_SIZE;
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         *outLen = FALCON_LEVEL5_PRIVKEY_SIZE;
     }
 
@@ -629,8 +602,7 @@ int wc_falcon_export_private_only(falcon_key* key, byte* out, word32* outLen)
  *         BUFFER_E when outLen is less than FALCON_LEVEL1_PRIVKEY_SIZE,
  *         0 otherwise.
  */
-int wc_falcon_export_private(falcon_key* key, byte* out, word32* outLen)
-{
+int wc_falcon_export_private(falcon_key *key, byte *out, word32 *outLen) {
     /* sanity checks on arguments */
     if ((key == NULL) || (out == NULL) || (outLen == NULL)) {
         return BAD_FUNC_ARG;
@@ -643,20 +615,17 @@ int wc_falcon_export_private(falcon_key* key, byte* out, word32* outLen)
     if ((key->level == 1) && (*outLen < FALCON_LEVEL1_PRIVKEY_SIZE)) {
         *outLen = FALCON_LEVEL1_PRIVKEY_SIZE;
         return BUFFER_E;
-    }
-    else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_PRIVKEY_SIZE)) {
+    } else if ((key->level == 5) && (*outLen < FALCON_LEVEL5_PRIVKEY_SIZE)) {
         *outLen = FALCON_LEVEL5_PRIVKEY_SIZE;
         return BUFFER_E;
     }
-
 
     if (key->level == 1) {
         *outLen = FALCON_LEVEL1_PRIVKEY_SIZE;
         XMEMCPY(out, key->k, FALCON_LEVEL1_PRIVKEY_SIZE);
         XMEMCPY(out + FALCON_LEVEL1_PRIVKEY_SIZE, key->p,
                 FALCON_LEVEL1_PUBKEY_SIZE);
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         *outLen = FALCON_LEVEL5_PRIVKEY_SIZE;
         XMEMCPY(out, key->k, FALCON_LEVEL5_PRIVKEY_SIZE);
         XMEMCPY(out + FALCON_LEVEL5_PRIVKEY_SIZE, key->p,
@@ -675,13 +644,11 @@ int wc_falcon_export_private(falcon_key* key, byte* out, word32* outLen)
  * pubSz   [in/out]  On in, the number of bytes in public key array.
  *                   On out, the number bytes put into array.
  * returns BAD_FUNC_ARG when a parameter is NULL,
- *         BUFFER_E when privSz is less than FALCON_LEVEL1_PRIVKEY_SIZE or pubSz is less
- *         than FALCON_LEVEL1_PUBKEY_SIZE,
- *         0 otherwise.
+ *         BUFFER_E when privSz is less than FALCON_LEVEL1_PRIVKEY_SIZE or pubSz
+ * is less than FALCON_LEVEL1_PUBKEY_SIZE, 0 otherwise.
  */
-int wc_falcon_export_key(falcon_key* key, byte* priv, word32 *privSz,
-                        byte* pub, word32 *pubSz)
-{
+int wc_falcon_export_key(falcon_key *key, byte *priv, word32 *privSz, byte *pub,
+                         word32 *pubSz) {
     int ret = 0;
 
     /* export private part */
@@ -702,8 +669,7 @@ int wc_falcon_export_key(falcon_key* key, byte* priv, word32 *privSz,
  *         other -ve value on hash failure,
  *         0 otherwise.
  */
-int wc_falcon_check_key(falcon_key* key)
-{
+int wc_falcon_check_key(falcon_key *key) {
     int ret = 0;
 
     if (key == NULL) {
@@ -715,8 +681,7 @@ int wc_falcon_check_key(falcon_key* key)
     if (key->level == 1) {
         ret = XMEMCMP(key->p, key->k + FALCON_LEVEL1_PRIVKEY_SIZE,
                       FALCON_LEVEL1_PUBKEY_SIZE);
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         ret = XMEMCMP(key->p, key->k + FALCON_LEVEL5_PRIVKEY_SIZE,
                       FALCON_LEVEL5_PUBKEY_SIZE);
     }
@@ -734,16 +699,14 @@ int wc_falcon_check_key(falcon_key* key)
  * returns BAD_FUNC_ARG when key is NULL,
  *         FALCON_LEVEL1_PRIVKEY_SIZE otherwise.
  */
-int wc_falcon_size(falcon_key* key)
-{
+int wc_falcon_size(falcon_key *key) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
 
     if (key->level == 1) {
         return FALCON_LEVEL1_PRIVKEY_SIZE;
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         return FALCON_LEVEL5_PRIVKEY_SIZE;
     }
 
@@ -756,16 +719,14 @@ int wc_falcon_size(falcon_key* key)
  * returns BAD_FUNC_ARG when key is NULL,
  *         FALCON_LEVEL1_PRIVKEY_SIZE otherwise.
  */
-int wc_falcon_priv_size(falcon_key* key)
-{
+int wc_falcon_priv_size(falcon_key *key) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
 
     if (key->level == 1) {
         return FALCON_LEVEL1_PRIVKEY_SIZE;
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         return FALCON_LEVEL5_PRIVKEY_SIZE;
     }
 
@@ -778,16 +739,14 @@ int wc_falcon_priv_size(falcon_key* key)
  * returns BAD_FUNC_ARG when key is NULL,
  *         FALCON_LEVEL1_PUBKEY_SIZE otherwise.
  */
-int wc_falcon_pub_size(falcon_key* key)
-{
+int wc_falcon_pub_size(falcon_key *key) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
 
     if (key->level == 1) {
         return FALCON_LEVEL1_PUBKEY_SIZE;
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         return FALCON_LEVEL5_PUBKEY_SIZE;
     }
 
@@ -800,25 +759,22 @@ int wc_falcon_pub_size(falcon_key* key)
  * returns BAD_FUNC_ARG when key is NULL,
  *         FALCON_LEVEL1_SIG_SIZE otherwise.
  */
-int wc_falcon_sig_size(falcon_key* key)
-{
+int wc_falcon_sig_size(falcon_key *key) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
 
     if (key->level == 1) {
         return FALCON_LEVEL1_SIG_SIZE;
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         return FALCON_LEVEL5_SIG_SIZE;
     }
 
     return BAD_FUNC_ARG;
 }
 
-int wc_Falcon_PrivateKeyDecode(const byte* input, word32* inOutIdx,
-                                     falcon_key* key, word32 inSz)
-{
+int wc_Falcon_PrivateKeyDecode(const byte *input, word32 *inOutIdx,
+                               falcon_key *key, word32 inSz) {
     int ret = 0;
     byte privKey[FALCON_MAX_PRIVKEY_SIZE], pubKey[FALCON_MAX_PUBKEY_SIZE];
     word32 privKeyLen = (word32)sizeof(privKey);
@@ -831,31 +787,27 @@ int wc_Falcon_PrivateKeyDecode(const byte* input, word32* inOutIdx,
 
     if (key->level == 1) {
         keytype = FALCON_LEVEL1k;
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         keytype = FALCON_LEVEL5k;
-    }
-    else {
+    } else {
         return BAD_FUNC_ARG;
     }
 
-    ret = DecodeAsymKey(input, inOutIdx, inSz, privKey, &privKeyLen,
-                        pubKey, &pubKeyLen, keytype);
+    ret = DecodeAsymKey(input, inOutIdx, inSz, privKey, &privKeyLen, pubKey,
+                        &pubKeyLen, keytype);
     if (ret == 0) {
         if (pubKeyLen == 0) {
             ret = wc_falcon_import_private_key(input, inSz, NULL, 0, key);
-        }
-        else {
-            ret = wc_falcon_import_private_key(input, inSz, pubKey,
-                                               pubKeyLen, key);
+        } else {
+            ret = wc_falcon_import_private_key(input, inSz, pubKey, pubKeyLen,
+                                               key);
         }
     }
     return ret;
 }
 
-int wc_Falcon_PublicKeyDecode(const byte* input, word32* inOutIdx,
-                                    falcon_key* key, word32 inSz)
-{
+int wc_Falcon_PublicKeyDecode(const byte *input, word32 *inOutIdx,
+                              falcon_key *key, word32 inSz) {
     int ret = 0;
     byte pubKey[FALCON_MAX_PUBKEY_SIZE];
     word32 pubKeyLen = (word32)sizeof(pubKey);
@@ -872,16 +824,14 @@ int wc_Falcon_PublicKeyDecode(const byte* input, word32* inOutIdx,
 
     if (key->level == 1) {
         keytype = FALCON_LEVEL1k;
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         keytype = FALCON_LEVEL5k;
-    }
-    else {
+    } else {
         return BAD_FUNC_ARG;
     }
 
-    ret = DecodeAsymKeyPublic(input, inOutIdx, inSz, pubKey, &pubKeyLen,
-                              keytype);
+    ret =
+        DecodeAsymKeyPublic(input, inOutIdx, inSz, pubKey, &pubKeyLen, keytype);
     if (ret == 0) {
         ret = wc_falcon_import_public(pubKey, pubKeyLen, key);
     }
@@ -901,13 +851,12 @@ int wc_Falcon_PublicKeyDecode(const byte* input, word32* inOutIdx,
  * @return  BAD_FUNC_ARG when key is NULL.
  * @return  MEMORY_E when dynamic memory allocation failed.
  */
-int wc_Falcon_PublicKeyToDer(falcon_key* key, byte* output, word32 inLen,
-                             int withAlg)
-{
-    int    ret;
-    byte   pubKey[FALCON_MAX_PUBKEY_SIZE];
+int wc_Falcon_PublicKeyToDer(falcon_key *key, byte *output, word32 inLen,
+                             int withAlg) {
+    int ret;
+    byte pubKey[FALCON_MAX_PUBKEY_SIZE];
     word32 pubKeyLen = (word32)sizeof(pubKey);
-    int    keytype = 0;
+    int keytype = 0;
 
     if (key == NULL) {
         return BAD_FUNC_ARG;
@@ -915,11 +864,9 @@ int wc_Falcon_PublicKeyToDer(falcon_key* key, byte* output, word32 inLen,
 
     if (key->level == 1) {
         keytype = FALCON_LEVEL1k;
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         keytype = FALCON_LEVEL5k;
-    }
-    else {
+    } else {
         return BAD_FUNC_ARG;
     }
 
@@ -933,8 +880,7 @@ int wc_Falcon_PublicKeyToDer(falcon_key* key, byte* output, word32 inLen,
 }
 #endif
 
-int wc_Falcon_KeyToDer(falcon_key* key, byte* output, word32 inLen)
-{
+int wc_Falcon_KeyToDer(falcon_key *key, byte *output, word32 inLen) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
@@ -943,8 +889,7 @@ int wc_Falcon_KeyToDer(falcon_key* key, byte* output, word32 inLen)
         return SetAsymKeyDer(key->k, FALCON_LEVEL1_PRIVKEY_SIZE, key->p,
                              FALCON_LEVEL1_PRIVKEY_SIZE, output, inLen,
                              FALCON_LEVEL1k);
-    }
-    else if (key->level == 5) {
+    } else if (key->level == 5) {
         return SetAsymKeyDer(key->k, FALCON_LEVEL5_PRIVKEY_SIZE, key->p,
                              FALCON_LEVEL5_PRIVKEY_SIZE, output, inLen,
                              FALCON_LEVEL5k);
@@ -953,21 +898,197 @@ int wc_Falcon_KeyToDer(falcon_key* key, byte* output, word32 inLen)
     return BAD_FUNC_ARG;
 }
 
-int wc_Falcon_PrivateKeyToDer(falcon_key* key, byte* output, word32 inLen)
-{
+int wc_Falcon_PrivateKeyToDer(falcon_key *key, byte *output, word32 inLen) {
     if (key == NULL) {
         return BAD_FUNC_ARG;
     }
 
     if (key->level == 1) {
-        return SetAsymKeyDer(key->k, FALCON_LEVEL1_PRIVKEY_SIZE, NULL, 0, output,
-                             inLen, FALCON_LEVEL1k);
-    }
-    else if (key->level == 5) {
-        return SetAsymKeyDer(key->k, FALCON_LEVEL5_PRIVKEY_SIZE, NULL, 0, output,
-                             inLen, FALCON_LEVEL5k);
+        return SetAsymKeyDer(key->k, FALCON_LEVEL1_PRIVKEY_SIZE, NULL, 0,
+                             output, inLen, FALCON_LEVEL1k);
+    } else if (key->level == 5) {
+        return SetAsymKeyDer(key->k, FALCON_LEVEL5_PRIVKEY_SIZE, NULL, 0,
+                             output, inLen, FALCON_LEVEL5k);
     }
 
     return BAD_FUNC_ARG;
 }
 #endif /* HAVE_PQC && HAVE_FALCON */
+
+#ifdef HAVE_PQCLEAN
+int wc_FalconKey_Init(FalconKey *key) {
+    if (key == NULL) {
+        return BAD_FUNC_ARG;
+    }
+    memset(key, 0, sizeof(*key));
+    return 0;
+}
+
+static int is_valid_level(int level) { return (level == 1) || (level == 5); }
+
+int wc_FalconKey_SetLevel(FalconKey *key, int level) {
+    if ((key == NULL) || (!is_valid_level(level))) {
+        return BAD_FUNC_ARG;
+    }
+    key->level = level;
+    return 0;
+}
+
+int wc_FalconKey_GetLevel(FalconKey *key, int *level) {
+    if ((key == NULL) || (level == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level(key->level)) {
+        return BAD_FUNC_ARG;
+    }
+    *level = key->level;
+    return 0;
+}
+
+/* If there is existing public key or private key, return error
+ */
+int wc_FalconKey_MakeKey(FalconKey *key, WC_RNG *rng) {
+    int ret;
+    if ((key == NULL) || (rng == NULL)) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level(key->level) || key->pubKeySet || key->privKeySet) {
+        return BAD_FUNC_ARG;
+    }
+
+    set_wc_rng(rng);
+    switch (key->level) {
+    case 1:
+        ret = PQCLEAN_FALCON512_CLEAN_crypto_sign_keypair(key->pubKey,
+                                                          key->privKey);
+        break;
+    case 5:
+        ret = PQCLEAN_FALCON1024_CLEAN_crypto_sign_keypair(key->pubKey,
+                                                           key->privKey);
+        break;
+    default:
+        return BAD_FUNC_ARG; /* should not happen though */
+    }
+
+    if (ret < 0) {
+        ret = BAD_FUNC_ARG;
+    } else {
+        key->pubKeySet = 1;
+        key->privKeySet = 1;
+    }
+    return ret;
+}
+
+/* TODO: I am not sure what this is supposed to do
+ */
+int wc_FalconKey_CheckKey(FalconKey *key) {
+    if (!key) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level(key->level)) {
+        return BAD_FUNC_ARG;
+    }
+    return 0;
+}
+
+int wc_FalconKey_Free(FalconKey *key) {
+    if (!key) {
+        return BAD_FUNC_ARG;
+    }
+    memset(key, 0, sizeof(*key));
+    return 0;
+}
+
+/* Sign a message.
+ *
+ * Parameters:
+ * siglen           On input, the capacity of the sig buffer.
+ *                  On output, the length of the signature if signing succeeds.
+ */
+int wc_FalconKey_Sign(FalconKey *key, const byte *msg, word32 msglen, byte *sig,
+                      word32 *siglen, WC_RNG *rng) {
+    int ret;
+    word32 siglen_cmp;
+    size_t siglen_wide = *siglen;
+    if (!key || !msg || !sig || !siglen || !rng) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level(key->level) || !key->privKeySet) {
+        return BAD_FUNC_ARG;
+    }
+    if ((ret = wc_FalconKey_SigSize(key, &siglen_cmp)) < 0) {
+        return ret;
+    }
+    if (*siglen < siglen_cmp) {
+        return BUFFER_E;
+    }
+    set_wc_rng(rng);
+    switch (key->level) {
+    case 1:
+        ret = PQCLEAN_FALCON512_CLEAN_crypto_sign_signature(
+            sig, &siglen_wide, msg, msglen, key->privKey);
+        break;
+    case 5:
+        ret = PQCLEAN_FALCON1024_CLEAN_crypto_sign_signature(
+            sig, &siglen_wide, msg, msglen, key->privKey);
+        break;
+    default:
+        return BAD_FUNC_ARG; /* unreachable! */
+    }
+    if (ret != 0) {
+        return BAD_FUNC_ARG;
+    }
+    *siglen = (word32)siglen_wide;
+
+    return 0;
+}
+
+int wc_FalconKey_SigSize(FalconKey *key, word32 *siglen) {
+    if (!key || !siglen) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level(key->level)) {
+        return BAD_FUNC_ARG;
+    }
+    switch (key->level) {
+    case 1:
+        *siglen = FALCON_LEVEL1_SIG_SIZE;
+        break;
+    case 5:
+        *siglen = FALCON_LEVEL5_SIG_SIZE;
+        break;
+    default:
+        return BAD_FUNC_ARG; /* unreachable! */
+    }
+    return 0;
+}
+
+int wc_FalconKey_Verify(FalconKey *key, const byte *msg, word32 msglen,
+                        const byte *sig, word32 siglen, int *ok) {
+    int ret;
+    if (!key || !msg || !sig) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level(key->level) || !key->pubKeySet) {
+        return BAD_FUNC_ARG;
+    }
+    switch (key->level) {
+    case 1:
+        ret = PQCLEAN_FALCON512_CLEAN_crypto_sign_verify(sig, siglen, msg,
+                                                         msglen, key->pubKey);
+        break;
+    case 5:
+        ret = PQCLEAN_FALCON1024_CLEAN_crypto_sign_verify(sig, siglen, msg,
+                                                          msglen, key->pubKey);
+        break;
+    default:
+        return BAD_FUNC_ARG;
+    }
+    *ok = (ret == 0);
+    if (ret != 0) {
+        return BAD_FUNC_ARG;
+    }
+    return 0;
+}
+
+#endif /* HAVE_PQCLEAN */

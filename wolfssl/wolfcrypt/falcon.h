@@ -29,8 +29,8 @@
 #ifndef WOLF_CRYPT_FALCON_H
 #define WOLF_CRYPT_FALCON_H
 
-#include <wolfssl/wolfcrypt/types.h>
 #include <wolfssl/wolfcrypt/random.h>
+#include <wolfssl/wolfcrypt/types.h>
 
 #ifdef WOLF_CRYPTO_CB
 #include <wolfssl/wolfcrypt/cryptocb.h>
@@ -67,12 +67,12 @@ extern "C" {
 #elif defined(HAVE_PQCLEAN)
 #define FALCON_LEVEL1_SIG_SIZE PQCLEAN_FALCON512_CLEAN_CRYPTO_BYTES
 #define FALCON_LEVEL1_PUBKEY_SIZE PQCLEAN_FALCON512_CLEAN_CRYPTO_PUBLICKEYBYTES
-#define FALCON_LEVEL1_PRIVKEY_SIZE PQCLEAN_FALCON512_CLEAN_CRYPTO_PUBLICKEYBYTES
+#define FALCON_LEVEL1_PRIVKEY_SIZE PQCLEAN_FALCON512_CLEAN_CRYPTO_SECRETKEYBYTES
 
 #define FALCON_LEVEL5_SIG_SIZE PQCLEAN_FALCON1024_CLEAN_CRYPTO_BYTES
 #define FALCON_LEVEL5_PUBKEY_SIZE PQCLEAN_FALCON1024_CLEAN_CRYPTO_PUBLICKEYBYTES
 #define FALCON_LEVEL5_PRIVKEY_SIZE                                             \
-    PQCLEAN_FALCON1024_CLEAN_CRYPTO_PUBLICKEYBYTES
+    PQCLEAN_FALCON1024_CLEAN_CRYPTO_SECRETKEYBYTES
 #endif
 
 #define FALCON_MAX_SIG_SIZE FALCON_LEVEL5_SIG_SIZE
@@ -86,6 +86,9 @@ extern "C" {
 
 /* Structs */
 
+/* TODO: Once FalconKey with PQClean is fully implemented, deprecate this */
+#define _FALCON_H_DEPRECATED 0
+#if !_FALCON_H_DEPRECATED
 struct falcon_key {
     bool pubKeySet;
     bool prvKeySet;
@@ -183,6 +186,29 @@ WOLFSSL_API int wc_Falcon_PrivateKeyToDer(falcon_key *key, byte *output,
                                           word32 inLen);
 WOLFSSL_API int wc_Falcon_PublicKeyToDer(falcon_key *key, byte *output,
                                          word32 inLen, int withAlg);
+#endif /* _FALCON_H_DEPRECATED */
+
+typedef struct FalconKey {
+    byte level;
+    byte pubKey[FALCON_MAX_PUBKEY_SIZE];
+    byte pubKeySet;
+    byte privKey[FALCON_MAX_PRIVKEY_SIZE];
+    byte privKeySet;
+} FalconKey;
+
+WOLFSSL_API int wc_FalconKey_Init(FalconKey *key);
+WOLFSSL_API int wc_FalconKey_SetLevel(FalconKey *key, int level);
+WOLFSSL_API int wc_FalconKey_GetLevel(FalconKey *key, int *level);
+WOLFSSL_API int wc_FalconKey_MakeKey(FalconKey *key, WC_RNG *rng);
+WOLFSSL_API int wc_FalconKey_CheckKey(FalconKey *key);
+WOLFSSL_API int wc_FalconKey_Free(FalconKey *key);
+WOLFSSL_API int wc_FalconKey_Sign(FalconKey *key, const byte *msg,
+                                  word32 msglen, byte *sig, word32 *siglen,
+                                  WC_RNG *rng);
+WOLFSSL_API int wc_FalconKey_Verify(FalconKey *key, const byte *msg,
+                                    word32 msglen, const byte *sig,
+                                    word32 siglen, int *ok);
+WOLFSSL_API int wc_FalconKey_SigSize(FalconKey *key, word32 *siglen);
 
 #ifdef __cplusplus
 } /* extern "C" */
