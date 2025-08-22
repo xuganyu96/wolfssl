@@ -1137,6 +1137,27 @@ int wc_SphincsKey_PrivateKeySize(SphincsKey *key, word32 *len) {
     return 0;
 }
 
+int wc_SphincsKey_PublicKeySize(SphincsKey *key, word32 *len) {
+    if (!key || !len)
+        return BAD_FUNC_ARG;
+    if (!is_valid_level_optim(key->level, key->optim))
+        return BAD_FUNC_ARG;
+    switch (key->level) {
+    case 1:
+        *len = SPHINCS_LEVEL1_PUBKEY_SIZE;
+        break;
+    case 3:
+        *len = SPHINCS_LEVEL3_PUBKEY_SIZE;
+        break;
+    case 5:
+        *len = SPHINCS_LEVEL5_PUBKEY_SIZE;
+        break;
+    default:
+        return BAD_FUNC_ARG;
+    }
+    return 0;
+}
+
 int wc_SphincsKey_SigSize(SphincsKey *key, word32 *len) {
     if (!key || !len) {
         return BAD_FUNC_ARG;
@@ -1196,6 +1217,45 @@ int wc_SphincsKey_PrivateKeyToDer(SphincsKey *key, byte *out, word32 len) {
         return BAD_FUNC_ARG;
     }
     return SetAsymKeyDer(key->privKey, privKeyLen, NULL, 0, out, len, oidsum);
+}
+
+/* Encode SPHINCS+ public key to the output buffer.
+ *
+ * If the output buffer is NULL, then return the expected length of encoding
+ *
+ * Returns the length of the encoding on success.
+ */
+int wc_SphincsKey_PublicKeyToDer(SphincsKey *key, byte *out, word32 len,
+                                 int withAlg) {
+    if (!key) {
+        return BAD_FUNC_ARG;
+    }
+    if (!is_valid_level_optim(key->level, key->optim) || !key->pubKeySet) {
+        return BAD_FUNC_ARG;
+    }
+    int ret, oidsum;
+    word32 pubKeyLen;
+    if ((key->level == 1) && (key->optim == SMALL_VARIANT)) {
+        oidsum = SPHINCS_SMALL_LEVEL1k;
+    } else if ((key->level == 1) && (key->optim == FAST_VARIANT)) {
+        oidsum = SPHINCS_FAST_LEVEL1k;
+    } else if ((key->level == 3) && (key->optim == SMALL_VARIANT)) {
+        oidsum = SPHINCS_SMALL_LEVEL3k;
+    } else if ((key->level == 3) && (key->optim == FAST_VARIANT)) {
+        oidsum = SPHINCS_FAST_LEVEL3k;
+    } else if ((key->level == 5) && (key->optim == SMALL_VARIANT)) {
+        oidsum = SPHINCS_SMALL_LEVEL5k;
+    } else if ((key->level == 5) && (key->optim == FAST_VARIANT)) {
+        oidsum = SPHINCS_FAST_LEVEL5k;
+    } else {
+        return BAD_FUNC_ARG; /* unreachable! */
+    }
+    if ((ret = wc_SphincsKey_PublicKeySize(key, &pubKeyLen)) < 0) {
+        return ret;
+    }
+
+    return SetAsymKeyDerPublic(key->pubKey, pubKeyLen, out, len, oidsum,
+                               withAlg);
 }
 
 #endif /* HAVE_PQC && HAVE_SPHINCS */
