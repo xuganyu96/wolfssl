@@ -1005,8 +1005,8 @@ int wc_FalconKey_Free(FalconKey *key) {
  * siglen           On input, the capacity of the sig buffer.
  *                  On output, the length of the signature if signing succeeds.
  */
-int wc_FalconKey_Sign(FalconKey *key, const byte *msg, word32 msglen, byte *sig,
-                      word32 *siglen, WC_RNG *rng) {
+int wc_FalconKey_Sign(const byte *msg, word32 msglen, byte *sig, word32 *siglen,
+                      FalconKey *key, WC_RNG *rng) {
     int ret;
     word32 siglen_cmp;
     size_t siglen_wide = *siglen;
@@ -1164,26 +1164,30 @@ int wc_FalconKey_PrivateKeyToDer(FalconKey *key, byte *out, word32 len) {
     return SetAsymKeyDer(key->privKey, privKeyLen, NULL, 0, out, len, oidsum);
 }
 
-int wc_FalconKey_PublicKeyToDer(FalconKey *key, byte *out, word32 len, int withAlg) {
-    if (!key) return BAD_FUNC_ARG;
-    if (!is_valid_level(key->level) || !key->pubKeySet) return BAD_FUNC_ARG;
+int wc_FalconKey_PublicKeyToDer(FalconKey *key, byte *out, word32 len,
+                                int withAlg) {
+    if (!key)
+        return BAD_FUNC_ARG;
+    if (!is_valid_level(key->level) || !key->pubKeySet)
+        return BAD_FUNC_ARG;
     int ret, oidsum;
     word32 pubKeyLen;
     switch (key->level) {
     case 1:
         oidsum = FALCON_LEVEL1k;
         break;
-        case 5:
+    case 5:
         oidsum = FALCON_LEVEL5k;
         break;
-        default:
+    default:
         return BAD_FUNC_ARG;
     }
     if ((ret = wc_FalconKey_PublicKeySize(key, &pubKeyLen)) < 0) {
         return ret;
     }
 
-    return SetAsymKeyDerPublic(key->pubKey, pubKeyLen, out, len, oidsum, withAlg);
+    return SetAsymKeyDerPublic(key->pubKey, pubKeyLen, out, len, oidsum,
+                               withAlg);
 }
 
 #endif /* HAVE_PQCLEAN */

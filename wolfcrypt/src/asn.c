@@ -31788,8 +31788,8 @@ static int WriteCertBody(DerCert* der, byte* buf)
 /* Make signature from buffer (sz), write to sig (sigSz) */
 static int MakeSignature(CertSignCtx* certSignCtx, const byte* buf, word32 sz,
     byte* sig, word32 sigSz, RsaKey* rsaKey, ecc_key* eccKey,
-    ed25519_key* ed25519Key, ed448_key* ed448Key, falcon_key* falconKey,
-    dilithium_key* dilithiumKey, sphincs_key* sphincsKey, WC_RNG* rng,
+    ed25519_key* ed25519Key, ed448_key* ed448Key, FalconKey* falconKey,
+    dilithium_key* dilithiumKey, SphincsKey* sphincsKey, WC_RNG* rng,
     word32 sigAlgoType, void* heap)
 {
     int digestSz = 0, typeH = 0, ret = 0;
@@ -31897,7 +31897,8 @@ static int MakeSignature(CertSignCtx* certSignCtx, const byte* buf, word32 sz,
     #if defined(HAVE_FALCON)
         if (!rsaKey && !eccKey && !ed25519Key && !ed448Key && falconKey) {
             word32 outSz = sigSz;
-            ret = wc_falcon_sign_msg(buf, sz, sig, &outSz, falconKey, rng);
+            // ret = wc_falcon_sign_msg(buf, sz, sig, &outSz, falconKey, rng);
+            ret = wc_FalconKey_Sign(buf, sz, sig, &outSz, falconKey, rng);
             if (ret == 0)
                 ret = outSz;
         }
@@ -31929,7 +31930,7 @@ static int MakeSignature(CertSignCtx* certSignCtx, const byte* buf, word32 sz,
         if (!rsaKey && !eccKey && !ed25519Key && !ed448Key && !falconKey &&
             !dilithiumKey && sphincsKey) {
             word32 outSz = sigSz;
-            ret = wc_sphincs_sign_msg(buf, sz, sig, &outSz, sphincsKey, rng);
+            ret = wc_SphincsKey_Sign(buf, sz, sig, &outSz, sphincsKey, rng);
             if (ret == 0)
                 ret = outSz;
         }
@@ -33701,8 +33702,8 @@ int wc_MakeCertReq(Cert* cert, byte* derBuffer, word32 derSz,
 
 static int SignCert(int requestSz, int sType, byte* buf, word32 buffSz,
                     RsaKey* rsaKey, ecc_key* eccKey, ed25519_key* ed25519Key,
-                    ed448_key* ed448Key, falcon_key* falconKey,
-                    dilithium_key* dilithiumKey, sphincs_key* sphincsKey,
+                    ed448_key* ed448Key, FalconKey* falconKey,
+                    dilithium_key* dilithiumKey, SphincsKey* sphincsKey,
                     WC_RNG* rng)
 {
     int sigSz = 0;
@@ -33943,9 +33944,9 @@ int wc_SignCert_ex(int requestSz, int sType, byte* buf, word32 buffSz,
     ecc_key*           eccKey = NULL;
     ed25519_key*       ed25519Key = NULL;
     ed448_key*         ed448Key = NULL;
-    falcon_key*        falconKey = NULL;
+    FalconKey*        falconKey = NULL;
     dilithium_key*     dilithiumKey = NULL;
-    sphincs_key*       sphincsKey = NULL;
+    SphincsKey*       sphincsKey = NULL;
 
     if (keyType == RSA_TYPE)
         rsaKey = (RsaKey*)key;
@@ -33956,9 +33957,9 @@ int wc_SignCert_ex(int requestSz, int sType, byte* buf, word32 buffSz,
     else if (keyType == ED448_TYPE)
         ed448Key = (ed448_key*)key;
     else if (keyType == FALCON_LEVEL1_TYPE)
-        falconKey = (falcon_key*)key;
+        falconKey = (FalconKey*)key;
     else if (keyType == FALCON_LEVEL5_TYPE)
-        falconKey = (falcon_key*)key;
+        falconKey = (FalconKey*)key;
 #ifdef WOLFSSL_DILITHIUM_FIPS204_DRAFT
     else if (keyType == DILITHIUM_LEVEL2_TYPE)
         dilithiumKey = (dilithium_key*)key;
@@ -33974,17 +33975,17 @@ int wc_SignCert_ex(int requestSz, int sType, byte* buf, word32 buffSz,
     else if (keyType == ML_DSA_LEVEL5_TYPE)
         dilithiumKey = (dilithium_key*)key;
     else if (keyType == SPHINCS_FAST_LEVEL1_TYPE)
-        sphincsKey = (sphincs_key*)key;
+        sphincsKey = (SphincsKey*)key;
     else if (keyType == SPHINCS_FAST_LEVEL3_TYPE)
-        sphincsKey = (sphincs_key*)key;
+        sphincsKey = (SphincsKey*)key;
     else if (keyType == SPHINCS_FAST_LEVEL5_TYPE)
-        sphincsKey = (sphincs_key*)key;
+        sphincsKey = (SphincsKey*)key;
     else if (keyType == SPHINCS_SMALL_LEVEL1_TYPE)
-        sphincsKey = (sphincs_key*)key;
+        sphincsKey = (SphincsKey*)key;
     else if (keyType == SPHINCS_SMALL_LEVEL3_TYPE)
-        sphincsKey = (sphincs_key*)key;
+        sphincsKey = (SphincsKey*)key;
     else if (keyType == SPHINCS_SMALL_LEVEL5_TYPE)
-        sphincsKey = (sphincs_key*)key;
+        sphincsKey = (SphincsKey*)key;
 
     return SignCert(requestSz, sType, buf, buffSz, rsaKey, eccKey, ed25519Key,
                     ed448Key, falconKey, dilithiumKey, sphincsKey, rng);

@@ -202,8 +202,8 @@ WOLFSSL_API int wc_FalconKey_GetLevel(FalconKey *key, int *level);
 WOLFSSL_API int wc_FalconKey_MakeKey(FalconKey *key, WC_RNG *rng);
 WOLFSSL_API int wc_FalconKey_CheckKey(FalconKey *key);
 WOLFSSL_API int wc_FalconKey_Free(FalconKey *key);
-WOLFSSL_API int wc_FalconKey_Sign(FalconKey *key, const byte *msg,
-                                  word32 msglen, byte *sig, word32 *siglen,
+WOLFSSL_API int wc_FalconKey_Sign(const byte *msg, word32 msglen,
+                                  byte *sig, word32 *siglen, FalconKey *key,
                                   WC_RNG *rng);
 WOLFSSL_API int wc_FalconKey_Verify(FalconKey *key, const byte *msg,
                                     word32 msglen, const byte *sig,
